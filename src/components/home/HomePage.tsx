@@ -1,9 +1,8 @@
-import Image from "next/image";
-import Link from "next/link";
 import { Hero } from "@/components/home/Hero";
+import { HomeSeoArticle } from "@/components/home/HomeSeoArticle";
 import { CreditsPricing } from "@/components/pricing/CreditsPricing";
 import { Button } from "@/components/ui/Button";
-import { motionLibraryClips } from "@/data/motion-library";
+import { homeFaqs } from "@/data/home-content";
 
 const steps = [
   {
@@ -42,58 +41,11 @@ const features = [
   },
 ];
 
-const faqs = [
-  {
-    q: "What is Genjutsu AI Video Generator?",
-    a: "An AI video tool that transfers motion from a reference video to your character — so you can generate new videos without filming every take.",
-  },
-  {
-    q: "What do I upload?",
-    a: "A character image (JPG/PNG) and a motion reference video (MP4/MOV, about 3–30 seconds).",
-  },
-  {
-    q: "Is it free?",
-    a: "Sign up free for welcome credits, then generate. Buy Basic ($9.9), Creator ($19.9), or Pro ($69) packs when you need more.",
-  },
-];
-
 export function HomePage() {
   return (
     <>
       <Hero />
-
-      <section className="border-t border-border bg-bg-soft py-14 sm:py-16">
-        <div className="page-shell">
-          <h2 className="font-display text-2xl font-semibold tracking-tight sm:text-3xl">
-            Examples
-          </h2>
-          <p className="mt-2 max-w-xl text-sm text-fg-muted">
-            Take the motion and recast it with your characters, locations, and
-            products.
-          </p>
-          <div className="mt-8 grid gap-4 sm:grid-cols-3">
-            {motionLibraryClips.map((clip) => (
-              <Link
-                key={clip.id}
-                href="/#studio"
-                className="group relative aspect-[16/10] overflow-hidden rounded-2xl border border-border bg-surface"
-              >
-                <Image
-                  src={clip.src}
-                  alt={clip.label}
-                  fill
-                  className="object-cover transition-transform duration-500 group-hover:scale-[1.03]"
-                  sizes="(max-width: 640px) 100vw, 33vw"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/10 to-transparent" />
-                <p className="absolute bottom-3 left-3 text-sm font-medium text-fg">
-                  {clip.label}
-                </p>
-              </Link>
-            ))}
-          </div>
-        </div>
-      </section>
+      <HomeSeoArticle />
 
       <section className="border-t border-border py-14 sm:py-16">
         <div className="page-shell">
@@ -157,13 +109,13 @@ export function HomePage() {
         </div>
       </section>
 
-      <section className="border-t border-border bg-bg-soft py-14 sm:py-16">
-        <div className="page-shell max-w-2xl">
+      <section id="faq" className="border-t border-border bg-bg-soft py-14 sm:py-16">
+        <div className="page-shell max-w-3xl">
           <h2 className="text-center font-display text-2xl font-semibold tracking-tight sm:text-3xl">
             FAQ
           </h2>
           <div className="mt-8 space-y-3">
-            {faqs.map((item) => (
+            {homeFaqs.map((item) => (
               <div
                 key={item.q}
                 className="rounded-2xl border border-border bg-surface/60 px-5 py-4"

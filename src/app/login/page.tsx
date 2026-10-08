@@ -6,6 +6,7 @@ export const metadata = pageMetadata({
   description: "Log in or sign up for Genjutsu AI Video Generator.",
   path: "/login",
   keywords: ["Log in", "Genjutsu"],
+  noindex: true,
 });
 
 export default function LoginPage() {

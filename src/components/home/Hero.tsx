@@ -15,7 +15,7 @@ export function Hero() {
             Genjutsu AI Video Generator
           </h1>
           <p className="mx-auto mt-1 max-w-xl text-[0.8rem] leading-snug text-fg-muted sm:text-sm">
-            Character + reference clip → motion transfer video
+            AI Motion Transfer Video Generator
           </p>
         </div>
 

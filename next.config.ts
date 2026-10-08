@@ -23,6 +23,8 @@ const nextConfig: NextConfig = {
       { source: "/styles", destination: "/examples", permanent: false },
       { source: "/styles/:slug", destination: "/examples", permanent: false },
       { source: "/soul-id", destination: "/genjutsu-tutorial", permanent: false },
+      { source: "/tools", destination: "/", permanent: true },
+      { source: "/tools/:slug", destination: "/", permanent: true },
     ];
   },
   turbopack: {

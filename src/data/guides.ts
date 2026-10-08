@@ -97,7 +97,7 @@ export const guides: Guide[] = [
     ],
     related: [
       { href: "/genjutsu-alternatives", label: "Alternatives" },
-      { href: "/tools/kling", label: "Kling" },
+      { href: "/guides/genjutsu-vs-kling", label: "Kling" },
     ],
   },
   {
@@ -111,7 +111,7 @@ export const guides: Guide[] = [
       "If you need general editing, restyle and generative video in one suite, Runway may fit better as a complementary tool.",
     ],
     related: [
-      { href: "/tools/runway", label: "Runway" },
+      { href: "/guides/genjutsu-vs-runway", label: "Runway" },
       { href: "/genjutsu-alternatives", label: "Compare tools" },
     ],
   },
@@ -127,7 +127,7 @@ export const guides: Guide[] = [
     ],
     related: [
       { href: "/genjutsu-alternatives", label: "Full comparison" },
-      { href: "/tools", label: "Tools" },
+      { href: "/genjutsu-alternatives", label: "Alternatives" },
     ],
   },
   {
@@ -141,7 +141,7 @@ export const guides: Guide[] = [
       "Evaluate on identity hold, motion fidelity, camera handling and iteration speed.",
     ],
     related: [
-      { href: "/tools", label: "Tools" },
+      { href: "/genjutsu-alternatives", label: "Alternatives" },
       { href: "/motion-transfer", label: "Motion Transfer" },
     ],
   },

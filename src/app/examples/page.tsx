@@ -23,8 +23,9 @@ export default function ExamplesPage() {
             {motionLibraryClips.map((clip) => (
               <Link
                 key={clip.id}
+                id={clip.id}
                 href="/#studio"
-                className="group relative aspect-[16/10] overflow-hidden rounded-2xl border border-border bg-surface"
+                className="group relative aspect-[16/10] overflow-hidden rounded-2xl border border-border bg-surface scroll-mt-24"
               >
                 <Image
                   src={clip.src}

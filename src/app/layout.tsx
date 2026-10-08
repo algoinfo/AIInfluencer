@@ -16,7 +16,8 @@ const syne = Syne({
   subsets: ["latin"],
 });
 
-const ROOT_TITLE = "Genjutsu AI Video Generator | Motion Transfer & Object Swap";
+const ROOT_TITLE =
+  "AI Motion Transfer Video Generator — Recast Any Character | Genjutsu";
 const ROOT_DESCRIPTION =
   "Genjutsu AI Video Generator — motion transfer and object swap. Upload a character image and reference video to create AI video clips online.";
 

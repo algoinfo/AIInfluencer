@@ -25,7 +25,6 @@ Open [http://localhost:3000](http://localhost:3000).
 - `/discover` — Influencer gallery
 - `/create` — Character builder
 - `/video` — Motion transfer / AI influencer video
-- `/tools` — Tool directory
 - `/guides` — Guides
 - `/genjutsu` — Higgsfield Genjutsu SEO guide
 - `/soul-id` — Soul ID consistency guide

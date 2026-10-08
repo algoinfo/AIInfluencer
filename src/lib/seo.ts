@@ -24,6 +24,9 @@ type PageSeo = {
   path: string;
   /** Page-specific keywords; merged with DEFAULT_KEYWORDS */
   keywords?: string[];
+  noindex?: boolean;
+  /** Skip the root `%s | GENJUTSU` template when the title already includes the brand. */
+  absoluteTitle?: boolean;
 };
 
 export function pageMetadata({
@@ -31,6 +34,8 @@ export function pageMetadata({
   description,
   path,
   keywords = [],
+  noindex = false,
+  absoluteTitle = false,
 }: PageSeo): Metadata {
   const url = `${SITE_URL}${path}`;
   const mergedKeywords = Array.from(
@@ -38,9 +43,12 @@ export function pageMetadata({
   );
 
   return {
-    title,
+    title: absoluteTitle ? { absolute: title } : title,
     description,
     keywords: mergedKeywords,
+    robots: noindex
+      ? { index: false, follow: false, googleBot: { index: false, follow: false } }
+      : undefined,
     alternates: {
       canonical: url,
     },
