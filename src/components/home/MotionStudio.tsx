@@ -45,7 +45,7 @@ const MODE_TABS: { id: StudioMode; label: string }[] = [
 
 /** Idle preview sample shown before the user generates. */
 const DEMO_PREVIEW_VIDEO =
-  "https://pub-3a51eee0bcba4124b258f45bbbe4d181.r2.dev/two-cats-dance.mp4";
+  "https://pub-3a51eee0bcba4124b258f45bbbe4d181.r2.dev/demo/two-cats-dance.mp4";
 
 type StudioModel = {
   id: string;

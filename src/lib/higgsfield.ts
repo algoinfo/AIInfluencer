@@ -142,7 +142,7 @@ export async function subscribeGenjutsuVideo(params: {
     withPolling: true,
   });
 
-  if (result.status === "failed" || result.status === "canceled") {
+  if (result.status === "failed") {
     throw new Error("We could not create your video this time.");
   }
   if (result.status === "nsfw") {

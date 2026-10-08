@@ -172,7 +172,6 @@ export async function POST(req: NextRequest) {
     await screenWaffoPrompt({
       prompt: prompt || (mode === "object-swap" ? "object swap" : "motion transfer"),
       locale: "en",
-      semantic: "enforce",
       log: (message, data) => log(message, data),
     });
 
