@@ -9,12 +9,21 @@ import {
   StudioPreviewHistoryTabs,
   type StudioPanelMode,
 } from "@/components/studio/StudioPreviewHistoryTabs";
+import { CREDITS_PER_SECOND, creditsForRun } from "@/data/credits";
 import {
-  CREDITS_PER_SECOND,
-  creditsForRun,
-  durationOptions,
-} from "@/data/credits";
+  creditsForGenjutsuRun,
+  GENJUTSU_DEFAULT_RESOLUTION,
+  GENJUTSU_MIN_DURATION_SEC,
+  GENJUTSU_RESOLUTIONS,
+  genjutsuCreditsPerSecond,
+  type GenjutsuResolution,
+} from "@/data/genjutsu-pricing";
 import { resolveMotionPrompt } from "@/data/motion-prompt";
+import { probeVideoFileDurationSeconds } from "@/lib/probe-video-duration-client";
+import {
+  billableSecondsFromDuration,
+  MOTION_TRANSFER_MAX_DURATION_SEC,
+} from "@/lib/probe-video-duration";
 import {
   loadStudioHistory,
   prependStudioHistory,
@@ -27,13 +36,38 @@ function formatElapsed(totalSeconds: number): string {
   return `${m}:${s.toString().padStart(2, "0")}`;
 }
 
-const models = [
+type StudioMode = "object-swap" | "motion-transfer";
+
+const MODE_TABS: { id: StudioMode; label: string }[] = [
+  { id: "motion-transfer", label: "Motion Transfer" },
+  { id: "object-swap", label: "Object Swap" },
+];
+
+type StudioModel = {
+  id: string;
+  name: string;
+  meta: string;
+  mark: string;
+  multiplier: number;
+  provider: "higgsfield" | "fal";
+};
+
+const models: StudioModel[] = [
+  {
+    id: "genjutsu",
+    name: "genjutsu",
+    meta: "Higgsfield · by resolution",
+    mark: "gj",
+    multiplier: 1,
+    provider: "higgsfield",
+  },
   {
     id: "kling-v3-pro",
     name: "Kling V3 Pro Motion Control",
     meta: "Pro · ×1.5 credits",
     mark: "K3",
     multiplier: 1.5,
+    provider: "fal",
   },
   {
     id: "kling-v3-standard",
@@ -41,6 +75,7 @@ const models = [
     meta: "Standard · ×1.2 credits",
     mark: "V3",
     multiplier: 1.2,
+    provider: "fal",
   },
   {
     id: "kling-v26-standard",
@@ -48,20 +83,28 @@ const models = [
     meta: "Standard · ×1.0 credits",
     mark: "2.6",
     multiplier: 1,
+    provider: "fal",
   },
 ];
 
 export function MotionStudio() {
-  const { needsLoginToGenerate, openAuthModal, refreshSession } = useAuth();
-  const [model, setModel] = useState(models[0]);
-  const [duration, setDuration] = useState(durationOptions[1].seconds);
+  const { isLoggedIn, openAuthModal, refreshSession } = useAuth();
+  const [studioMode, setStudioMode] = useState<StudioMode>("motion-transfer");
+  const [resolution, setResolution] = useState<GenjutsuResolution>(
+    GENJUTSU_DEFAULT_RESOLUTION,
+  );
+  const [model, setModel] = useState(
+    () => models.find((m) => m.id === "genjutsu") ?? models[0],
+  );
   const [open, setOpen] = useState(false);
   const [imageName, setImageName] = useState<string | null>(null);
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [videoName, setVideoName] = useState<string | null>(null);
   const [videoFile, setVideoFile] = useState<File | null>(null);
+  const [videoDurationSec, setVideoDurationSec] = useState<number | null>(null);
   const [prompt, setPrompt] = useState("");
+  const [promptOn, setPromptOn] = useState(false);
   const [status, setStatus] = useState<
     "idle" | "need" | "generating" | "done" | "error"
   >("idle");
@@ -75,8 +118,19 @@ export function MotionStudio() {
   const listId = useId();
   const promptId = useId();
 
-  const sellCredits = creditsForRun(duration, model.multiplier);
-  const usingDefaultPrompt = prompt.trim().length === 0;
+  const duration = videoDurationSec;
+  const isObjectSwap = studioMode === "object-swap";
+  const isGenjutsuMotion =
+    !isObjectSwap && model.provider === "higgsfield";
+  const usesGenjutsuPricing = isObjectSwap || isGenjutsuMotion;
+  const sellCredits =
+    duration == null
+      ? null
+      : usesGenjutsuPricing
+        ? creditsForGenjutsuRun(duration, resolution)
+        : creditsForRun(duration, model.multiplier);
+  const usingDefaultPrompt = !promptOn || prompt.trim().length === 0;
+  const modelMark = isObjectSwap ? "gj" : model.mark;
 
   useEffect(() => {
     setHistory(loadStudioHistory());
@@ -124,22 +178,62 @@ export function MotionStudio() {
     if (!file) return;
     setVideoName(file.name);
     setVideoFile(file);
+    setVideoDurationSec(null);
     setStatus("idle");
     setErrorMessage(null);
+
+    void probeVideoFileDurationSeconds(file).then((raw) => {
+      if (raw != null && raw > MOTION_TRANSFER_MAX_DURATION_SEC + 0.05) {
+        setVideoFile(null);
+        setVideoName(null);
+        setVideoDurationSec(null);
+        setStatus("error");
+        setErrorMessage(
+          `Motion video is too long (max ${MOTION_TRANSFER_MAX_DURATION_SEC}s).`,
+        );
+        return;
+      }
+      const billable = billableSecondsFromDuration(raw ?? 0);
+      setVideoDurationSec(billable);
+      if (billable == null) {
+        setStatus("error");
+        setErrorMessage(
+          "Could not read video length. Try another MP4 / MOV file.",
+        );
+      }
+    });
   }
 
   async function onGenerate() {
+    if (!isLoggedIn) {
+      openAuthModal({ mode: "login", reason: "generation" });
+      return;
+    }
     if (!imageFile || !videoFile) {
       setStatus("need");
       return;
     }
-    if (needsLoginToGenerate()) {
-      openAuthModal({ mode: "register", reason: "generation" });
+    if (duration == null) {
+      setStatus("error");
+      setErrorMessage(
+        "Could not read video length. Try another MP4 / MOV file.",
+      );
+      return;
+    }
+    if (usesGenjutsuPricing && duration < GENJUTSU_MIN_DURATION_SEC) {
+      setStatus("error");
+      setErrorMessage(
+        `Genjutsu needs a video at least ${GENJUTSU_MIN_DURATION_SEC}s long.`,
+      );
       return;
     }
 
-    const resolved = resolveMotionPrompt(prompt);
-    setLastPrompt(resolved);
+    const resolved = usesGenjutsuPricing
+      ? promptOn
+        ? prompt.trim()
+        : ""
+      : resolveMotionPrompt(promptOn ? prompt : "");
+    setLastPrompt(resolved || null);
     setErrorMessage(null);
     setStatus("generating");
     setPanelMode("preview");
@@ -149,11 +243,14 @@ export function MotionStudio() {
 
     try {
       const form = new FormData();
+      form.set("mode", studioMode);
+      form.set("modelId", isObjectSwap ? "genjutsu" : model.id);
       form.set("characterImage", imageFile);
       form.set("motionVideo", videoFile);
       form.set("prompt", resolved);
       form.set("durationSec", String(duration));
       form.set("modelMultiplier", String(model.multiplier));
+      form.set("resolution", resolution);
 
       const res = await fetch("/api/video/generate", {
         method: "POST",
@@ -193,12 +290,14 @@ export function MotionStudio() {
 
       const item: StudioHistoryItem = {
         id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-        title: imageFile.name.replace(/\.[^.]+$/, "") || "Motion transfer",
+        title:
+          imageFile.name.replace(/\.[^.]+$/, "") ||
+          (isObjectSwap ? "Object swap" : "Motion transfer"),
         createdAt: new Date().toISOString(),
         // Prefer public R2 URL for reload-safe history; blob for this session.
         videoUrl: publicUrl || blobUrl,
         durationSec: duration,
-        modelMark: model.mark,
+        modelMark: modelMark,
       };
       setHistory((prev) => {
         const next = prependStudioHistory(prev, item);
@@ -236,7 +335,7 @@ export function MotionStudio() {
     a.click();
   }, []);
 
-  const ready = Boolean(imageFile && videoFile);
+  const ready = Boolean(imageFile && videoFile && duration != null);
   const busy = status === "generating";
 
   return (
@@ -250,85 +349,198 @@ export function MotionStudio() {
         {/* Left tools */}
         <div className="flex min-h-0 flex-col border-b border-white/[0.07] lg:border-b-0 lg:border-r lg:border-white/[0.07]">
           <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto p-3.5 sm:p-4 [scrollbar-width:thin]">
-            {/* Model */}
-            <div ref={menuRef} className="relative shrink-0">
-              <p className="mb-1.5 text-[0.65rem] uppercase tracking-[0.16em] text-fg-subtle">
-                Model
-              </p>
-              <button
-                type="button"
-                aria-haspopup="listbox"
-                aria-expanded={open}
-                aria-controls={listId}
-                onClick={() => setOpen((v) => !v)}
-                className="flex w-full items-center justify-between rounded-xl border border-white/[0.1] bg-white/[0.04] px-3 py-2.5 text-left transition-colors hover:border-white/[0.18] hover:bg-white/[0.06]"
-              >
-                <span className="flex min-w-0 items-center gap-2.5">
-                  <span className="flex h-8 min-w-8 items-center justify-center rounded-lg bg-accent px-1.5 font-display text-[0.6rem] font-semibold leading-none text-[#0a0a0c]">
-                    {model.mark}
-                  </span>
-                  <span className="min-w-0">
-                    <span className="block truncate text-[0.8rem] font-medium text-fg">
-                      {model.name}
-                    </span>
-                    <span className="block text-[0.7rem] text-fg-subtle">
-                      {model.meta}
-                    </span>
-                  </span>
-                </span>
-                <Chevron open={open} />
-              </button>
+            {/* Mode tabs */}
+            <div
+              className="grid shrink-0 grid-cols-2 gap-1 rounded-xl border border-white/[0.1] bg-black/30 p-1"
+              role="tablist"
+              aria-label="Studio mode"
+            >
+              {MODE_TABS.map((tab) => {
+                const active = studioMode === tab.id;
+                return (
+                  <button
+                    key={tab.id}
+                    type="button"
+                    role="tab"
+                    aria-selected={active}
+                    onClick={() => {
+                      setStudioMode(tab.id);
+                      setOpen(false);
+                      setStatus("idle");
+                      setErrorMessage(null);
+                      if (tab.id === "motion-transfer") {
+                        setModel(
+                          models.find((m) => m.id === "genjutsu") ?? models[0],
+                        );
+                      }
+                    }}
+                    className={[
+                      "rounded-lg px-2 py-2 text-center text-[0.72rem] font-semibold tracking-tight transition-colors",
+                      active
+                        ? "bg-accent text-accent-ink"
+                        : "text-fg-subtle hover:bg-white/[0.05] hover:text-fg",
+                    ].join(" ")}
+                  >
+                    {tab.label}
+                  </button>
+                );
+              })}
+            </div>
 
-              {open ? (
-                <ul
-                  id={listId}
-                  role="listbox"
-                  className="absolute left-0 right-0 z-20 mt-2 overflow-hidden rounded-2xl border border-white/[0.1] bg-[#141416] p-1.5 shadow-[0_20px_50px_rgba(0,0,0,0.5)]"
-                >
-                  {models.map((item) => (
-                    <li key={item.id}>
+            {/* Object Swap: no model picker — fixed Genjutsu object-swap API */}
+            {isObjectSwap ? (
+              <div className="shrink-0">
+                <div className="mb-1.5 flex items-center justify-between gap-2">
+                  <p className="text-[0.65rem] uppercase tracking-[0.16em] text-fg-subtle">
+                    Resolution
+                  </p>
+                  <p className="text-[0.65rem] text-fg-subtle">
+                    {genjutsuCreditsPerSecond(resolution).toLocaleString()} cr/s
+                  </p>
+                </div>
+                <div className="grid grid-cols-3 gap-1 rounded-xl border border-white/[0.08] bg-black/25 p-1">
+                  {GENJUTSU_RESOLUTIONS.map((option) => {
+                    const active = option === resolution;
+                    return (
                       <button
+                        key={option}
                         type="button"
-                        role="option"
-                        aria-selected={item.id === model.id}
-                        onClick={() => {
-                          setModel(item);
-                          setOpen(false);
-                        }}
+                        onClick={() => setResolution(option)}
                         className={[
-                          "flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition-colors",
-                          item.id === model.id
-                            ? "bg-white/[0.08]"
-                            : "hover:bg-white/[0.04]",
+                          "rounded-lg px-1 py-2 text-center text-xs font-medium transition-colors",
+                          active
+                            ? "bg-accent text-[#0a0a0c]"
+                            : "text-fg-muted hover:bg-white/[0.05] hover:text-fg",
                         ].join(" ")}
                       >
-                        <span className="flex h-8 min-w-8 items-center justify-center rounded-lg bg-accent/90 px-1 font-display text-[0.6rem] font-semibold leading-none text-[#0a0a0c]">
-                          {item.mark}
-                        </span>
-                        <span className="min-w-0">
-                          <span className="block truncate text-sm text-fg">
-                            {item.name}
-                          </span>
-                          <span className="block text-xs text-fg-subtle">
-                            {item.meta} ·{" "}
-                            {creditsForRun(
-                              duration,
-                              item.multiplier,
-                            ).toLocaleString()}{" "}
-                            cr / {duration}s
-                          </span>
-                        </span>
+                        {option}
                       </button>
-                    </li>
-                  ))}
-                </ul>
-              ) : null}
-            </div>
+                    );
+                  })}
+                </div>
+              </div>
+            ) : (
+              <div className="shrink-0 space-y-2.5">
+                <div ref={menuRef} className="relative">
+                  <p className="mb-1.5 text-[0.65rem] uppercase tracking-[0.16em] text-fg-subtle">
+                    Model
+                  </p>
+                  <button
+                    type="button"
+                    aria-haspopup="listbox"
+                    aria-expanded={open}
+                    aria-controls={listId}
+                    onClick={() => setOpen((v) => !v)}
+                    className="flex w-full items-center justify-between rounded-xl border border-white/[0.1] bg-white/[0.04] px-3 py-2.5 text-left transition-colors hover:border-white/[0.18] hover:bg-white/[0.06]"
+                  >
+                    <span className="flex min-w-0 items-center gap-2.5">
+                      <span className="flex h-8 min-w-8 items-center justify-center rounded-lg bg-accent px-1.5 font-display text-[0.6rem] font-semibold leading-none text-[#0a0a0c]">
+                        {model.mark}
+                      </span>
+                      <span className="min-w-0">
+                        <span className="block truncate text-[0.8rem] font-medium text-fg">
+                          {model.name}
+                        </span>
+                        <span className="block text-[0.7rem] text-fg-subtle">
+                          {isGenjutsuMotion
+                            ? `${genjutsuCreditsPerSecond(resolution).toLocaleString()} cr/s · ${resolution}`
+                            : model.meta}
+                        </span>
+                      </span>
+                    </span>
+                    <Chevron open={open} />
+                  </button>
+
+                  {open ? (
+                    <ul
+                      id={listId}
+                      role="listbox"
+                      className="absolute left-0 right-0 z-20 mt-2 overflow-hidden rounded-2xl border border-white/[0.1] bg-[#141416] p-1.5 shadow-[0_20px_50px_rgba(0,0,0,0.5)]"
+                    >
+                      {models.map((item) => {
+                        const itemCredits =
+                          item.provider === "higgsfield"
+                            ? duration != null
+                              ? creditsForGenjutsuRun(duration, resolution)
+                              : genjutsuCreditsPerSecond(resolution)
+                            : duration != null
+                              ? creditsForRun(duration, item.multiplier)
+                              : Math.round(
+                                  CREDITS_PER_SECOND * item.multiplier,
+                                );
+                        return (
+                          <li key={item.id}>
+                            <button
+                              type="button"
+                              role="option"
+                              aria-selected={item.id === model.id}
+                              onClick={() => {
+                                setModel(item);
+                                setOpen(false);
+                              }}
+                              className={[
+                                "flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition-colors",
+                                item.id === model.id
+                                  ? "bg-white/[0.08]"
+                                  : "hover:bg-white/[0.04]",
+                              ].join(" ")}
+                            >
+                              <span className="flex h-8 min-w-8 items-center justify-center rounded-lg bg-accent/90 px-1 font-display text-[0.6rem] font-semibold leading-none text-[#0a0a0c]">
+                                {item.mark}
+                              </span>
+                              <span className="min-w-0">
+                                <span className="block truncate text-sm text-fg">
+                                  {item.name}
+                                </span>
+                                <span className="block text-xs text-fg-subtle">
+                                  {item.meta}
+                                  {duration != null
+                                    ? ` · ${itemCredits.toLocaleString()} cr / ${duration}s`
+                                    : ` · ${itemCredits.toLocaleString()} cr/s`}
+                                </span>
+                              </span>
+                            </button>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  ) : null}
+                </div>
+
+                {isGenjutsuMotion ? (
+                  <div>
+                    <p className="mb-1.5 text-[0.65rem] uppercase tracking-[0.16em] text-fg-subtle">
+                      Resolution
+                    </p>
+                    <div className="grid grid-cols-3 gap-1 rounded-xl border border-white/[0.08] bg-black/25 p-1">
+                      {GENJUTSU_RESOLUTIONS.map((option) => {
+                        const active = option === resolution;
+                        return (
+                          <button
+                            key={option}
+                            type="button"
+                            onClick={() => setResolution(option)}
+                            className={[
+                              "rounded-lg px-1 py-2 text-center text-xs font-medium transition-colors",
+                              active
+                                ? "bg-accent text-[#0a0a0c]"
+                                : "text-fg-muted hover:bg-white/[0.05] hover:text-fg",
+                            ].join(" ")}
+                          >
+                            {option}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ) : null}
+              </div>
+            )}
 
             {/* Uploads side by side */}
             <div className="grid shrink-0 grid-cols-2 gap-2.5">
               <UploadField
-                label="Character"
+                label={isObjectSwap ? "Reference" : "Character"}
                 required
                 hint="JPG / PNG"
                 button="Add image"
@@ -340,9 +552,13 @@ export function MotionStudio() {
                 compact
               />
               <UploadField
-                label="Motion"
+                label={isObjectSwap ? "Source video" : "Motion"}
                 required
-                hint="MP4 / MOV"
+                hint={
+                  duration != null
+                    ? `${duration}s · billable`
+                    : "MP4 / MOV"
+                }
                 button="Add video"
                 accept="video/*"
                 fileName={videoName}
@@ -352,57 +568,61 @@ export function MotionStudio() {
               />
             </div>
 
-            {/* Prompt */}
-            <div className="shrink-0">
-              <label
-                htmlFor={promptId}
-                className="mb-1.5 flex items-center gap-2 text-[0.65rem] uppercase tracking-[0.16em] text-fg-subtle"
-              >
-                Prompt
-                <span className="normal-case tracking-normal text-fg-subtle/80">
-                  (optional)
-                </span>
-              </label>
-              <textarea
-                id={promptId}
-                value={prompt}
-                onChange={(e) => setPrompt(e.target.value)}
-                rows={3}
-                placeholder="1. Look  2. Outfit  3. Scene  4. Keep the same  5. Final style"
-                className="w-full resize-none rounded-xl border border-white/[0.1] bg-white/[0.04] px-3 py-2.5 text-[0.8rem] leading-relaxed text-fg outline-none transition placeholder:text-fg-subtle/65 focus:border-accent/35 focus:bg-white/[0.06]"
-              />
-            </div>
-
-            {/* Duration */}
+            {/* Prompt — toggle like Genjutsu studio */}
             <div className="shrink-0">
               <div className="mb-1.5 flex items-center justify-between gap-2">
-                <p className="text-[0.65rem] uppercase tracking-[0.16em] text-fg-subtle">
-                  Duration
-                </p>
-                <p className="text-[0.65rem] text-fg-subtle">
-                  {CREDITS_PER_SECOND} cr/s · ×{model.multiplier}
-                </p>
+                <label
+                  htmlFor={promptId}
+                  className="flex items-center gap-2 text-[0.65rem] uppercase tracking-[0.16em] text-fg-subtle"
+                >
+                  Prompt
+                  <span className="normal-case tracking-normal text-fg-subtle/80">
+                    {promptOn
+                      ? "custom"
+                      : usesGenjutsuPricing
+                        ? "optional"
+                        : "default"}
+                  </span>
+                </label>
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={promptOn}
+                  aria-label="Enable custom prompt"
+                  onClick={() => setPromptOn((v) => !v)}
+                  className={[
+                    "relative h-6 w-11 shrink-0 rounded-full transition-colors duration-200",
+                    promptOn
+                      ? "bg-accent"
+                      : "bg-white/[0.12] ring-1 ring-inset ring-white/[0.08]",
+                  ].join(" ")}
+                >
+                  <span
+                    className={[
+                      "absolute top-0.5 left-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform duration-200",
+                      promptOn
+                        ? "translate-x-5 bg-accent-ink"
+                        : "translate-x-0",
+                    ].join(" ")}
+                  />
+                </button>
               </div>
-              <div className="grid grid-cols-4 gap-1.5 rounded-xl border border-white/[0.08] bg-black/25 p-1">
-                {durationOptions.map((option) => {
-                  const active = option.seconds === duration;
-                  return (
-                    <button
-                      key={option.seconds}
-                      type="button"
-                      onClick={() => setDuration(option.seconds)}
-                      className={[
-                        "rounded-lg px-1 py-2 text-center text-xs font-medium transition-colors",
-                        active
-                          ? "bg-accent text-[#0a0a0c]"
-                          : "text-fg-muted hover:bg-white/[0.05] hover:text-fg",
-                      ].join(" ")}
-                    >
-                      {option.label}
-                    </button>
-                  );
-                })}
-              </div>
+              {promptOn ? (
+                <textarea
+                  id={promptId}
+                  value={prompt}
+                  onChange={(e) => setPrompt(e.target.value)}
+                  rows={3}
+                  placeholder={
+                    usesGenjutsuPricing
+                      ? isObjectSwap
+                        ? "Describe what to swap or keep…"
+                        : "Optional style / character notes…"
+                      : "1. Look  2. Outfit  3. Scene  4. Keep the same  5. Final style"
+                  }
+                  className="w-full resize-none rounded-xl border border-white/[0.1] bg-white/[0.04] px-3 py-2.5 text-[0.8rem] leading-relaxed text-fg outline-none transition placeholder:text-fg-subtle/65 focus:border-accent/35 focus:bg-white/[0.06]"
+                />
+              ) : null}
             </div>
           </div>
 
@@ -457,11 +677,25 @@ export function MotionStudio() {
                       : "bg-black/25 text-fg-subtle",
                   ].join(" ")}
                 >
-                  <span>{duration}s</span>
-                  <span className={ready ? "text-accent-ink/40" : "text-fg-subtle/50"}>
-                    ·
-                  </span>
-                  <span>{sellCredits.toLocaleString()} cr</span>
+                  {duration != null && sellCredits != null ? (
+                    <>
+                      <span>{duration}s</span>
+                      <span
+                        className={
+                          ready ? "text-accent-ink/40" : "text-fg-subtle/50"
+                        }
+                      >
+                        ·
+                      </span>
+                      <span>{sellCredits.toLocaleString()} cr</span>
+                    </>
+                  ) : (
+                    <span>
+                      {usesGenjutsuPricing
+                        ? `${genjutsuCreditsPerSecond(resolution).toLocaleString()} cr/s · ${resolution}`
+                        : `${CREDITS_PER_SECOND} cr/s · ×${model.multiplier}`}
+                    </span>
+                  )}
                 </span>
               ) : null}
             </button>
@@ -474,14 +708,24 @@ export function MotionStudio() {
               ].join(" ")}
             >
               {status === "need"
-                ? "Add a character image and motion video first."
+                ? isObjectSwap
+                  ? "Add a reference image and source video first."
+                  : "Add a character image and motion video first."
                 : status === "generating"
-                  ? "Uploading + transferring motion…"
+                  ? isObjectSwap
+                    ? "Uploading + swapping objects…"
+                    : "Uploading + transferring motion…"
                   : status === "error"
                     ? errorMessage || "Generation failed."
                     : status === "done"
-                      ? `Done · ${duration}s · ${model.mark}${lastPrompt ? (usingDefaultPrompt ? " · default prompt" : " · custom prompt") : ""}.`
-                      : "Character + motion → AI video"}
+                      ? `Done · ${duration ?? "?"}s · ${modelMark}${usesGenjutsuPricing ? ` · ${resolution}` : ""}${lastPrompt ? (usingDefaultPrompt ? " · default prompt" : " · custom prompt") : ""}.`
+                      : duration != null
+                        ? usesGenjutsuPricing
+                          ? `Credits follow video length · ${genjutsuCreditsPerSecond(resolution).toLocaleString()} cr/s · ${resolution}`
+                          : `Credits follow motion length · ${CREDITS_PER_SECOND} cr/s ×${model.multiplier}`
+                        : isObjectSwap
+                          ? "Reference + video → object swap"
+                          : "Character + motion → AI video"}
             </p>
           </div>
         </div>
@@ -493,7 +737,9 @@ export function MotionStudio() {
             onModeChange={setPanelMode}
             trailing={
               <>
-                {duration}s · {model.mark}
+                {duration != null ? `${duration}s · ` : ""}
+                {usesGenjutsuPricing ? `${resolution} · ` : ""}
+                {modelMark}
                 {status === "error" &&
                 errorMessage?.toLowerCase().includes("credit") ? (
                   <>

@@ -53,7 +53,7 @@ const faqs = [
   },
   {
     q: "Is it free?",
-    a: "You can explore the studio free. Sign up for welcome credits, then buy Basic ($9.9), Creator ($19.9), or Pro ($69) packs.",
+    a: "Sign up free for welcome credits, then generate. Buy Basic ($9.9), Creator ($19.9), or Pro ($69) packs when you need more.",
   },
 ];
 

@@ -1,4 +1,3 @@
-import { FREE_GENERATION_LIMIT } from "@/lib/auth-limits";
 import { WELCOME_CREDITS } from "@/lib/credit-limits";
 import { CREDITS_PER_SECOND } from "@/data/credits";
 
@@ -14,10 +13,10 @@ export const PRICING_HERO = {
 export const PRICING_FREE = {
   title: "Free",
   priceLabel: "$0",
-  tagline: "Preview the studio in your browser.",
+  tagline: "Sign up free, then generate with welcome credits.",
   includes: [
     `New accounts: ${WELCOME_CREDITS.toLocaleString()} welcome credits`,
-    `Guests: ${FREE_GENERATION_LIMIT} demo generation, then sign in`,
+    "Login required to generate",
     "Explore examples",
     "Upload character + reference workflow",
   ],

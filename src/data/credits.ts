@@ -2,20 +2,8 @@
 export const CENTS_PER_CREDIT = 0.1;
 export const USD_PER_CREDIT = CENTS_PER_CREDIT / 100; // $0.001
 
-/** Credits charged per second of output duration */
+/** Credits charged per second of motion-video duration */
 export const CREDITS_PER_SECOND = 100;
-
-export type DurationOption = {
-  seconds: number;
-  label: string;
-};
-
-export const durationOptions: DurationOption[] = [
-  { seconds: 5, label: "5s" },
-  { seconds: 10, label: "10s" },
-  { seconds: 15, label: "15s" },
-  { seconds: 30, label: "30s" },
-];
 
 export function creditsForDuration(seconds: number) {
   return seconds * CREDITS_PER_SECOND;

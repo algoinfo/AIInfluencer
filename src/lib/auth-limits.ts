@@ -1,10 +1,10 @@
-export const FREE_GENERATION_LIMIT = 1;
+export const FREE_GENERATION_LIMIT = 0;
 export const FREE_DOWNLOAD_LIMIT = 2;
-/** Max credit cost for a single anonymous generation */
-export const ANONYMOUS_MAX_CREDIT_COST = 1;
+/** Max credit cost for a single anonymous generation (generation always requires login). */
+export const ANONYMOUS_MAX_CREDIT_COST = 0;
 
 export const ANONYMOUS_LOGIN_REQUIRED_MESSAGE =
-  "Log in to continue. Free guests get one demo generation.";
+  "Log in to generate. New accounts get free welcome credits.";
 
 export interface AuthUser {
   email: string;
@@ -22,21 +22,17 @@ export interface SessionPayload {
 
 export function requiresLoginForGeneration(
   user: AuthUser | null,
-  usage: UsageCounts,
+  _usage?: UsageCounts,
 ) {
-  return !user && usage.generations >= FREE_GENERATION_LIMIT;
+  return !user;
 }
 
 export function requiresLoginForAnonymousGeneration(
   user: AuthUser | null,
-  usage: UsageCounts,
-  creditCost: number,
+  _usage?: UsageCounts,
+  _creditCost?: number,
 ) {
-  if (user) return false;
-  return (
-    usage.generations >= FREE_GENERATION_LIMIT ||
-    creditCost > ANONYMOUS_MAX_CREDIT_COST
-  );
+  return !user;
 }
 
 export function requiresLoginForDownload(

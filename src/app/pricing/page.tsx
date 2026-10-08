@@ -16,7 +16,7 @@ const faqs = [
   },
   {
     q: "How does duration affect credits?",
-    a: "Generation costs 100 credits per second of output at base rate. Model multipliers (×1.2 / ×1.5) apply in the studio.",
+    a: "Credits follow your uploaded video length. Motion Transfer uses 100 credits/s × model multiplier. Object Swap prices by resolution (480p / 720p / 1080p) with the studio markup applied.",
   },
   {
     q: "Do credits expire?",
