@@ -34,7 +34,6 @@ import {
 } from "@/lib/waffo-content-safety";
 import { generateWanMotionVideo } from "@/lib/wan-motion-fal";
 
-export const runtime = "nodejs";
 export const maxDuration = 300;
 
 const LOG_PREFIX = "[video/generate]";
