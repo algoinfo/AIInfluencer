@@ -36,6 +36,59 @@ export async function getUserCreditBalanceByEmail(
   return { credits: Number(row.credits_balance ?? 0) };
 }
 
+export async function getUserIdByEmail(email: string): Promise<string | null> {
+  await ensureSchema();
+  const db = getDb();
+  const result = await db.execute({
+    sql: "SELECT id FROM users WHERE email = ? LIMIT 1",
+    args: [email.trim().toLowerCase()],
+  });
+  const id = result.rows[0]?.id;
+  return typeof id === "string" ? id : null;
+}
+
+export async function deductCredits(input: {
+  userId: string;
+  amount: number;
+  description: string;
+}): Promise<{ balanceAfter: number } | null> {
+  if (input.amount <= 0) {
+    throw new Error("Deduction amount must be positive.");
+  }
+
+  await ensureSchema();
+  const db = getDb();
+
+  const balance = await getUserCreditBalance(input.userId);
+  if (balance.credits < input.amount) return null;
+
+  await db.execute({
+    sql: `UPDATE users
+          SET credits_balance = credits_balance - ?
+          WHERE id = ? AND credits_balance >= ?`,
+    args: [input.amount, input.userId, input.amount],
+  });
+
+  const after = await getUserCreditBalance(input.userId);
+  const expected = balance.credits - input.amount;
+  if (after.credits !== expected) return null;
+
+  await db.execute({
+    sql: `INSERT INTO credit_transactions (
+            id, user_id, type, amount, balance_after, description
+          ) VALUES (?, ?, 'usage', ?, ?, ?)`,
+    args: [
+      randomUUID(),
+      input.userId,
+      -input.amount,
+      after.credits,
+      input.description,
+    ],
+  });
+
+  return { balanceAfter: after.credits };
+}
+
 export async function grantWelcomeCreditsIfNeeded(
   userId: string,
 ): Promise<{ granted: boolean; balanceAfter?: number }> {

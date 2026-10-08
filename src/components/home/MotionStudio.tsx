@@ -1,7 +1,8 @@
 "use client";
 
 import Image from "next/image";
-import { useEffect, useId, useRef, useState } from "react";
+import Link from "next/link";
+import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { useAuth } from "@/components/auth/AuthProvider";
 import {
   CREDITS_PER_SECOND,
@@ -35,15 +36,21 @@ const models = [
 ];
 
 export function MotionStudio() {
-  const { needsLoginToGenerate, openAuthModal } = useAuth();
+  const { needsLoginToGenerate, openAuthModal, refreshSession } = useAuth();
   const [model, setModel] = useState(models[0]);
   const [duration, setDuration] = useState(durationOptions[1].seconds);
   const [open, setOpen] = useState(false);
   const [imageName, setImageName] = useState<string | null>(null);
   const [imageUrl, setImageUrl] = useState<string | null>(null);
+  const [imageFile, setImageFile] = useState<File | null>(null);
   const [videoName, setVideoName] = useState<string | null>(null);
+  const [videoFile, setVideoFile] = useState<File | null>(null);
   const [prompt, setPrompt] = useState("");
-  const [status, setStatus] = useState<"idle" | "need" | "demo">("idle");
+  const [status, setStatus] = useState<
+    "idle" | "need" | "generating" | "done" | "error"
+  >("idle");
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [resultUrl, setResultUrl] = useState<string | null>(null);
   const [lastPrompt, setLastPrompt] = useState<string | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
   const listId = useId();
@@ -63,25 +70,30 @@ export function MotionStudio() {
   useEffect(() => {
     return () => {
       if (imageUrl) URL.revokeObjectURL(imageUrl);
+      if (resultUrl?.startsWith("blob:")) URL.revokeObjectURL(resultUrl);
     };
-  }, [imageUrl]);
+  }, [imageUrl, resultUrl]);
 
   function onImage(file: File | null) {
     if (!file) return;
     if (imageUrl) URL.revokeObjectURL(imageUrl);
     setImageName(file.name);
+    setImageFile(file);
     setImageUrl(URL.createObjectURL(file));
     setStatus("idle");
+    setErrorMessage(null);
   }
 
   function onVideo(file: File | null) {
     if (!file) return;
     setVideoName(file.name);
+    setVideoFile(file);
     setStatus("idle");
+    setErrorMessage(null);
   }
 
-  function onGenerate() {
-    if (!imageName || !videoName) {
+  async function onGenerate() {
+    if (!imageFile || !videoFile) {
       setStatus("need");
       return;
     }
@@ -89,11 +101,74 @@ export function MotionStudio() {
       openAuthModal({ mode: "register", reason: "generation" });
       return;
     }
-    setLastPrompt(resolveMotionPrompt(prompt));
-    setStatus("demo");
+
+    const resolved = resolveMotionPrompt(prompt);
+    setLastPrompt(resolved);
+    setErrorMessage(null);
+    setStatus("generating");
+
+    if (resultUrl?.startsWith("blob:")) URL.revokeObjectURL(resultUrl);
+    setResultUrl(null);
+
+    try {
+      const form = new FormData();
+      form.set("characterImage", imageFile);
+      form.set("motionVideo", videoFile);
+      form.set("prompt", resolved);
+      form.set("durationSec", String(duration));
+      form.set("modelMultiplier", String(model.multiplier));
+
+      const res = await fetch("/api/video/generate", {
+        method: "POST",
+        body: form,
+        credentials: "include",
+      });
+
+      if (!res.ok) {
+        const data = (await res.json().catch(() => null)) as {
+          error?: string;
+          needsLogin?: boolean;
+          needsCredits?: boolean;
+        } | null;
+        if (res.status === 403 && data?.needsLogin) {
+          openAuthModal({ mode: "register", reason: "generation" });
+          setStatus("idle");
+          return;
+        }
+        if (res.status === 402 && data?.needsCredits) {
+          setStatus("error");
+          setErrorMessage(
+            data.error ||
+              "Not enough credits. Buy a pack on Pricing to continue.",
+          );
+          return;
+        }
+        throw new Error(data?.error || "Generation failed.");
+      }
+
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      setResultUrl(url);
+      setStatus("done");
+      void refreshSession();
+    } catch (err) {
+      setStatus("error");
+      setErrorMessage(
+        err instanceof Error ? err.message : "Generation failed.",
+      );
+    }
   }
 
-  const ready = Boolean(imageName && videoName);
+  const downloadResult = useCallback(() => {
+    if (!resultUrl) return;
+    const a = document.createElement("a");
+    a.href = resultUrl;
+    a.download = "genjutsu-motion.mp4";
+    a.click();
+  }, [resultUrl]);
+
+  const ready = Boolean(imageFile && videoFile);
+  const busy = status === "generating";
 
   return (
     <div
@@ -266,27 +341,36 @@ export function MotionStudio() {
           <div className="shrink-0 border-t border-white/[0.07] p-3.5 sm:p-4">
             <button
               type="button"
-              onClick={onGenerate}
+              onClick={() => void onGenerate()}
+              disabled={busy}
               className={[
-                "inline-flex h-11 w-full items-center justify-center gap-2 rounded-full text-sm font-semibold transition-all",
+                "inline-flex h-11 w-full items-center justify-center gap-2 rounded-full text-sm font-semibold transition-all disabled:cursor-wait disabled:opacity-70",
                 ready
                   ? "bg-accent text-[#0a0a0c] shadow-[0_0_36px_rgba(216,255,62,0.22)] hover:bg-accent-strong"
                   : "bg-white text-[#0a0a0c] hover:bg-white/90",
               ].join(" ")}
             >
-              Generate · {duration}s · {sellCredits.toLocaleString()} credits
+              {busy
+                ? "Generating…"
+                : `Generate · ${duration}s · ${sellCredits.toLocaleString()} credits`}
             </button>
             <p
               className={[
                 "mt-2 text-center text-[0.7rem] leading-tight",
-                status === "need" ? "text-accent" : "text-fg-subtle",
+                status === "need" || status === "error"
+                  ? "text-accent"
+                  : "text-fg-subtle",
               ].join(" ")}
             >
               {status === "need"
                 ? "Add a character image and motion video first."
-                : status === "demo"
-                  ? `Demo · ${duration}s · ${model.mark}${lastPrompt ? (usingDefaultPrompt ? " · default prompt" : " · custom prompt") : ""}.`
-                  : "Demo UI · files stay in browser"}
+                : status === "generating"
+                  ? "Uploading + transferring motion…"
+                  : status === "error"
+                    ? errorMessage || "Generation failed."
+                    : status === "done"
+                      ? `Done · ${duration}s · ${model.mark}${lastPrompt ? (usingDefaultPrompt ? " · default prompt" : " · custom prompt") : ""}.`
+                      : "Character + motion → AI video"}
             </p>
           </div>
         </div>
@@ -300,43 +384,91 @@ export function MotionStudio() {
                 {duration}s · {model.mark}
               </span>
             </div>
-            {ready ? (
-              <span className="rounded-full border border-accent/30 bg-[rgba(216,255,62,0.08)] px-2 py-0.5 text-[0.65rem] text-accent">
-                Ready to generate
-              </span>
-            ) : (
-              <span className="text-[0.65rem] text-fg-subtle">
-                Add character + motion
-              </span>
-            )}
+            <div className="flex items-center gap-2">
+              {status === "done" && resultUrl ? (
+                <button
+                  type="button"
+                  onClick={downloadResult}
+                  className="rounded-full border border-accent/30 bg-[rgba(216,255,62,0.08)] px-2.5 py-0.5 text-[0.65rem] font-medium text-accent transition-colors hover:bg-[rgba(216,255,62,0.14)]"
+                >
+                  Download
+                </button>
+              ) : null}
+              {status === "error" &&
+              errorMessage?.toLowerCase().includes("credit") ? (
+                <Link
+                  href="/pricing"
+                  className="rounded-full border border-accent/30 bg-[rgba(216,255,62,0.08)] px-2.5 py-0.5 text-[0.65rem] font-medium text-accent transition-colors hover:bg-[rgba(216,255,62,0.14)]"
+                >
+                  Get credits
+                </Link>
+              ) : null}
+              {busy ? (
+                <span className="text-[0.65rem] text-accent">Generating…</span>
+              ) : status === "done" ? (
+                <span className="text-[0.65rem] text-fg-subtle">Ready</span>
+              ) : ready ? (
+                <span className="rounded-full border border-accent/30 bg-[rgba(216,255,62,0.08)] px-2 py-0.5 text-[0.65rem] text-accent">
+                  Ready to generate
+                </span>
+              ) : (
+                <span className="text-[0.65rem] text-fg-subtle">
+                  Add character + motion
+                </span>
+              )}
+            </div>
           </div>
 
           <div className="relative min-h-0 flex-1 overflow-hidden rounded-xl border border-white/[0.1] bg-[#0a0a0c]">
-            <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_50%_40%,rgba(40,48,56,0.9),#0a0a0c_70%)]" />
-            <div className="absolute inset-0 opacity-40 video-shimmer bg-[linear-gradient(125deg,#16161a_0%,#222228_40%,#121216_70%,#1a1a20_100%)] bg-[length:200%_200%]" />
-            <div className="absolute inset-0 bg-[linear-gradient(180deg,transparent_35%,rgba(0,0,0,0.7)_100%)]" />
+            {resultUrl ? (
+              <video
+                key={resultUrl}
+                src={resultUrl}
+                controls
+                autoPlay
+                playsInline
+                className="absolute inset-0 h-full w-full object-contain bg-black"
+              />
+            ) : (
+              <>
+                <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_50%_40%,rgba(40,48,56,0.9),#0a0a0c_70%)]" />
+                <div
+                  className={[
+                    "absolute inset-0 opacity-40 video-shimmer bg-[linear-gradient(125deg,#16161a_0%,#222228_40%,#121216_70%,#1a1a20_100%)] bg-[length:200%_200%]",
+                    busy ? "opacity-70" : "",
+                  ].join(" ")}
+                />
+                <div className="absolute inset-0 bg-[linear-gradient(180deg,transparent_35%,rgba(0,0,0,0.7)_100%)]" />
 
-            <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 px-6 text-center">
-              <button
-                type="button"
-                className="flex h-14 w-14 items-center justify-center rounded-full border border-white/20 bg-white/[0.08] backdrop-blur-md transition-transform hover:scale-105"
-                aria-label="Preview placeholder"
-              >
-                <div className="ml-0.5 h-0 w-0 border-y-[7px] border-l-[12px] border-y-transparent border-l-fg" />
-              </button>
-              <div>
-                <p className="text-sm font-medium text-fg">
-                  {status === "demo"
-                    ? "Generation placeholder"
-                    : "Your AI video preview"}
-                </p>
-                <p className="mt-1 text-[0.7rem] text-fg-subtle">
-                  {status === "demo"
-                    ? "Connect generation to see the result here"
-                    : "Output appears here after you generate"}
-                </p>
-              </div>
-            </div>
+                <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 px-6 text-center">
+                  <div
+                    className={[
+                      "flex h-14 w-14 items-center justify-center rounded-full border border-white/20 bg-white/[0.08] backdrop-blur-md",
+                      busy ? "animate-pulse" : "",
+                    ].join(" ")}
+                    aria-label={busy ? "Generating" : "Preview placeholder"}
+                  >
+                    <div className="ml-0.5 h-0 w-0 border-y-[7px] border-l-[12px] border-y-transparent border-l-fg" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-fg">
+                      {busy
+                        ? "Generating your video"
+                        : status === "error"
+                          ? "Generation failed"
+                          : "Your AI video preview"}
+                    </p>
+                    <p className="mt-1 text-[0.7rem] text-fg-subtle">
+                      {busy
+                        ? "This can take a minute…"
+                        : status === "error"
+                          ? errorMessage || "Try again"
+                          : "Output appears here after you generate"}
+                    </p>
+                  </div>
+                </div>
+              </>
+            )}
 
             {imageUrl ? (
               <div className="absolute bottom-3 left-3 overflow-hidden rounded-lg border border-white/20 shadow-lg">
