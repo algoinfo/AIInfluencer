@@ -1,4 +1,3 @@
-import { ScanSemanticMode } from "@waffo/pancake-ts";
 import { getWaffoClient, isWaffoConfigured } from "@/lib/waffo";
 
 /**
@@ -48,7 +47,6 @@ export function isWaffoContentSafetySkipped(): boolean {
 export async function screenWaffoPrompt(input: {
   prompt: string;
   locale?: "en" | "zh" | "ja";
-  semantic?: ScanSemanticMode;
   log?: (message: string, data?: Record<string, unknown>) => void;
 }): Promise<void> {
   const prompt = input.prompt.trim();
@@ -82,10 +80,10 @@ export async function screenWaffoPrompt(input: {
   }
 
   try {
+    // Omit `semantic` — SDK default is enforce; avoids enum/string assignability issues.
     const verdict = await getWaffoClient().contentSafety.scanPrompt({
       prompt,
       locale: input.locale ?? "en",
-      semantic: input.semantic ?? ScanSemanticMode.Enforce,
     });
 
     input.log?.("content-safety screened", {

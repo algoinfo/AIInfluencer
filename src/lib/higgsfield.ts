@@ -142,14 +142,17 @@ export async function subscribeGenjutsuVideo(params: {
     withPolling: true,
   });
 
-  if (result.status === "failed") {
-    throw new Error("We could not create your video this time.");
-  }
-  if (result.status === "nsfw") {
+  // Status union differs across @higgsfield/client versions — compare as string.
+  const status = String(result.status);
+  if (status === "nsfw") {
     throw new Error("This request was blocked by content safety.");
   }
-  if (result.status !== "completed" || !result.video?.url) {
-    throw new Error("Video generation returned no file. Try again.");
+  if (status !== "completed" || !result.video?.url) {
+    throw new Error(
+      status === "failed" || status === "canceled"
+        ? "We could not create your video this time."
+        : "Video generation returned no file. Try again.",
+    );
   }
 
   const videoRes = await fetch(result.video.url);
