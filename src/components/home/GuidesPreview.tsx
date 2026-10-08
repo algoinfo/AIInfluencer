@@ -1,0 +1,46 @@
+import Link from "next/link";
+import { SectionHeading } from "@/components/ui/SectionHeading";
+import { guides } from "@/data/guides";
+
+export function GuidesPreview() {
+  return (
+    <section className="section-pad border-y border-border bg-bg-soft">
+      <div className="page-shell">
+        <SectionHeading
+          title="Learn AI Influencer"
+          subtitle="Practical guides for creating, animating and growing."
+        />
+        <div className="mt-10 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          {guides.slice(0, 6).map((guide) => (
+            <Link
+              key={guide.slug}
+              href={`/guides/${guide.slug}`}
+              className="rounded-[1.35rem] border border-border bg-surface p-6 transition-all duration-300 hover:-translate-y-0.5 hover:border-border-strong hover:bg-surface-hover"
+            >
+              <p className="text-xs uppercase tracking-[0.16em] text-fg-subtle">
+                {guide.readTime} read
+              </p>
+              <h3 className="font-display mt-3 text-xl font-medium leading-snug">
+                {guide.title}
+              </h3>
+              <p className="mt-3 text-sm leading-relaxed text-fg-muted">
+                {guide.excerpt}
+              </p>
+            </Link>
+          ))}
+        </div>
+        <div className="mt-8 flex flex-wrap gap-4 text-sm">
+          <Link href="/guides" className="text-accent hover:text-accent-strong">
+            All guides →
+          </Link>
+          <Link href="/genjutsu" className="text-accent hover:text-accent-strong">
+            Genjutsu →
+          </Link>
+          <Link href="/soul-id" className="text-accent hover:text-accent-strong">
+            Soul ID →
+          </Link>
+        </div>
+      </div>
+    </section>
+  );
+}
