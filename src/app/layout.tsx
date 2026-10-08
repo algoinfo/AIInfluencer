@@ -49,6 +49,11 @@ export const metadata: Metadata = {
     description: ROOT_DESCRIPTION,
     images: ["/genjutsu-icon.jpg"],
   },
+  verification: {
+    other: {
+      "msvalidate.01": "01EB66A5E4B59A2D858A8836E6A736F6",
+    },
+  },
   other: {
     "waffo-verify": "28912b5be58bb3a71254fbc0ca4e87c7",
   },
