@@ -43,6 +43,10 @@ const MODE_TABS: { id: StudioMode; label: string }[] = [
   { id: "object-swap", label: "Object Swap" },
 ];
 
+/** Idle preview sample shown before the user generates. */
+const DEMO_PREVIEW_VIDEO =
+  "https://pub-3a51eee0bcba4124b258f45bbbe4d181.r2.dev/two-cats-dance.mp4";
+
 type StudioModel = {
   id: string;
   name: string;
@@ -777,26 +781,27 @@ export function MotionStudio() {
                     />
                   ) : (
                     <>
-                      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_50%_40%,rgba(40,48,56,0.9),#0a0a0c_70%)]" />
-                      <div className="absolute inset-0 opacity-40 video-shimmer bg-[linear-gradient(125deg,#16161a_0%,#222228_40%,#121216_70%,#1a1a20_100%)] bg-[length:200%_200%]" />
-                      <div className="absolute inset-0 bg-[linear-gradient(180deg,transparent_35%,rgba(0,0,0,0.7)_100%)]" />
-                      <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 px-6 text-center">
-                        <div className="flex h-14 w-14 items-center justify-center rounded-full border border-white/20 bg-white/[0.08]">
-                          <div className="ml-0.5 h-0 w-0 border-y-[7px] border-l-[12px] border-y-transparent border-l-fg" />
-                        </div>
-                        <div>
+                      <video
+                        key={DEMO_PREVIEW_VIDEO}
+                        src={DEMO_PREVIEW_VIDEO}
+                        autoPlay
+                        muted
+                        loop
+                        playsInline
+                        preload="metadata"
+                        className="absolute inset-0 h-full w-full object-cover bg-black"
+                        aria-label="Sample motion transfer preview"
+                      />
+                      {status === "error" ? (
+                        <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-black/65 px-6 text-center backdrop-blur-[2px]">
                           <p className="text-sm font-medium text-fg">
-                            {status === "error"
-                              ? "Generation failed"
-                              : "Your AI video preview"}
+                            Generation failed
                           </p>
-                          <p className="mt-1 text-[0.7rem] text-fg-subtle">
-                            {status === "error"
-                              ? errorMessage || "Try again"
-                              : "Output appears here after you generate"}
+                          <p className="text-[0.7rem] text-fg-subtle">
+                            {errorMessage || "Try again"}
                           </p>
                         </div>
-                      </div>
+                      ) : null}
                     </>
                   )}
 
