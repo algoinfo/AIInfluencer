@@ -1,50 +1,116 @@
 export const homeWhatIs = {
   title: "What is AI motion transfer",
   paragraphs: [
-    "AI motion transfer is a way to make a new video without reshooting the performance. You give the model two things: a still of the character you want on screen, and a reference clip that already has the movement. The generator reads pose, timing, camera energy, and body language from the video, then recasts that motion onto your character. The result is a clip where the person (or product, or influencer identity) looks like yours, while the dance, walk, gesture, or camera move follows the reference.",
-    "Unlike text-to-video, you are not hoping a prompt invents the choreography. Unlike a simple face swap, you are not pasting a head onto frames and hoping the neck holds. Motion transfer is reference-driven: the source video is the director, the image is the cast. Upload a JPG or PNG of the subject, upload an MP4 or MOV of the motion, optionally add a short prompt, pick a resolution, and generate. Credits follow the length of the uploaded motion video (rounded up to the next second, maximum 30 seconds). Genjutsu motion transfer needs a clip of at least four seconds.",
-    "On genjutsu.online, that workflow lives in the studio above this article. Motion Transfer maps a character onto a performance. Object Swap uses the same inputs to reimagine objects, outfits, or scene elements while keeping camera move and timing. Both are built for creators who already know the shot they want — they just need a different face, body, brand, or product in it.",
+    "AI motion transfer creates a new video from two inputs: a reference image of the subject you want on screen, and a reference video that already contains the movement. The model reads pose, timing, and camera energy from the clip, then applies that motion to your image. The result keeps your character, product, or identity while following the performance in the reference.",
+    "Unlike text-only image-to-video, you are not asking a prompt to invent the choreography. Unlike a simple face swap, the goal is full-body timing and camera feel from a real clip. On Genjutsu, that workflow lives in the studio above: upload an image and a motion video, optionally enable a prompt, choose a resolution, and generate. Credits follow the length of the uploaded motion video.",
   ],
 };
 
-export const homeUseCases = [
+export type HomeUseCase = {
+  id: string;
+  title: string;
+  href: string;
+  paragraphs: string[];
+};
+
+export const homeUseCases: HomeUseCase[] = [
   {
     id: "photo-to-dance",
-    title: "Turn a still photo into a dance video",
+    title: "Turn a Still Image Into a Dance Video",
     href: "/guides/how-to-create-ai-influencer-videos",
-    body: "You have one strong portrait — a phone photo, a studio head-and-shoulders, or an illustrated character — and a dance clip you like. AI motion transfer copies the footwork, arms, and rhythm onto that person so you get a vertical or landscape performance without booking a studio day. Keep the reference short and readable: full body in frame, stable lighting, four to fifteen seconds. Pair it with a character image that matches the angle you want (front-facing stills usually hold identity better than extreme profiles). Fashion, music, and social teams use this to test choreography on a talent before the real shoot, or to ship a reel the same afternoon the still was taken.",
+    paragraphs: [
+      "Start with a clear still of a person or character, then add a short dance clip as the motion reference. AI motion transfer maps the footwork, arms, and rhythm onto that image so you can produce an AI dance video without reshooting the performance.",
+      "Results are strongest with a readable full-body reference and a front-facing still that matches the angle you want. Use this for social reels, music creatives, or quick tests before a live shoot. See the guide on creating AI influencer videos for prep tips.",
+    ],
   },
   {
     id: "product-in-motion",
-    title: "Make a product image move",
-    href: "/examples#cast",
-    body: "A pack shot or hero product still is static by nature. With motion transfer or object swap, you attach that product to a reference video of hands turning a bottle, a model walking a bag, or a camera orbit around a table. The output is UGC-style motion without a full product video crew. Use a clean product crop as the image, and a clip where the object stays large enough in frame. This is useful for Amazon-style lifestyle loops, TikTok unboxings, and landing-page heroes that need to feel filmed. Generation length follows the reference, so a six-second turntable costs six billable seconds at your chosen resolution.",
+    title: "AI Motion Transfer for Product Images",
+    href: "/examples",
+    paragraphs: [
+      "A pack shot or hero product still is static. With motion transfer—or Object Swap when you mainly need the held item replaced—you can attach that product image to a reference of a turn, hand demo, or lifestyle move.",
+      "Keep the product large and clear in both the still and the reference. This is useful for short product loops, landing-page heroes, and UGC-style demos. Browse Examples for look-and-feel inspiration, then generate in the studio with your own assets.",
+    ],
   },
   {
     id: "ai-influencer-batch",
-    title: "Batch AI influencer content from one identity",
+    title: "Create AI Influencer Videos at Scale",
     href: "/ai-influencer",
-    body: "AI influencer programs fail when every clip looks like a different person. Motion transfer lets you lock a face and body from a character sheet, then run many reference performances — walks, talks-with-hands, dance, unbox — through the same identity. You get a week of posts from one still set instead of a new photoshoot each time. Keep the character image consistent (same outfit family, same lighting) and vary only the motion file. Genjutsu’s studio history keeps session outputs so you can compare takes. Credits are per second of motion, so batching ten eight-second clips is a known cost, not a surprise invoice after a long render.",
+    paragraphs: [
+      "Consistent AI influencer videos need a stable identity. Lock a character image you trust, then run many reference performances—walks, gestures, dance, unbox—through the same face and body.",
+      "Vary the motion file, not the character sheet, so a week of posts can come from one identity set. Genjutsu’s studio history helps you compare takes in a session. Learn more on the AI Influencer page, then generate from the homepage studio.",
+    ],
   },
   {
     id: "film-recast",
-    title: "Film-style recast: keep the camera, change the actor",
+    title: "Film-Style Character Recasting",
     href: "/motion-transfer",
-    body: "Editors and directors often need a stand-in: the blocking and camera move are locked, but the on-screen talent cannot appear. Motion transfer recasts the performance onto another character while preserving timing. It is not a finishing-grade VFX suite, and you should treat outputs as previz, social cuts, or pitch tools unless you grade and composite further. For best hold, use a reference with clear silhouette and avoid heavy occlusion. Resolution options (480p, 720p, 1080p on Genjutsu models) let you draft cheap at 480p and upscale the take you keep. Pair this with a prompt only when you must steer wardrobe or scene notes; otherwise the default path is image + video.",
+    paragraphs: [
+      "When blocking and camera move are locked but the on-screen talent needs to change, character motion transfer recasts the performance onto another subject while keeping timing from the reference.",
+      "Treat outputs as previz, social cuts, or pitch tools unless you grade and composite further. Clear silhouettes and limited occlusion hold better. Read the motion transfer overview, then try the live studio with your own plate and still.",
+    ],
   },
   {
     id: "ecommerce-model",
-    title: "Ecommerce model stand-in for apparel and beauty",
-    href: "/examples#world",
-    body: "Catalog teams need motion — fabric swing, three-quarter turns, walk-bys — but cannot shoot every SKU on a model. Upload a lookbook still of the garment or a digital model, then a walk or turn reference. The generated clip shows the product in motion for PDP modules, shoppable ads, and size-inclusive stand-ins when a live model is not available. Object Swap is the better tab when the source video already has a person and you mainly want clothes or a product replaced. Motion Transfer is better when the still is the hero identity. Keep clips under 30 seconds; longer files are rejected. Always follow your brand’s disclosure rules when the talent is synthetic.",
+    title: "AI Virtual Models for Ecommerce",
+    href: "/examples",
+    paragraphs: [
+      "Catalog and fashion teams often need fabric swing, turns, or walk-bys without shooting every SKU on a live model. Upload a lookbook still or digital model, then a walk or turn reference to produce an AI ecommerce video stand-in.",
+      "Prefer Motion Transfer when the still is the hero identity; prefer Object Swap when the source video already has a person and you mainly want clothes or a product replaced. Always follow your brand’s disclosure rules for synthetic talent.",
+    ],
   },
   {
     id: "ugc-ads",
-    title: "UGC-style ads without a new filming day",
+    title: "Create UGC-Style AI Video Ads",
     href: "/pricing",
-    body: "Performance ads burn through talking-head and demo variants. Motion transfer lets a brand reuse a winning camera pattern — handheld kitchen demo, sidewalk walk-and-talk energy — with a new face or a new product still. Produce several recasts from one reference instead of briefing five creators. Sign up includes 10 welcome credits; generation is billed by motion length (base motion-transfer rate is 100 credits per second times the model multiplier; Genjutsu models price by resolution). That makes A/B tests predictable: same 8-second hook, three characters, three charges. Link winning cuts out of the studio preview, then iterate only the image or the prompt.",
+    paragraphs: [
+      "Performance ads burn through demo and walk-and-talk variants. Reuse a winning camera pattern from a reference clip, then recast it with a new face or product still to create UGC-style AI advertising video without another filming day.",
+      "Generation is billed by motion length, so A/B tests stay predictable: same hook length, different images. Check Pricing for packs and welcome credits, then iterate in the studio preview.",
+    ],
   },
 ];
+
+export const homeWhatYouCanCreate = {
+  title: "What Can You Create With AI Motion Transfer?",
+  intro: "Short-form and catalog-style clips from the same image + motion workflow.",
+  items: [
+    {
+      title: "AI Influencer Videos",
+      body: "Keep one identity consistent across many performances.",
+      href: "/ai-influencer",
+    },
+    {
+      title: "Dance Videos",
+      body: "Map choreography from a reference onto a still character.",
+      href: "/guides/how-to-create-ai-influencer-videos",
+    },
+    {
+      title: "Product Videos",
+      body: "Turn a pack shot into a short motion loop or demo.",
+      href: "/examples",
+    },
+    {
+      title: "Fashion Videos",
+      body: "Walks, turns, and fabric motion for lookbook-style clips.",
+      href: "/examples",
+    },
+    {
+      title: "UGC Ads",
+      body: "Recast a proven camera pattern with a new face or product.",
+      href: "/pricing",
+    },
+    {
+      title: "Character Videos",
+      body: "Illustrated or digital characters performing real motion.",
+      href: "/motion-transfer",
+    },
+    {
+      title: "Ecommerce Videos",
+      body: "Virtual model stand-ins for PDP and shoppable creatives.",
+      href: "/examples",
+    },
+  ],
+};
 
 export type HomeExample = {
   id: string;
@@ -59,80 +125,85 @@ export const homeExamples: HomeExample[] = [
   {
     id: "flip",
     src: "/images/studio/lib-flip.jpg",
-    title: "Flip — athletic recast",
-    result:
-      "A character still plus an acrobatic reference; output follows the flip timing and landing.",
-    params: "Motion Transfer · genjutsu · 720p · ~8s · character JPG + motion MP4",
-    href: "/examples#flip",
+    title: "Flip",
+    result: "Athletic recast from a character still + motion clip.",
+    params: "Motion Transfer · 720p",
+    href: "/examples",
   },
   {
     id: "cast",
     src: "/images/studio/lib-cast.jpg",
-    title: "Recast — same move, new talent",
-    result:
-      "Identity comes from the image; choreography and camera come from the reference clip.",
-    params: "Motion Transfer · genjutsu · 720p · ~6s · optional prompt off",
-    href: "/examples#cast",
+    title: "Recast",
+    result: "Same move, new talent from your reference image.",
+    params: "Motion Transfer · 720p",
+    href: "/examples",
   },
   {
     id: "world",
     src: "/images/studio/lib-world.jpg",
-    title: "New world — scene-aware motion",
-    result:
-      "Reference blocking stays; wardrobe and location read as the uploaded character’s world.",
-    params: "Motion Transfer · genjutsu · 1080p · ~10s · custom prompt on",
-    href: "/examples#world",
-  },
-  {
-    id: "swap",
-    src: "/images/studio/lib-cast.jpg",
-    title: "Object Swap — product in the same shot",
-    result:
-      "Keep camera and hands; swap the held object or outfit using a product still as the image.",
-    params: "Object Swap · 720p · ≥4s source · 1 reference image",
-    href: "/examples#cast",
+    title: "New world",
+    result: "Reference blocking with your character’s look.",
+    params: "Motion Transfer · 1080p",
+    href: "/examples",
   },
 ];
 
+/** SEO + product FAQ shown on the homepage (also FAQPage JSON-LD). */
 export const homeFaqs = [
   {
-    q: "What is Genjutsu AI Video Generator?",
-    a: "Genjutsu is an AI motion transfer video generator: you upload a character image and a reference video, and it recasts that motion onto your subject. Use Motion Transfer for character performance and Object Swap to change products, clothes, or objects while keeping camera movement. The studio on this page is the working tool — not a waitlist demo.",
+    q: "What is Genjutsu?",
+    a: "Genjutsu is an AI video tool for motion transfer and object swap. You upload a character or product image and a reference video, then generate a new clip where that subject follows the motion in the reference.",
   },
   {
-    q: "What do I upload?",
-    a: "A character or product image (JPG, PNG, or WEBP, up to 10 MB) and a motion or source video (MP4, MOV, or WEBM, up to 80 MB). Credits are calculated from the uploaded video length. For Genjutsu models, the clip must be at least 4 seconds and no longer than 30 seconds.",
+    q: "How does Genjutsu AI motion transfer work?",
+    a: "Upload a reference image and a reference video in the studio. The model applies pose, timing, and camera energy from the clip to your image, then returns a generated video. You can optionally enable a prompt and choose resolution before you run.",
   },
   {
-    q: "How long can the reference video be?",
-    a: "Maximum 30 seconds. Longer files are rejected. Duration is read from the file and billed in whole seconds (rounded up). Genjutsu Object Swap and the Genjutsu motion-transfer model also require at least 4 seconds. Output length follows the prepared source clip.",
+    q: "What images and videos can I upload?",
+    a: "Images: JPG, PNG, or WEBP up to 10 MB. Videos: MP4, MOV, or WEBM up to 80 MB. Use a clear subject still and a readable motion clip you have rights to upload.",
   },
   {
-    q: "How do free credits work?",
-    a: "New accounts get 10 welcome credits after sign up (email or Google). You must be logged in to generate. After the welcome balance, buy one-time packs on Pricing: Basic $9.9, Creator $19.9, and Pro $69. Credits do not expire. Packs add bonus credits on top of the dollar-to-credit base rate (1 credit = $0.001).",
+    q: "How long can a Genjutsu reference video be?",
+    a: "Uploads are capped at 30 seconds. Genjutsu models also require at least 4 seconds. Credits are based on the billable length of the uploaded motion video (rounded up to whole seconds).",
   },
   {
-    q: "How are credits calculated?",
-    a: "Credits follow motion length, not a flat fee per click. Kling-style motion transfer in the studio uses 100 credits per second times the model multiplier (×1.0 / ×1.2 / ×1.5). Genjutsu models (Motion Transfer genjutsu and Object Swap) price by resolution: 480p, 720p, or 1080p, with studio markup on Higgsfield’s per-second cost. The Generate button shows seconds and credits before you run.",
+    q: "Can I turn a photo into a dance video?",
+    a: "Yes. Use a clear photo as the image and a dance clip as the motion reference. Full-body, well-lit references usually hold better than extreme crops or heavy occlusion.",
   },
   {
-    q: "Can I use the videos commercially?",
-    a: "You are responsible for the rights to every image and video you upload, and for how you publish the output (talent likeness, music, trademarks, platform disclosure for synthetic media). Genjutsu provides the generation tool; it does not grant you third-party IP. Read Terms (/terms) and Acceptable Use (/acceptable-use) before you run ads or sell footage. If a face is not yours to license, do not upload it.",
-  },
-  {
-    q: "How is this different from Higgsfield or Runway?",
-    a: "Higgsfield Genjutsu is an upstream model family (motion transfer and object swap APIs) that this site can call when you pick the genjutsu model or the Object Swap tab. Runway is a broader editorial video suite (generate, restyle, edit) and is not the same as a character-plus-reference recast. genjutsu.online is an independent product: studio, credits, and guides focused on that recast workflow. We are not affiliated with Higgsfield or Runway. See /genjutsu-alternatives and the Guides pages Genjutsu vs Kling and Genjutsu vs Runway.",
+    q: "Can I use Genjutsu for product videos?",
+    a: "Yes. Use a clean product still with a short demo or turn reference. For replacing an object or outfit inside an existing shot, use the Object Swap tab instead of Motion Transfer.",
   },
   {
     q: "Do I need a prompt?",
-    a: "No. Prompt is a switch. Off uses the default motion-transfer prompt (or an empty prompt for Genjutsu APIs). On reveals a text box for look, outfit, scene, or what to swap. If the switch is off, generation does not send your custom text.",
+    a: "No. Prompt is optional. Leave it off to use the default path (image + video). Turn it on only when you want to steer look, outfit, scene, or what to swap.",
   },
   {
-    q: "What resolutions and models can I pick?",
-    a: "Motion Transfer defaults to the genjutsu model with 480p / 720p / 1080p. You can also choose Kling V3 Pro, V3 Standard, or V2.6 Standard (fal wan-motion path) with credit multipliers. Object Swap does not offer a model menu; it always calls Higgsfield object-swap at your selected resolution, default 720p.",
+    q: "How much does Genjutsu cost?",
+    a: "Sign up includes 10 welcome credits. After that, buy one-time packs on Pricing: Basic $9.9, Creator $19.9, and Pro $69. Credits do not expire.",
   },
   {
-    q: "Why was my generation blocked or why did login appear?",
-    a: "Generate requires an account. Prompts are screened before the model runs; blocked text returns an error and is not charged as a successful video. Not enough credits returns a 402 with the amount required. Content that fails safety checks will not complete. Check Pricing to top up, or try a clearer still and a shorter, well-lit reference clip.",
+    q: "How are credits calculated?",
+    a: "Credits follow motion length, not a flat fee per click. Kling-style motion transfer uses 100 credits per second times the model multiplier. Genjutsu Motion Transfer and Object Swap price by resolution (480p / 720p / 1080p). The Generate button shows seconds and credits before you run.",
+  },
+  {
+    q: "Can I use Genjutsu videos commercially?",
+    a: "You are responsible for rights to your uploads and for how you publish the output, including likeness, trademarks, and platform rules for synthetic media. Genjutsu provides the generation tool; it does not grant third-party IP. See Terms and Acceptable Use.",
+  },
+  {
+    q: "What is the difference between Genjutsu and Kling Motion Control?",
+    a: "On this site, Genjutsu refers to the product and the Genjutsu motion-transfer / object-swap models. Kling Motion Control is a separate model family you can also pick in the studio for wan-motion style generation. Choose Genjutsu models when you want the Genjutsu resolution pricing path; choose Kling when you prefer that model’s look and credit multipliers. genjutsu.online is independent and not affiliated with Kling.",
+  },
+  {
+    q: "What is the difference between Genjutsu and Runway?",
+    a: "Runway is a broad creative video suite (generate, restyle, edit). Genjutsu focuses on character or product image plus reference video → motion transfer or object swap. They solve different jobs; this site is not affiliated with Runway.",
+  },
+  {
+    q: "Why was my generation blocked?",
+    a: "Prompts and content are screened before a successful video completes. Blocked or unsafe content returns an error. Not enough credits returns a payment required response. Try a clearer still, a shorter well-lit reference, or a different prompt.",
+  },
+  {
+    q: "Why do I need to sign in to generate a video?",
+    a: "Generation uses your credit balance and account history. Sign in with email or Google to receive welcome credits and run jobs. Anonymous generation is not available.",
   },
 ];

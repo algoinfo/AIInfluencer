@@ -9,7 +9,6 @@ import { UserAccountMenu } from "@/components/layout/UserAccountMenu";
 
 const navItems = [
   { href: "/pricing", label: "Pricing" },
-  { href: "/guides", label: "Guides" },
 ];
 
 export function Navbar() {
@@ -38,7 +37,7 @@ export function Navbar() {
           : "bg-transparent",
       ].join(" ")}
     >
-      <div className="page-shell grid h-[72px] grid-cols-[1fr_auto] items-center gap-4 lg:grid-cols-[1fr_auto_1fr]">
+      <div className="page-shell flex h-[72px] items-center justify-between gap-4">
         <Link
           href="/"
           className="inline-flex items-center gap-2.5 font-display text-[0.95rem] font-semibold tracking-[0.14em] text-fg sm:text-base"
@@ -54,30 +53,29 @@ export function Navbar() {
           GENJUTSU
         </Link>
 
-        <nav className="hidden items-center gap-8 lg:flex">
-          {navItems.map((item) => {
-            const active =
-              pathname === item.href || pathname.startsWith(`${item.href}/`);
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                className={[
-                  "text-sm transition-colors duration-200",
-                  active ? "text-fg" : "text-fg-muted hover:text-fg",
-                ].join(" ")}
-              >
-                {item.label}
-              </Link>
-            );
-          })}
-        </nav>
-
-        <div className="hidden items-center justify-end gap-2 lg:flex">
+        <div className="hidden items-center justify-end gap-6 lg:flex">
+          <nav className="flex items-center gap-6">
+            {navItems.map((item) => {
+              const active =
+                pathname === item.href || pathname.startsWith(`${item.href}/`);
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className={[
+                    "text-sm transition-colors duration-200",
+                    active ? "text-fg" : "text-fg-muted hover:text-fg",
+                  ].join(" ")}
+                >
+                  {item.label}
+                </Link>
+              );
+            })}
+          </nav>
           {isLoggedIn && user ? (
             <UserAccountMenu email={user.email} />
           ) : (
-            <>
+            <div className="flex items-center gap-2">
               <button
                 type="button"
                 onClick={() => openAuthModal({ mode: "login" })}
@@ -92,7 +90,7 @@ export function Navbar() {
               >
                 Sign up
               </button>
-            </>
+            </div>
           )}
         </div>
 

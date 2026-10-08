@@ -1,10 +1,11 @@
 import { pageMetadata } from "@/lib/seo";
 
 export const metadata = pageMetadata({
-  title: "Examples — Motion Transfer & Object Swap",
+  title: "Motion Transfer Examples | Genjutsu",
   description:
-    "Browse Genjutsu examples: studio swap, fashion, portrait, and motion transfer styles before you generate.",
+    "Browse Genjutsu motion transfer and object swap looks—then open the studio to generate with your own image and reference video.",
   path: "/examples",
+  absoluteTitle: true,
   keywords: [
     "Genjutsu examples",
     "motion transfer examples",

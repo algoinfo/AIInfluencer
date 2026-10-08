@@ -7,7 +7,7 @@ export const metadata = pageMetadata({
   title:
     "AI Motion Transfer Video Generator — Recast Any Character | Genjutsu",
   description:
-    "Create AI videos with Genjutsu: motion transfer and object swap. Upload a character image and reference video, pick resolution, and generate online.",
+    "AI motion transfer for characters, products, and influencers. Upload a reference image and video, then generate dance, product, fashion, and UGC-style clips online.",
   path: "/",
   absoluteTitle: true,
   keywords: [

@@ -4,6 +4,7 @@ import {
   homeExamples,
   homeUseCases,
   homeWhatIs,
+  homeWhatYouCanCreate,
 } from "@/data/home-content";
 
 export function HomeSeoArticle() {
@@ -22,24 +23,24 @@ export function HomeSeoArticle() {
           ))}
         </div>
         <p className="mt-4 text-[15px] leading-relaxed text-fg-muted">
-          Start in the{" "}
+          Open the{" "}
           <Link href="/#studio" className="text-fg underline-offset-2 hover:underline">
             studio
           </Link>
-          , or read{" "}
+          , read{" "}
           <Link
-            href="/guides/what-is-ai-motion-transfer"
+            href="/motion-transfer"
             className="text-fg underline-offset-2 hover:underline"
           >
-            the motion transfer guide
+            how motion transfer works
           </Link>
-          ,{" "}
+          , browse{" "}
           <Link href="/examples" className="text-fg underline-offset-2 hover:underline">
             examples
           </Link>
-          , and{" "}
+          , or check{" "}
           <Link href="/pricing" className="text-fg underline-offset-2 hover:underline">
-            credit pricing
+            pricing
           </Link>
           .
         </p>
@@ -53,7 +54,7 @@ export function HomeSeoArticle() {
           Use cases
         </h2>
         <p className="mt-2 max-w-2xl text-sm text-fg-muted">
-          Same inputs — character still plus motion clip — different jobs.
+          Same workflow — reference image plus reference video — different jobs.
         </p>
         <div className="mt-8 grid gap-4 lg:grid-cols-2">
           {homeUseCases.map((item) => (
@@ -67,10 +68,41 @@ export function HomeSeoArticle() {
                   {item.title}
                 </Link>
               </h3>
-              <p className="mt-3 text-sm leading-relaxed text-fg-muted">{item.body}</p>
+              <div className="mt-3 space-y-3 text-sm leading-relaxed text-fg-muted">
+                {item.paragraphs.map((p) => (
+                  <p key={p.slice(0, 40)}>{p}</p>
+                ))}
+              </div>
             </section>
           ))}
         </div>
+      </div>
+
+      <div className="page-shell mt-16">
+        <h2
+          id="what-can-you-create"
+          className="font-display text-2xl font-semibold tracking-tight sm:text-3xl"
+        >
+          {homeWhatYouCanCreate.title}
+        </h2>
+        <p className="mt-2 max-w-2xl text-sm text-fg-muted">
+          {homeWhatYouCanCreate.intro}
+        </p>
+        <ul className="mt-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {homeWhatYouCanCreate.items.map((item) => (
+            <li key={item.title}>
+              <Link
+                href={item.href}
+                className="block h-full rounded-2xl border border-border bg-surface/50 px-5 py-4 transition-colors hover:border-border-strong hover:bg-surface"
+              >
+                <h3 className="text-sm font-medium text-fg">{item.title}</h3>
+                <p className="mt-1.5 text-sm leading-relaxed text-fg-muted">
+                  {item.body}
+                </p>
+              </Link>
+            </li>
+          ))}
+        </ul>
       </div>
 
       <div className="page-shell mt-16">
@@ -81,41 +113,28 @@ export function HomeSeoArticle() {
           Examples: still + motion → video
         </h2>
         <p className="mt-2 max-w-2xl text-sm text-fg-muted">
-          Studio library stills with typical generation settings. Open{" "}
-          <Link href="/examples" className="text-fg underline-offset-2 hover:underline">
-            Examples
-          </Link>{" "}
-          for more, or jump to{" "}
-          <Link href="/#studio" className="text-fg underline-offset-2 hover:underline">
-            generate
-          </Link>
-          .
+          Studio library stills with typical settings.
         </p>
-        <div className="mt-8 grid gap-4 sm:grid-cols-2">
+        <div className="mt-8 grid grid-cols-1 gap-4 sm:grid-cols-3">
           {homeExamples.map((ex) => (
-            <Link
+            <div
               key={ex.id}
-              href={ex.href}
-              className="group overflow-hidden rounded-2xl border border-border bg-surface"
+              className="overflow-hidden rounded-2xl border border-border bg-surface"
             >
               <div className="relative aspect-[16/10]">
                 <Image
                   src={ex.src}
                   alt={ex.title}
                   fill
-                  className="object-cover transition-transform duration-500 group-hover:scale-[1.03]"
-                  sizes="(max-width: 640px) 100vw, 50vw"
+                  className="object-cover"
+                  sizes="(max-width: 640px) 100vw, 33vw"
                 />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/5 to-transparent" />
-              </div>
-              <div className="p-4">
-                <h3 className="text-sm font-medium text-fg">{ex.title}</h3>
-                <p className="mt-1.5 text-sm leading-relaxed text-fg-muted">{ex.result}</p>
-                <p className="mt-2 font-mono text-[11px] leading-relaxed text-fg-muted/80">
-                  {ex.params}
+                <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/10 to-transparent" />
+                <p className="absolute bottom-3 left-3 text-sm font-medium text-fg">
+                  {ex.title}
                 </p>
               </div>
-            </Link>
+            </div>
           ))}
         </div>
       </div>

@@ -5,11 +5,12 @@ import { VideoDemo } from "@/components/ui/VideoDemo";
 import { pageMetadata } from "@/lib/seo";
 
 export const metadata = pageMetadata({
-  title: "Create AI Influencer Videos",
+  title: "Create AI Influencer Videos | Genjutsu",
   description:
-    "Create a consistent AI character and bring it to life with Genjutsu motion transfer.",
+    "Build consistent AI influencer videos with character identity plus motion transfer. Reuse one face across walks, dance, and UGC-style performances.",
   path: "/ai-influencer",
-  keywords: ["Create AI Influencer Videos", "Genjutsu"],
+  absoluteTitle: true,
+  keywords: ["AI influencer videos", "AI character video", "Genjutsu"],
 });
 
 const flow = [
@@ -34,8 +35,8 @@ export default function AIInfluencerPage() {
             external: true,
           },
           {
-            href: "/motion-transfer",
-            label: "Try Genjutsu",
+            href: "/#studio",
+            label: "Open Genjutsu studio",
             variant: "secondary",
           },
         ]}

@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { FeatureCard } from "@/components/ui/FeatureCard";
 import { MotionTransferDemo } from "@/components/ui/MotionTransferDemo";
 import { PageHero } from "@/components/ui/PageHero";
@@ -5,10 +6,11 @@ import { CTA } from "@/components/ui/CTA";
 import { pageMetadata } from "@/lib/seo";
 
 export const metadata = pageMetadata({
-  title: "AI Motion Transfer — Character + Reference Video",
+  title: "AI Motion Transfer – Turn Images Into Videos | Genjutsu",
   description:
-    "Learn Genjutsu AI motion transfer: map movement from a reference video onto your character and generate a new AI video clip.",
+    "Transform a character, product, or image using motion from a reference video with AI motion transfer. Create AI influencer videos, product videos, dance videos, and more.",
   path: "/motion-transfer",
+  absoluteTitle: true,
   keywords: [
     "AI motion transfer",
     "motion control video",
@@ -53,8 +55,8 @@ export default function MotionTransferPage() {
         subtitle="Bring any character to life with the movement of a reference video."
         tags={["Character", "Reference Video", "AI Video"]}
         ctas={[
+          { href: "/#studio", label: "Open studio" },
           { href: "/examples", label: "See Examples", variant: "secondary" },
-          { href: "/genjutsu-tutorial", label: "Read Tutorial", variant: "secondary" },
         ]}
       />
 
@@ -65,8 +67,11 @@ export default function MotionTransferPage() {
               Interactive demo
             </h2>
             <p className="mt-3 text-fg-muted">
-              Upload placeholders to explore the workflow. This is a demo UI —
-              nothing is sent to a generation API yet.
+              Explore the upload layout here, then generate for real in the{" "}
+              <Link href="/#studio" className="text-fg underline-offset-2 hover:underline">
+                homepage studio
+              </Link>
+              .
             </p>
           </div>
           <MotionTransferDemo />
@@ -93,11 +98,11 @@ export default function MotionTransferPage() {
 
       <CTA
         title="See what motion transfer can create"
-        body="Browse dance, fashion, influencer and character examples."
-        primaryHref="/examples"
-        primaryLabel="Open Examples"
-        secondaryHref="/genjutsu"
-        secondaryLabel="What is Genjutsu?"
+        body="Browse examples, or generate AI influencer and product clips in the studio."
+        primaryHref="/#studio"
+        primaryLabel="Open studio"
+        secondaryHref="/examples"
+        secondaryLabel="Open Examples"
       />
     </>
   );

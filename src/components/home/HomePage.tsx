@@ -112,7 +112,7 @@ export function HomePage() {
       <section id="faq" className="border-t border-border bg-bg-soft py-14 sm:py-16">
         <div className="page-shell max-w-3xl">
           <h2 className="text-center font-display text-2xl font-semibold tracking-tight sm:text-3xl">
-            FAQ
+            Frequently Asked Questions
           </h2>
           <div className="mt-8 space-y-3">
             {homeFaqs.map((item) => (
