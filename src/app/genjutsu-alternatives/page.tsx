@@ -3,10 +3,16 @@ import { ToolCard } from "@/components/ui/ToolCard";
 import { pageMetadata } from "@/lib/seo";
 
 export const metadata = pageMetadata({
-  title: "Best Genjutsu Alternatives",
+  title: "Best Genjutsu Alternatives — Kling, Runway, Veo",
   description:
-    "Compare Genjutsu with Kling, Runway, Veo, Seedance and other AI video tools for motion and character workflows.",
+    "Compare Genjutsu with Kling, Runway, Veo, Seedance and other AI video tools for motion transfer and character workflows.",
   path: "/genjutsu-alternatives",
+  keywords: [
+    "Genjutsu alternatives",
+    "Kling vs Genjutsu",
+    "AI video comparison",
+    "motion transfer tools",
+  ],
 });
 
 const rows = [

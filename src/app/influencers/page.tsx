@@ -1,11 +1,19 @@
-import type { Metadata } from "next";
 import { InfluencerCard } from "@/components/influencers/InfluencerCard";
 import { influencers } from "@/data/influencers";
+import { pageMetadata } from "@/lib/seo";
 
-export const metadata: Metadata = {
-  title: "AI Influencers",
-  description: "Browse AI influencers, digital models and virtual creators.",
-};
+export const metadata = pageMetadata({
+  title: "AI Influencers — Digital Models & Creators",
+  description:
+    "Browse AI influencers, digital models and virtual creators ready for Genjutsu motion transfer videos.",
+  path: "/influencers",
+  keywords: [
+    "AI influencers",
+    "digital models",
+    "virtual creators",
+    "AI character library",
+  ],
+});
 
 export default function InfluencersPage() {
   return (

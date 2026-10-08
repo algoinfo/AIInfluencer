@@ -6,6 +6,7 @@ export const metadata = pageMetadata({
   title: "Acceptable Use Policy",
   description: `Acceptable use rules for ${SITE_NAME}, the AI video motion-transfer service.`,
   path: "/acceptable-use",
+  keywords: ["Acceptable Use Policy", "Genjutsu"],
 });
 
 const LAST_UPDATED = "October 8, 2026";

@@ -3,7 +3,7 @@ import { Outfit, Syne } from "next/font/google";
 import { Footer } from "@/components/layout/Footer";
 import { Navbar } from "@/components/layout/Navbar";
 import { AppProviders } from "@/components/providers/AppProviders";
-import { SITE_NAME, SITE_URL } from "@/lib/seo";
+import { DEFAULT_KEYWORDS, SITE_NAME, SITE_URL } from "@/lib/seo";
 import "./globals.css";
 
 const outfit = Outfit({
@@ -16,28 +16,37 @@ const syne = Syne({
   subsets: ["latin"],
 });
 
+const ROOT_TITLE = "Genjutsu AI Video Generator | Motion Transfer & Object Swap";
+const ROOT_DESCRIPTION =
+  "Genjutsu AI Video Generator — motion transfer and object swap. Upload a character image and reference video to create AI video clips online.";
+
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
   title: {
-    default: "Genjutsu AI Video Generator",
+    default: ROOT_TITLE,
     template: `%s | ${SITE_NAME}`,
   },
-  description:
-    "Genjutsu AI Video Generator — create AI videos with motion transfer. Upload a character and reference video to generate new clips.",
+  description: ROOT_DESCRIPTION,
+  keywords: DEFAULT_KEYWORDS,
   icons: {
     icon: [{ url: "/genjutsu-icon.jpg", type: "image/jpeg" }],
     apple: [{ url: "/genjutsu-icon.jpg" }],
   },
   openGraph: {
-    title: "Genjutsu AI Video Generator",
-    description:
-      "Genjutsu AI Video Generator — create AI videos with motion transfer. Upload a character and reference video to generate new clips.",
+    title: ROOT_TITLE,
+    description: ROOT_DESCRIPTION,
     siteName: SITE_NAME,
     type: "website",
     url: SITE_URL,
     images: [
       { url: "/genjutsu-icon.jpg", width: 512, height: 512, alt: "Genjutsu" },
     ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: ROOT_TITLE,
+    description: ROOT_DESCRIPTION,
+    images: ["/genjutsu-icon.jpg"],
   },
   other: {
     "waffo-verify": "28912b5be58bb3a71254fbc0ca4e87c7",

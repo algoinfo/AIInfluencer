@@ -6,6 +6,7 @@ export const metadata = pageMetadata({
   description:
     "Create a consistent AI influencer from a photo or a description. Build character identity for photos and videos.",
   path: "/ai-influencer-generator",
+  keywords: ["AI Influencer Generator — Create Your AI Influencer", "Genjutsu"],
 });
 
 export default function AIInfluencerGeneratorPage() {

@@ -3,10 +3,16 @@ import { PageHero } from "@/components/ui/PageHero";
 import { pageMetadata } from "@/lib/seo";
 
 export const metadata = pageMetadata({
-  title: "Genjutsu API",
+  title: "Genjutsu API — Motion Transfer for Developers",
   description:
-    "Developer-oriented overview of a Genjutsu-style motion transfer API workflow, inputs, outputs and availability notes.",
+    "Developer overview of a Genjutsu-style motion transfer API: inputs, outputs, workflow shape, and availability notes.",
   path: "/genjutsu-api",
+  keywords: [
+    "Genjutsu API",
+    "motion transfer API",
+    "AI video API",
+    "object swap API",
+  ],
 });
 
 const faqs = [

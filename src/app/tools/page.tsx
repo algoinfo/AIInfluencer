@@ -8,6 +8,7 @@ export const metadata = pageMetadata({
   description:
     "Curated character, image, video, motion transfer and AI influencer tools that fit the Genjutsu pipeline.",
   path: "/tools",
+  keywords: ["Tools for Genjutsu Workflows", "Genjutsu"],
 });
 
 export default function ToolsPage() {

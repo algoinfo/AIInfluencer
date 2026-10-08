@@ -6,6 +6,7 @@ export const metadata = pageMetadata({
   title: "Privacy Policy",
   description: `How ${SITE_NAME} collects, uses, and protects your images, videos, and account data.`,
   path: "/privacy",
+  keywords: ["Privacy Policy", "Genjutsu"],
 });
 
 const LAST_UPDATED = "October 8, 2026";

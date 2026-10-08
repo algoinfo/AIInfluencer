@@ -6,6 +6,7 @@ export const metadata = pageMetadata({
   description:
     "GENJUTSU (genjutsu.online) is an independent site for AI video motion transfer — character + reference video → AI video.",
   path: "/about",
+  keywords: ["About", "Genjutsu"],
 });
 
 export default function AboutPage() {

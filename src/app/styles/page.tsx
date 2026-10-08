@@ -1,12 +1,20 @@
-import type { Metadata } from "next";
 import Link from "next/link";
 import { CoverImage } from "@/components/ui/CoverImage";
 import { styles } from "@/data/styles";
+import { pageMetadata } from "@/lib/seo";
 
-export const metadata: Metadata = {
+export const metadata = pageMetadata({
   title: "Viral AI Influencer Styles",
-  description: "Explore trending AI influencer styles for social content.",
-};
+  description:
+    "Explore trending AI influencer styles for social content and Genjutsu motion transfer workflows.",
+  path: "/styles",
+  keywords: [
+    "AI influencer styles",
+    "viral AI styles",
+    "AI fashion video",
+    "Genjutsu styles",
+  ],
+});
 
 export default function StylesPage() {
   return (

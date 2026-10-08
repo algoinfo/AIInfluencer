@@ -6,6 +6,7 @@ export const metadata = pageMetadata({
   title: "Terms of Service",
   description: `Terms and conditions for using ${SITE_NAME} at genjutsu.online.`,
   path: "/terms",
+  keywords: ["Terms of Service", "Genjutsu"],
 });
 
 const LAST_UPDATED = "October 8, 2026";

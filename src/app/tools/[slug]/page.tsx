@@ -3,7 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Button } from "@/components/ui/Button";
 import { getTool, tools } from "@/data/tools";
-import { SITE_URL } from "@/lib/seo";
+import { pageMetadata } from "@/lib/seo";
 
 type Props = {
   params: Promise<{ slug: string }>;
@@ -17,16 +17,12 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
   const tool = getTool(slug);
   if (!tool) return {};
-  return {
+  return pageMetadata({
     title: tool.name,
     description: tool.description,
-    alternates: { canonical: `${SITE_URL}/tools/${slug}` },
-    openGraph: {
-      title: tool.name,
-      description: tool.description,
-      url: `${SITE_URL}/tools/${slug}`,
-    },
-  };
+    path: `/tools/${slug}`,
+    keywords: ["Genjutsu tools", "AI video tools", tool.name],
+  });
 }
 
 export default async function ToolDetailPage({ params }: Props) {

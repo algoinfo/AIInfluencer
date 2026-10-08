@@ -5,10 +5,16 @@ import { CTA } from "@/components/ui/CTA";
 import { pageMetadata } from "@/lib/seo";
 
 export const metadata = pageMetadata({
-  title: "AI Motion Transfer",
+  title: "AI Motion Transfer — Character + Reference Video",
   description:
-    "Bring any character to life with the movement of a reference video. Learn Genjutsu AI motion transfer.",
+    "Learn Genjutsu AI motion transfer: map movement from a reference video onto your character and generate a new AI video clip.",
   path: "/motion-transfer",
+  keywords: [
+    "AI motion transfer",
+    "motion control video",
+    "character motion transfer",
+    "reference video AI",
+  ],
 });
 
 const concepts = [

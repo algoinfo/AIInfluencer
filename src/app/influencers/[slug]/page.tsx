@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { CoverImage } from "@/components/ui/CoverImage";
 import { Button } from "@/components/ui/Button";
 import { getInfluencer, influencers } from "@/data/influencers";
+import { pageMetadata } from "@/lib/seo";
 
 type Props = {
   params: Promise<{ slug: string }>;
@@ -17,10 +18,17 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
   const influencer = getInfluencer(slug);
   if (!influencer) return {};
-  return {
+  return pageMetadata({
     title: `${influencer.name} — ${influencer.type}`,
-    description: `Explore ${influencer.name}, an AI ${influencer.type.toLowerCase()} for social content.`,
-  };
+    description: `Explore ${influencer.name}, an AI ${influencer.type.toLowerCase()} for social content and Genjutsu video.`,
+    path: `/influencers/${slug}`,
+    keywords: [
+      influencer.name,
+      "AI influencer",
+      influencer.type,
+      "Genjutsu character",
+    ],
+  });
 }
 
 export default async function InfluencerDetailPage({ params }: Props) {

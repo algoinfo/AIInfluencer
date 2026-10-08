@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { CoverImage } from "@/components/ui/CoverImage";
 import { Button } from "@/components/ui/Button";
 import { getStyle, styles } from "@/data/styles";
+import { pageMetadata } from "@/lib/seo";
 
 type Props = {
   params: Promise<{ slug: string }>;
@@ -17,10 +18,12 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
   const style = getStyle(slug);
   if (!style) return {};
-  return {
+  return pageMetadata({
     title: style.name,
     description: style.description,
-  };
+    path: `/styles/${slug}`,
+    keywords: ["AI influencer style", style.name, "Genjutsu styles"],
+  });
 }
 
 export default async function StyleDetailPage({ params }: Props) {

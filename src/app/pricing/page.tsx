@@ -3,10 +3,16 @@ import { pageMetadata } from "@/lib/seo";
 import { PRICING_HERO, PRICING_TIERS, formatTierCredits } from "@/data/pricing";
 
 export const metadata = pageMetadata({
-  title: "Pricing",
+  title: "Pricing — Credit Packs for AI Video",
   description:
-    "Genjutsu one-time credit packs — pay once for motion transfer video. Bonus on every pack, credits never expire.",
+    "Genjutsu one-time credit packs for motion transfer and object swap. Pay once, bonus on every pack, credits never expire.",
   path: "/pricing",
+  keywords: [
+    "Genjutsu pricing",
+    "AI video credits",
+    "motion transfer pricing",
+    "buy AI video credits",
+  ],
 });
 
 const faqs = [

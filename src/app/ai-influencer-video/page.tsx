@@ -7,6 +7,7 @@ export const metadata = pageMetadata({
   description:
     "Create videos with your AI influencer using reference images, characters and motion transfer.",
   path: "/ai-influencer-video",
+  keywords: ["AI Influencer Video Generator — Create AI Character Videos", "Genjutsu"],
 });
 
 export default function AIInfluencerVideoPage() {

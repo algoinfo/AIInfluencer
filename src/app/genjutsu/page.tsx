@@ -5,10 +5,16 @@ import { Workflow } from "@/components/ui/Workflow";
 import { pageMetadata } from "@/lib/seo";
 
 export const metadata = pageMetadata({
-  title: "Genjutsu AI — AI Video Motion Transfer",
+  title: "What is Genjutsu AI — Motion Transfer Explained",
   description:
-    "Genjutsu AI is AI-powered motion transfer for characters, creators and videos. Learn how Genjutsu works and how it relates to Higgsfield.",
+    "Genjutsu AI is motion transfer for characters and creators: character + reference video → AI video. Learn how it works and how it relates to Higgsfield Genjutsu.",
   path: "/genjutsu",
+  keywords: [
+    "what is Genjutsu",
+    "Genjutsu AI",
+    "Higgsfield Genjutsu",
+    "AI motion transfer explained",
+  ],
 });
 
 const sections = [

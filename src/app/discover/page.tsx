@@ -6,6 +6,7 @@ export const metadata = pageMetadata({
   description:
     "Explore trending AI influencers, digital models and virtual creators.",
   path: "/discover",
+  keywords: ["Discover AI Influencers", "Genjutsu"],
 });
 
 export default function DiscoverPage() {

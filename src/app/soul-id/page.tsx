@@ -7,6 +7,7 @@ export const metadata = pageMetadata({
   description:
     "Soul ID helps maintain the identity of an AI character across generated content. Learn character sheet, reference images and consistent AI characters.",
   path: "/soul-id",
+  keywords: ["Higgsfield Soul ID: Consistent AI Character Guide", "Genjutsu"],
 });
 
 export default function SoulIdPage() {

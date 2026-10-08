@@ -3,10 +3,16 @@ import { PageHero } from "@/components/ui/PageHero";
 import { pageMetadata } from "@/lib/seo";
 
 export const metadata = pageMetadata({
-  title: "How to Use Genjutsu",
+  title: "How to Use Genjutsu — Step-by-Step Tutorial",
   description:
-    "A practical Genjutsu tutorial: create your character, prepare a reference video, configure generation and improve results.",
+    "Practical Genjutsu tutorial: create your character, prepare a reference video, configure motion transfer or object swap, and improve results.",
   path: "/genjutsu-tutorial",
+  keywords: [
+    "Genjutsu tutorial",
+    "how to use Genjutsu",
+    "motion transfer tutorial",
+    "AI video tutorial",
+  ],
 });
 
 const steps = [

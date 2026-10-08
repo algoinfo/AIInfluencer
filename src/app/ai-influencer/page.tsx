@@ -9,6 +9,7 @@ export const metadata = pageMetadata({
   description:
     "Create a consistent AI character and bring it to life with Genjutsu motion transfer.",
   path: "/ai-influencer",
+  keywords: ["Create AI Influencer Videos", "Genjutsu"],
 });
 
 const flow = [

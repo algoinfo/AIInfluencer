@@ -3,7 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Button } from "@/components/ui/Button";
 import { getGuide, guides } from "@/data/guides";
-import { SITE_URL } from "@/lib/seo";
+import { pageMetadata } from "@/lib/seo";
 
 type Props = {
   params: Promise<{ slug: string }>;
@@ -17,16 +17,12 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
   const guide = getGuide(slug);
   if (!guide) return {};
-  return {
+  return pageMetadata({
     title: guide.title,
     description: guide.excerpt,
-    alternates: { canonical: `${SITE_URL}/guides/${slug}` },
-    openGraph: {
-      title: guide.title,
-      description: guide.excerpt,
-      url: `${SITE_URL}/guides/${slug}`,
-    },
-  };
+    path: `/guides/${slug}`,
+    keywords: ["Genjutsu guide", "AI video tutorial", guide.title],
+  });
 }
 
 export default async function GuideDetailPage({ params }: Props) {
