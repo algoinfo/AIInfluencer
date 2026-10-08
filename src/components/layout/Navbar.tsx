@@ -8,8 +8,6 @@ import { useAuth } from "@/components/auth/AuthProvider";
 import { UserAccountMenu } from "@/components/layout/UserAccountMenu";
 
 const navItems = [
-  { href: "/#studio", label: "Tool" },
-  { href: "/examples", label: "Motion Library" },
   { href: "/pricing", label: "Pricing" },
   { href: "/guides", label: "Guides" },
 ];

@@ -1,9 +1,9 @@
 import { pageMetadata } from "@/lib/seo";
 
 export const metadata = pageMetadata({
-  title: "Motion Library",
+  title: "Examples",
   description:
-    "Browse Genjutsu Motion Library examples — studio swap, fashion, portrait, and motion transfer styles.",
+    "Browse Genjutsu examples — studio swap, fashion, portrait, and motion transfer styles.",
   path: "/examples",
 });
 

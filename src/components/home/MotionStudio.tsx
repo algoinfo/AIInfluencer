@@ -4,12 +4,28 @@ import Image from "next/image";
 import Link from "next/link";
 import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { useAuth } from "@/components/auth/AuthProvider";
+import { StudioHistoryPanel } from "@/components/studio/StudioHistoryPanel";
+import {
+  StudioPreviewHistoryTabs,
+  type StudioPanelMode,
+} from "@/components/studio/StudioPreviewHistoryTabs";
 import {
   CREDITS_PER_SECOND,
   creditsForRun,
   durationOptions,
 } from "@/data/credits";
 import { resolveMotionPrompt } from "@/data/motion-prompt";
+import {
+  loadStudioHistory,
+  prependStudioHistory,
+  type StudioHistoryItem,
+} from "@/lib/studio-history";
+
+function formatElapsed(totalSeconds: number): string {
+  const m = Math.floor(totalSeconds / 60);
+  const s = totalSeconds % 60;
+  return `${m}:${s.toString().padStart(2, "0")}`;
+}
 
 const models = [
   {
@@ -52,12 +68,19 @@ export function MotionStudio() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [resultUrl, setResultUrl] = useState<string | null>(null);
   const [lastPrompt, setLastPrompt] = useState<string | null>(null);
+  const [panelMode, setPanelMode] = useState<StudioPanelMode>("preview");
+  const [history, setHistory] = useState<StudioHistoryItem[]>([]);
+  const [elapsedSec, setElapsedSec] = useState(0);
   const menuRef = useRef<HTMLDivElement>(null);
   const listId = useId();
   const promptId = useId();
 
   const sellCredits = creditsForRun(duration, model.multiplier);
   const usingDefaultPrompt = prompt.trim().length === 0;
+
+  useEffect(() => {
+    setHistory(loadStudioHistory());
+  }, []);
 
   useEffect(() => {
     function onDoc(e: MouseEvent) {
@@ -73,6 +96,19 @@ export function MotionStudio() {
       if (resultUrl?.startsWith("blob:")) URL.revokeObjectURL(resultUrl);
     };
   }, [imageUrl, resultUrl]);
+
+  useEffect(() => {
+    if (status !== "generating") {
+      setElapsedSec(0);
+      return;
+    }
+    setElapsedSec(0);
+    const startedAt = Date.now();
+    const id = window.setInterval(() => {
+      setElapsedSec(Math.floor((Date.now() - startedAt) / 1000));
+    }, 250);
+    return () => window.clearInterval(id);
+  }, [status]);
 
   function onImage(file: File | null) {
     if (!file) return;
@@ -106,6 +142,7 @@ export function MotionStudio() {
     setLastPrompt(resolved);
     setErrorMessage(null);
     setStatus("generating");
+    setPanelMode("preview");
 
     if (resultUrl?.startsWith("blob:")) URL.revokeObjectURL(resultUrl);
     setResultUrl(null);
@@ -146,10 +183,29 @@ export function MotionStudio() {
         throw new Error(data?.error || "Generation failed.");
       }
 
+      const publicUrl = res.headers.get("X-Video-Url");
       const blob = await res.blob();
-      const url = URL.createObjectURL(blob);
-      setResultUrl(url);
+      const blobUrl = URL.createObjectURL(blob);
+
+      setResultUrl(blobUrl);
       setStatus("done");
+      setPanelMode("preview");
+
+      const item: StudioHistoryItem = {
+        id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+        title: imageFile.name.replace(/\.[^.]+$/, "") || "Motion transfer",
+        createdAt: new Date().toISOString(),
+        // Prefer public R2 URL for reload-safe history; blob for this session.
+        videoUrl: publicUrl || blobUrl,
+        durationSec: duration,
+        modelMark: model.mark,
+      };
+      setHistory((prev) => {
+        const next = prependStudioHistory(prev, item);
+        // Keep blob entry visible this session even if not persisted.
+        if (!publicUrl) return [item, ...prev.filter((h) => h.id !== item.id)].slice(0, 24);
+        return next;
+      });
       void refreshSession();
     } catch (err) {
       setStatus("error");
@@ -166,6 +222,19 @@ export function MotionStudio() {
     a.download = "genjutsu-motion.mp4";
     a.click();
   }, [resultUrl]);
+
+  const openHistoryItem = useCallback((item: StudioHistoryItem) => {
+    setResultUrl(item.videoUrl);
+    setStatus("done");
+    setPanelMode("preview");
+  }, []);
+
+  const downloadHistoryItem = useCallback((item: StudioHistoryItem) => {
+    const a = document.createElement("a");
+    a.href = item.videoUrl;
+    a.download = `genjutsu-${item.id}.mp4`;
+    a.click();
+  }, []);
 
   const ready = Boolean(imageFile && videoFile);
   const busy = status === "generating";
@@ -344,15 +413,57 @@ export function MotionStudio() {
               onClick={() => void onGenerate()}
               disabled={busy}
               className={[
-                "inline-flex h-11 w-full items-center justify-center gap-2 rounded-full text-sm font-semibold transition-all disabled:cursor-wait disabled:opacity-70",
+                "group relative flex h-12 w-full items-center justify-between gap-3 overflow-hidden rounded-2xl px-4 text-left transition-all duration-200 disabled:cursor-wait",
                 ready
-                  ? "bg-accent text-[#0a0a0c] shadow-[0_0_36px_rgba(216,255,62,0.22)] hover:bg-accent-strong"
-                  : "bg-white text-[#0a0a0c] hover:bg-white/90",
+                  ? "bg-accent text-accent-ink shadow-[0_8px_28px_rgba(216,255,62,0.18)] hover:bg-accent-strong hover:shadow-[0_10px_32px_rgba(216,255,62,0.28)] active:scale-[0.985]"
+                  : "bg-white/[0.08] text-fg ring-1 ring-inset ring-white/[0.1] hover:bg-white/[0.12]",
+                busy ? "opacity-90" : "",
               ].join(" ")}
             >
-              {busy
-                ? "Generating…"
-                : `Generate · ${duration}s · ${sellCredits.toLocaleString()} credits`}
+              {ready ? (
+                <span
+                  aria-hidden
+                  className="pointer-events-none absolute inset-y-0 left-0 w-1/3 bg-gradient-to-r from-transparent via-white/25 to-transparent opacity-0 transition duration-500 group-hover:translate-x-[220%] group-hover:opacity-100"
+                />
+              ) : null}
+              <span className="relative flex min-w-0 items-center gap-2.5">
+                {busy ? (
+                  <span className="h-4 w-4 shrink-0 animate-spin rounded-full border-2 border-accent-ink/25 border-t-accent-ink" />
+                ) : (
+                  <span
+                    className={[
+                      "flex h-7 w-7 shrink-0 items-center justify-center rounded-full",
+                      ready ? "bg-accent-ink/10" : "bg-white/[0.06]",
+                    ].join(" ")}
+                  >
+                    <span
+                      className={[
+                        "ml-0.5 h-0 w-0 border-y-[5px] border-l-[8px] border-y-transparent",
+                        ready ? "border-l-accent-ink" : "border-l-fg-muted",
+                      ].join(" ")}
+                    />
+                  </span>
+                )}
+                <span className="truncate text-[0.95rem] font-semibold tracking-tight">
+                  {busy ? "Generating…" : "Generate"}
+                </span>
+              </span>
+              {!busy ? (
+                <span
+                  className={[
+                    "relative flex shrink-0 items-center gap-1.5 rounded-full px-2.5 py-1 text-[0.7rem] font-medium tabular-nums",
+                    ready
+                      ? "bg-accent-ink/10 text-accent-ink/85"
+                      : "bg-black/25 text-fg-subtle",
+                  ].join(" ")}
+                >
+                  <span>{duration}s</span>
+                  <span className={ready ? "text-accent-ink/40" : "text-fg-subtle/50"}>
+                    ·
+                  </span>
+                  <span>{sellCredits.toLocaleString()} cr</span>
+                </span>
+              ) : null}
             </button>
             <p
               className={[
@@ -375,114 +486,157 @@ export function MotionStudio() {
           </div>
         </div>
 
-        {/* Right preview */}
+        {/* Right: Preview / History (like tell AI Video Generator) */}
         <div className="relative flex min-h-0 flex-col p-3 sm:p-4">
-          <div className="mb-2 flex shrink-0 items-center justify-between gap-2">
-            <div className="flex items-center gap-2 text-[0.75rem]">
-              <span className="font-medium text-fg">Preview</span>
-              <span className="text-fg-subtle">
+          <StudioPreviewHistoryTabs
+            mode={panelMode}
+            onModeChange={setPanelMode}
+            trailing={
+              <>
                 {duration}s · {model.mark}
-              </span>
-            </div>
-            <div className="flex items-center gap-2">
-              {status === "done" && resultUrl ? (
-                <button
-                  type="button"
-                  onClick={downloadResult}
-                  className="rounded-full border border-accent/30 bg-[rgba(216,255,62,0.08)] px-2.5 py-0.5 text-[0.65rem] font-medium text-accent transition-colors hover:bg-[rgba(216,255,62,0.14)]"
-                >
-                  Download
-                </button>
-              ) : null}
-              {status === "error" &&
-              errorMessage?.toLowerCase().includes("credit") ? (
-                <Link
-                  href="/pricing"
-                  className="rounded-full border border-accent/30 bg-[rgba(216,255,62,0.08)] px-2.5 py-0.5 text-[0.65rem] font-medium text-accent transition-colors hover:bg-[rgba(216,255,62,0.14)]"
-                >
-                  Get credits
-                </Link>
-              ) : null}
-              {busy ? (
-                <span className="text-[0.65rem] text-accent">Generating…</span>
-              ) : status === "done" ? (
-                <span className="text-[0.65rem] text-fg-subtle">Ready</span>
-              ) : ready ? (
-                <span className="rounded-full border border-accent/30 bg-[rgba(216,255,62,0.08)] px-2 py-0.5 text-[0.65rem] text-accent">
-                  Ready to generate
-                </span>
-              ) : (
-                <span className="text-[0.65rem] text-fg-subtle">
-                  Add character + motion
-                </span>
-              )}
-            </div>
-          </div>
+                {status === "error" &&
+                errorMessage?.toLowerCase().includes("credit") ? (
+                  <>
+                    {" · "}
+                    <Link href="/pricing" className="text-accent hover:underline">
+                      Get credits
+                    </Link>
+                  </>
+                ) : null}
+              </>
+            }
+          />
 
-          <div className="relative min-h-0 flex-1 overflow-hidden rounded-xl border border-white/[0.1] bg-[#0a0a0c]">
-            {resultUrl ? (
-              <video
-                key={resultUrl}
-                src={resultUrl}
-                controls
-                autoPlay
-                playsInline
-                className="absolute inset-0 h-full w-full object-contain bg-black"
+          <div className="mt-3 flex min-h-0 flex-1 flex-col">
+            {panelMode === "history" ? (
+              <StudioHistoryPanel
+                items={history}
+                onSelect={openHistoryItem}
+                onDownload={downloadHistoryItem}
               />
             ) : (
               <>
-                <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_50%_40%,rgba(40,48,56,0.9),#0a0a0c_70%)]" />
                 <div
-                  className={[
-                    "absolute inset-0 opacity-40 video-shimmer bg-[linear-gradient(125deg,#16161a_0%,#222228_40%,#121216_70%,#1a1a20_100%)] bg-[length:200%_200%]",
-                    busy ? "opacity-70" : "",
-                  ].join(" ")}
-                />
-                <div className="absolute inset-0 bg-[linear-gradient(180deg,transparent_35%,rgba(0,0,0,0.7)_100%)]" />
+                  className="relative min-h-0 flex-1 overflow-hidden rounded-xl border border-white/[0.1] bg-[#0a0a0c]"
+                  aria-busy={busy}
+                >
+                  {resultUrl && !busy ? (
+                    <video
+                      key={resultUrl}
+                      src={resultUrl}
+                      controls
+                      autoPlay
+                      playsInline
+                      className="absolute inset-0 h-full w-full object-contain bg-black"
+                    />
+                  ) : (
+                    <>
+                      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_50%_40%,rgba(40,48,56,0.9),#0a0a0c_70%)]" />
+                      <div className="absolute inset-0 opacity-40 video-shimmer bg-[linear-gradient(125deg,#16161a_0%,#222228_40%,#121216_70%,#1a1a20_100%)] bg-[length:200%_200%]" />
+                      <div className="absolute inset-0 bg-[linear-gradient(180deg,transparent_35%,rgba(0,0,0,0.7)_100%)]" />
+                      <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 px-6 text-center">
+                        <div className="flex h-14 w-14 items-center justify-center rounded-full border border-white/20 bg-white/[0.08]">
+                          <div className="ml-0.5 h-0 w-0 border-y-[7px] border-l-[12px] border-y-transparent border-l-fg" />
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium text-fg">
+                            {status === "error"
+                              ? "Generation failed"
+                              : "Your AI video preview"}
+                          </p>
+                          <p className="mt-1 text-[0.7rem] text-fg-subtle">
+                            {status === "error"
+                              ? errorMessage || "Try again"
+                              : "Output appears here after you generate"}
+                          </p>
+                        </div>
+                      </div>
+                    </>
+                  )}
 
-                <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 px-6 text-center">
-                  <div
-                    className={[
-                      "flex h-14 w-14 items-center justify-center rounded-full border border-white/20 bg-white/[0.08] backdrop-blur-md",
-                      busy ? "animate-pulse" : "",
-                    ].join(" ")}
-                    aria-label={busy ? "Generating" : "Preview placeholder"}
-                  >
-                    <div className="ml-0.5 h-0 w-0 border-y-[7px] border-l-[12px] border-y-transparent border-l-fg" />
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium text-fg">
-                      {busy
-                        ? "Generating your video"
-                        : status === "error"
-                          ? "Generation failed"
-                          : "Your AI video preview"}
-                    </p>
-                    <p className="mt-1 text-[0.7rem] text-fg-subtle">
-                      {busy
-                        ? "This can take a minute…"
-                        : status === "error"
-                          ? errorMessage || "Try again"
-                          : "Output appears here after you generate"}
-                    </p>
-                  </div>
+                  {busy ? (
+                    <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-3 bg-[#0a0a0c]/85 px-6 backdrop-blur-[3px]">
+                      <div className="h-8 w-8 animate-spin rounded-full border-2 border-accent/30 border-t-accent" />
+                      <p
+                        className="font-mono text-4xl font-semibold tabular-nums tracking-tight text-fg sm:text-5xl"
+                        aria-live="polite"
+                      >
+                        {formatElapsed(elapsedSec)}
+                      </p>
+                      <p className="text-sm font-medium text-fg">
+                        Generating your video
+                      </p>
+                      <div
+                        className="flex items-end gap-6"
+                        aria-label="Expected wait in minutes"
+                      >
+                        {([1, 2, 3] as const).map((min) => {
+                          const reached = elapsedSec >= min * 60;
+                          const active =
+                            !reached && elapsedSec >= (min - 1) * 60;
+                          return (
+                            <div
+                              key={min}
+                              className="flex flex-col items-center gap-1"
+                            >
+                              <span
+                                className={[
+                                  "font-mono text-2xl font-bold tabular-nums leading-none sm:text-3xl",
+                                  reached
+                                    ? "text-accent"
+                                    : active
+                                      ? "text-fg"
+                                      : "text-fg-subtle/45",
+                                ].join(" ")}
+                              >
+                                {min}
+                              </span>
+                              <span
+                                className={[
+                                  "text-[10px] font-medium uppercase tracking-wide",
+                                  reached || active
+                                    ? "text-fg-subtle"
+                                    : "text-fg-subtle/45",
+                                ].join(" ")}
+                              >
+                                min
+                              </span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                      <p className="text-center text-[11px] text-fg-subtle">
+                        Keep this tab open
+                      </p>
+                    </div>
+                  ) : null}
+
+                  {imageUrl && !busy ? (
+                    <div className="absolute bottom-3 left-3 overflow-hidden rounded-lg border border-white/20 shadow-lg">
+                      <div className="relative h-14 w-11">
+                        <Image
+                          src={imageUrl}
+                          alt="Character"
+                          fill
+                          unoptimized
+                          className="object-cover"
+                        />
+                      </div>
+                    </div>
+                  ) : null}
                 </div>
+
+                {resultUrl && !busy ? (
+                  <button
+                    type="button"
+                    onClick={downloadResult}
+                    className="mt-3 inline-flex h-10 w-full items-center justify-center gap-2 rounded-full border border-white/[0.12] bg-white/[0.04] text-sm font-medium text-fg transition hover:border-white/[0.2] hover:bg-white/[0.07]"
+                  >
+                    Download MP4
+                  </button>
+                ) : null}
               </>
             )}
-
-            {imageUrl ? (
-              <div className="absolute bottom-3 left-3 overflow-hidden rounded-lg border border-white/20 shadow-lg">
-                <div className="relative h-14 w-11">
-                  <Image
-                    src={imageUrl}
-                    alt="Character"
-                    fill
-                    unoptimized
-                    className="object-cover"
-                  />
-                </div>
-              </div>
-            ) : null}
           </div>
         </div>
       </div>

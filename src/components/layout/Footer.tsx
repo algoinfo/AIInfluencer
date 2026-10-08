@@ -3,9 +3,7 @@ import Link from "next/link";
 import { CONTACT_EMAIL } from "@/lib/seo";
 
 const product = [
-  { href: "/motion-transfer", label: "Motion Transfer" },
-  { href: "/examples", label: "Motion Library" },
-  { href: "/tools", label: "Tools" },
+  { href: "/#studio", label: "Studio" },
   { href: "/pricing", label: "Pricing" },
   { href: "/ai-influencer", label: "AI Influencer" },
 ];

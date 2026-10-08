@@ -8,7 +8,7 @@ export default function ExamplesPage() {
     <>
       <PageHero
         eyebrow="Gallery"
-        title="Motion Library"
+        title="Examples"
         subtitle="Motion transfer looks — the same clips featured in the Genjutsu studio."
         tags={motionLibraryClips.map((clip) => clip.label)}
         ctas={[

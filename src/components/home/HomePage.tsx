@@ -65,7 +65,7 @@ export function HomePage() {
       <section className="border-t border-border bg-bg-soft py-14 sm:py-16">
         <div className="page-shell">
           <h2 className="font-display text-2xl font-semibold tracking-tight sm:text-3xl">
-            Motion Library
+            Examples
           </h2>
           <p className="mt-2 max-w-xl text-sm text-fg-muted">
             Take the motion and recast it with your characters, locations, and

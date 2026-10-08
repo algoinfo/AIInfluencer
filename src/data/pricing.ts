@@ -18,7 +18,7 @@ export const PRICING_FREE = {
   includes: [
     `New accounts: ${WELCOME_CREDITS.toLocaleString()} welcome credits`,
     `Guests: ${FREE_GENERATION_LIMIT} demo generation, then sign in`,
-    "Explore Motion Library examples",
+    "Explore examples",
     "Upload character + reference workflow",
   ],
 } as const;
