@@ -9,9 +9,18 @@ import {
 } from "@/lib/google-auth";
 import { SESSION_COOKIE, SESSION_MAX_AGE_SECONDS } from "@/lib/session-cookie";
 
+function publicAuthError(message: string): string {
+  const trimmed = message.trim();
+  if (!trimmed || /^fetch failed$/i.test(trimmed)) {
+    return "Could not reach Google. Try again, or set HTTPS_PROXY for local dev.";
+  }
+  // Keep query strings short / readable.
+  return trimmed.length > 180 ? `${trimmed.slice(0, 177)}…` : trimmed;
+}
+
 function redirectWithAuthError(req: NextRequest, message: string) {
   const url = new URL("/", req.url);
-  url.searchParams.set("auth_error", message);
+  url.searchParams.set("auth_error", publicAuthError(message));
   return NextResponse.redirect(url);
 }
 

@@ -1,5 +1,6 @@
 import { randomUUID } from "crypto";
 import type { NextRequest } from "next/server";
+import { googleFetch } from "@/lib/google-fetch";
 import { SITE_URL } from "@/lib/seo";
 
 export const GOOGLE_OAUTH_STATE_COOKIE = "google_oauth_state";
@@ -68,7 +69,7 @@ export async function exchangeGoogleCode(input: {
   code: string;
   redirectUri: string;
 }): Promise<GoogleUserProfile> {
-  const tokenRes = await fetch("https://oauth2.googleapis.com/token", {
+  const tokenRes = await googleFetch("https://oauth2.googleapis.com/token", {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
     body: new URLSearchParams({
@@ -94,9 +95,12 @@ export async function exchangeGoogleCode(input: {
     );
   }
 
-  const userRes = await fetch("https://www.googleapis.com/oauth2/v3/userinfo", {
-    headers: { Authorization: `Bearer ${tokenData.access_token}` },
-  });
+  const userRes = await googleFetch(
+    "https://www.googleapis.com/oauth2/v3/userinfo",
+    {
+      headers: { Authorization: `Bearer ${tokenData.access_token}` },
+    },
+  );
   const profile = (await userRes.json()) as GoogleUserProfile & {
     error?: { message?: string };
   };
