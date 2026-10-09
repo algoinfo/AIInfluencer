@@ -36,6 +36,11 @@ import {
   planR2Object,
   uploadToR2,
 } from "@/lib/r2";
+import {
+  createGenerationJob,
+  markGenerationJobCompleted,
+  markGenerationJobFailed,
+} from "@/lib/generation-jobs";
 import { ensureHttpsProxyDispatcher } from "@/lib/https-proxy";
 import {
   screenWaffoPrompt,
@@ -122,6 +127,7 @@ function validateVideo(file: FormDataEntryValue | null): File {
 export async function POST(req: NextRequest) {
   ensureHttpsProxyDispatcher();
   const startedAt = Date.now();
+  let cloudJobId: string | null = null;
   try {
     const { payload, session, token, created: sessionCreated } =
       await getRequestSessionFromReq(req);
@@ -261,6 +267,37 @@ export async function POST(req: NextRequest) {
           ? "higgsfield/motion-transfer"
           : "fal/wan-motion";
     const outResolution = useGenjutsuPricing ? resolution : falResolution;
+    const modelMark =
+      form.get("modelMark")?.toString().trim() ||
+      (mode === "object-swap" || useGenjutsuMotion
+        ? "gj"
+        : modelId.toLowerCase().includes("kling")
+          ? "kl"
+          : "wan");
+    const jobTitle =
+      characterFile.name.replace(/\.[^.]+$/, "").trim() ||
+      (mode === "object-swap" ? "Object swap" : "Motion transfer");
+
+    if (payload.user?.email) {
+      try {
+        const job = await createGenerationJob({
+          id: form.get("clientJobId")?.toString(),
+          sessionId: session.id,
+          userEmail: payload.user.email,
+          title: jobTitle.slice(0, 120),
+          product: mode,
+          durationSec,
+          modelMark,
+          resolution: outResolution,
+        });
+        cloudJobId = job.id;
+      } catch (jobError) {
+        log("job create failed", {
+          error:
+            jobError instanceof Error ? jobError.message : String(jobError),
+        });
+      }
+    }
 
     log("request", {
       mode,
@@ -274,6 +311,7 @@ export async function POST(req: NextRequest) {
       videoBytes: motionBuffer.byteLength,
       promptLen: prompt.length,
       user: payload.user?.email ? "logged-in" : "anonymous",
+      jobId: cloudJobId,
     });
 
     // Persist inputs under ges/ when R2 is configured (Kling / fal path only;
@@ -353,16 +391,24 @@ export async function POST(req: NextRequest) {
         });
       }
     } catch (providerError) {
+      const providerMessage =
+        providerError instanceof Error
+          ? providerError.message
+          : String(providerError);
       log("provider failed", {
         provider,
         resolution: outResolution,
         providerMs: Date.now() - providerStartedAt,
         totalMs: Date.now() - startedAt,
-        error:
-          providerError instanceof Error
-            ? providerError.message
-            : String(providerError),
+        error: providerMessage,
+        jobId: cloudJobId,
       });
+      if (cloudJobId) {
+        await markGenerationJobFailed(cloudJobId, providerMessage).catch(
+          () => undefined,
+        );
+        cloudJobId = null;
+      }
       throw providerError;
     }
 
@@ -402,6 +448,20 @@ export async function POST(req: NextRequest) {
       log("r2 mirror skipped — not configured");
     }
 
+    const historyUrl = r2Url || sourceUrl;
+    if (cloudJobId) {
+      await markGenerationJobCompleted(cloudJobId, {
+        outputR2Key: r2Key,
+        outputUrl: historyUrl,
+      }).catch((jobError) => {
+        log("job complete failed", {
+          jobId: cloudJobId,
+          error:
+            jobError instanceof Error ? jobError.message : String(jobError),
+        });
+      });
+    }
+
     const usage = await recordUsage(token ?? session.token, "generation");
     const totalMs = Date.now() - startedAt;
 
@@ -416,6 +476,7 @@ export async function POST(req: NextRequest) {
       totalMs,
       sourceUrl: sourceUrl.slice(0, 120),
       r2Key,
+      jobId: cloudJobId,
     });
 
     const res = NextResponse.json(
@@ -423,6 +484,7 @@ export async function POST(req: NextRequest) {
         videoUrl: sourceUrl,
         r2Url,
         r2Key,
+        jobId: cloudJobId,
         creditsCharged: payload.user ? creditCost : 0,
         providerMs,
         totalMs,
@@ -433,6 +495,7 @@ export async function POST(req: NextRequest) {
           "X-Credits-Charged": String(payload.user ? creditCost : 0),
           "X-Provider-Ms": String(providerMs),
           "X-Total-Ms": String(totalMs),
+          ...(cloudJobId ? { "X-Job-Id": cloudJobId } : {}),
           ...(r2Key ? { "X-R2-Key": r2Key } : {}),
           ...(r2Url ? { "X-Video-Url": r2Url } : { "X-Video-Url": sourceUrl }),
           "X-Source-Video-Url": sourceUrl,
@@ -452,10 +515,18 @@ export async function POST(req: NextRequest) {
 
     return res;
   } catch (error) {
+    const errorMessage =
+      error instanceof Error ? error.message : String(error);
     log("error", {
       ms: Date.now() - startedAt,
-      error: error instanceof Error ? error.message : String(error),
+      error: errorMessage,
+      jobId: cloudJobId,
     });
+    if (cloudJobId) {
+      await markGenerationJobFailed(cloudJobId, errorMessage).catch(
+        () => undefined,
+      );
+    }
 
     if (error instanceof WaffoContentSafetyError) {
       const status =
@@ -475,7 +546,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const message = error instanceof Error ? error.message : "";
+    const message = errorMessage;
     if (
       message.includes("required") ||
       message.includes("too large") ||

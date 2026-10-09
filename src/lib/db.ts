@@ -60,6 +60,25 @@ export async function ensureSchema() {
           created_at TEXT NOT NULL DEFAULT (datetime('now'))
         )
       `);
+      await db.execute(`
+        CREATE TABLE IF NOT EXISTS generation_jobs (
+          id TEXT PRIMARY KEY,
+          session_id TEXT NOT NULL,
+          user_email TEXT,
+          status TEXT NOT NULL,
+          type TEXT NOT NULL DEFAULT 'video',
+          product TEXT,
+          title TEXT NOT NULL,
+          output_r2_key TEXT,
+          output_url TEXT,
+          error TEXT,
+          duration_sec INTEGER,
+          model_mark TEXT,
+          resolution TEXT,
+          created_at TEXT NOT NULL DEFAULT (datetime('now')),
+          updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+        )
+      `);
 
       const ignoreDuplicate = async (sql: string) => {
         try {
@@ -75,6 +94,13 @@ export async function ensureSchema() {
           `ALTER TABLE users ADD COLUMN credits_balance INTEGER NOT NULL DEFAULT 0`,
         ),
         ignoreDuplicate(`ALTER TABLE users ADD COLUMN google_id TEXT`),
+        ignoreDuplicate(`ALTER TABLE generation_jobs ADD COLUMN output_url TEXT`),
+        ignoreDuplicate(
+          `ALTER TABLE generation_jobs ADD COLUMN duration_sec INTEGER`,
+        ),
+        ignoreDuplicate(`ALTER TABLE generation_jobs ADD COLUMN model_mark TEXT`),
+        ignoreDuplicate(`ALTER TABLE generation_jobs ADD COLUMN resolution TEXT`),
+        ignoreDuplicate(`ALTER TABLE generation_jobs ADD COLUMN product TEXT`),
       ]);
 
       await Promise.all([
@@ -87,6 +113,10 @@ export async function ensureSchema() {
         ),
         db.execute(
           `CREATE UNIQUE INDEX IF NOT EXISTS idx_users_google_id ON users(google_id)`,
+        ),
+        db.execute(
+          `CREATE INDEX IF NOT EXISTS idx_generation_jobs_user_email
+           ON generation_jobs(user_email, created_at DESC)`,
         ),
       ]);
 

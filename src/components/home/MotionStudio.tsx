@@ -37,8 +37,11 @@ import {
   saveStudioDraft,
 } from "@/lib/studio-draft";
 import {
+  fetchCloudStudioHistory,
   loadStudioHistory,
+  mergeCloudStudioHistory,
   prependStudioHistory,
+  updateStudioHistoryItem,
   type StudioHistoryItem,
 } from "@/lib/studio-history";
 
@@ -184,6 +187,18 @@ export function MotionStudio() {
   useEffect(() => {
     setHistory(loadStudioHistory());
   }, []);
+
+  useEffect(() => {
+    if (!isLoggedIn) return;
+    let cancelled = false;
+    void fetchCloudStudioHistory(24).then((cloud) => {
+      if (cancelled || cloud == null) return;
+      setHistory((prev) => mergeCloudStudioHistory(prev, cloud));
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [isLoggedIn]);
 
   useEffect(() => {
     function onDoc(e: MouseEvent) {
@@ -490,15 +505,35 @@ export function MotionStudio() {
     setErrorMessage(null);
     setLastElapsedSec(null);
     setStatus("generating");
-    setPanelMode("preview");
+    setPanelMode("history");
 
     if (resultUrl?.startsWith("blob:")) URL.revokeObjectURL(resultUrl);
     setResultUrl(null);
+
+    const historyId = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    const outResolution = usesGenjutsuPricing
+      ? genjutsuResolution
+      : falResolution;
+    const pendingItem: StudioHistoryItem = {
+      id: historyId,
+      title:
+        primaryImage.name.replace(/\.[^.]+$/, "") ||
+        (isObjectSwap ? "Object swap" : "Motion transfer"),
+      createdAt: new Date().toISOString(),
+      videoUrl: "",
+      durationSec: duration,
+      modelMark: modelMark,
+      status: "generating",
+      resolution: outResolution,
+    };
+    setHistory((prev) => prependStudioHistory(prev, pendingItem));
 
     try {
       const form = new FormData();
       form.set("mode", studioMode);
       form.set("modelId", isObjectSwap ? "genjutsu" : model.id);
+      form.set("modelMark", modelMark);
+      form.set("clientJobId", historyId);
       if (isObjectSwap) {
         for (const file of swapRefs) {
           form.append("referenceImage", file);
@@ -510,10 +545,7 @@ export function MotionStudio() {
       form.set("prompt", resolved);
       form.set("durationSec", String(duration));
       form.set("modelMultiplier", String(model.multiplier));
-      form.set(
-        "resolution",
-        usesGenjutsuPricing ? genjutsuResolution : falResolution,
-      );
+      form.set("resolution", outResolution);
       if (videoFramePixels != null && videoFramePixels > 0) {
         form.set("framePixels", String(videoFramePixels));
       }
@@ -531,16 +563,30 @@ export function MotionStudio() {
           needsCredits?: boolean;
         } | null;
         if (res.status === 403 && data?.needsLogin) {
+          setHistory((prev) =>
+            updateStudioHistoryItem(prev, historyId, {
+              status: "failed",
+              errorMessage: "Sign in required.",
+              elapsedSec: elapsedRef.current,
+            }),
+          );
           setStatus("idle");
           promptLoginForGenerate();
           return;
         }
         if (res.status === 402 && data?.needsCredits) {
-          setStatus("error");
-          setErrorMessage(
+          const message =
             data.error ||
-              "Not enough credits. Buy a pack on Pricing to continue.",
+            "Not enough credits. Buy a pack on Pricing to continue.";
+          setHistory((prev) =>
+            updateStudioHistoryItem(prev, historyId, {
+              status: "failed",
+              errorMessage: message,
+              elapsedSec: elapsedRef.current,
+            }),
           );
+          setStatus("error");
+          setErrorMessage(message);
           return;
         }
         throw new Error(data?.error || "Generation failed.");
@@ -549,9 +595,11 @@ export function MotionStudio() {
       const data = (await res.json()) as {
         videoUrl?: string;
         r2Url?: string | null;
+        jobId?: string | null;
       };
       const sourceUrl = data.videoUrl?.trim() || "";
       const historyUrl = data.r2Url?.trim() || sourceUrl;
+      const cloudId = data.jobId?.trim() || historyId;
       if (!sourceUrl) {
         throw new Error("Generation returned no video URL.");
       }
@@ -564,25 +612,42 @@ export function MotionStudio() {
       setPanelMode("preview");
       void clearStudioDraft();
 
-      const item: StudioHistoryItem = {
-        id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-        title:
-          primaryImage.name.replace(/\.[^.]+$/, "") ||
-          (isObjectSwap ? "Object swap" : "Motion transfer"),
-        createdAt: new Date().toISOString(),
-        // History prefers durable R2 URL (mirrored in the background).
-        videoUrl: historyUrl,
-        durationSec: duration,
-        modelMark: modelMark,
-      };
-      setHistory((prev) => prependStudioHistory(prev, item));
+      setHistory((prev) => {
+        const withoutLocal = prev.filter((item) => item.id !== historyId);
+        return prependStudioHistory(withoutLocal, {
+          id: cloudId,
+          title: pendingItem.title,
+          createdAt: pendingItem.createdAt,
+          videoUrl: historyUrl,
+          durationSec: duration,
+          modelMark: modelMark,
+          status: "done",
+          resolution: outResolution,
+          elapsedSec: elapsedRef.current,
+        });
+      });
       void refreshSession();
+      void fetchCloudStudioHistory(24).then((cloud) => {
+        if (cloud == null) return;
+        setHistory((prev) => mergeCloudStudioHistory(prev, cloud));
+      });
     } catch (err) {
+      const message =
+        err instanceof Error ? err.message : "Generation failed.";
       setLastElapsedSec(elapsedRef.current);
-      setStatus("error");
-      setErrorMessage(
-        err instanceof Error ? err.message : "Generation failed.",
+      setHistory((prev) =>
+        updateStudioHistoryItem(prev, historyId, {
+          status: "failed",
+          errorMessage: message,
+          elapsedSec: elapsedRef.current,
+        }),
       );
+      setStatus("error");
+      setErrorMessage(message);
+      void fetchCloudStudioHistory(24).then((cloud) => {
+        if (cloud == null) return;
+        setHistory((prev) => mergeCloudStudioHistory(prev, cloud));
+      });
     }
   }
 
@@ -597,12 +662,14 @@ export function MotionStudio() {
   }, [resultUrl]);
 
   const openHistoryItem = useCallback((item: StudioHistoryItem) => {
+    if (item.status !== "done" || !item.videoUrl) return;
     setResultUrl(item.videoUrl);
     setStatus("done");
     setPanelMode("preview");
   }, []);
 
   const downloadHistoryItem = useCallback((item: StudioHistoryItem) => {
+    if (item.status !== "done" || !item.videoUrl) return;
     const a = document.createElement("a");
     a.href = item.videoUrl;
     a.download = `genjutsu-${item.id}.mp4`;
@@ -1144,6 +1211,8 @@ export function MotionStudio() {
           <StudioPreviewHistoryTabs
             mode={panelMode}
             onModeChange={setPanelMode}
+            historyCount={history.length}
+            historyBusy={history.some((item) => item.status === "generating")}
             trailing={
               <>
                 {duration != null ? `${duration}s · ` : ""}
@@ -1168,6 +1237,7 @@ export function MotionStudio() {
                 items={history}
                 onSelect={openHistoryItem}
                 onDownload={downloadHistoryItem}
+                activeElapsedSec={elapsedSec}
               />
             ) : (
               <>
