@@ -117,6 +117,7 @@ export function MotionStudio() {
   const [referenceAssets, setReferenceAssets] = useState<ReferenceAsset[]>([]);
   const [videoName, setVideoName] = useState<string | null>(null);
   const [videoFile, setVideoFile] = useState<File | null>(null);
+  const [videoUrl, setVideoUrl] = useState<string | null>(null);
   const [videoDurationSec, setVideoDurationSec] = useState<number | null>(null);
   const [videoFramePixels, setVideoFramePixels] = useState<number | null>(null);
   const [prompt, setPrompt] = useState("");
@@ -163,6 +164,7 @@ export function MotionStudio() {
   useEffect(() => {
     return () => {
       if (imageUrl) URL.revokeObjectURL(imageUrl);
+      if (videoUrl) URL.revokeObjectURL(videoUrl);
       for (const asset of referenceAssets) URL.revokeObjectURL(asset.url);
       if (resultUrl?.startsWith("blob:")) URL.revokeObjectURL(resultUrl);
     };
@@ -232,8 +234,24 @@ export function MotionStudio() {
     setErrorMessage(null);
   }
 
+  function clearVideoPreview() {
+    setVideoFile(null);
+    setVideoName(null);
+    setVideoDurationSec(null);
+    setVideoFramePixels(null);
+    setVideoUrl((prev) => {
+      if (prev) URL.revokeObjectURL(prev);
+      return null;
+    });
+  }
+
   function onVideo(file: File | null) {
     if (!file) return;
+    const preview = URL.createObjectURL(file);
+    setVideoUrl((prev) => {
+      if (prev) URL.revokeObjectURL(prev);
+      return preview;
+    });
     setVideoName(file.name);
     setVideoFile(file);
     setVideoDurationSec(null);
@@ -244,10 +262,7 @@ export function MotionStudio() {
     void probeVideoFileMeta(file).then((meta) => {
       const raw = meta?.durationSec ?? null;
       if (raw != null && raw > MOTION_TRANSFER_MAX_DURATION_SEC + 0.05) {
-        setVideoFile(null);
-        setVideoName(null);
-        setVideoDurationSec(null);
-        setVideoFramePixels(null);
+        clearVideoPreview();
         setStatus("error");
         setErrorMessage(
           `Motion video is too long (max ${MOTION_TRANSFER_MAX_DURATION_SEC}s).`,
@@ -260,10 +275,7 @@ export function MotionStudio() {
         meta.framePixels > 0 &&
         meta.framePixels < OBJECT_SWAP_MIN_FRAME_PIXELS
       ) {
-        setVideoFile(null);
-        setVideoName(null);
-        setVideoDurationSec(null);
-        setVideoFramePixels(null);
+        clearVideoPreview();
         setStatus("error");
         setErrorMessage(
           "Source video resolution is too low for Object Swap (need about 854×480 or larger).",
@@ -510,7 +522,8 @@ export function MotionStudio() {
                     Resolution
                   </p>
                   <p className="text-[0.65rem] text-fg-subtle">
-                    {genjutsuCreditsPerSecond(resolution).toLocaleString()} cr/s
+                    {genjutsuCreditsPerSecond(resolution).toLocaleString()}{" "}
+                    credits/s
                   </p>
                 </div>
                 <div className="grid grid-cols-3 gap-1 rounded-xl border border-white/[0.08] bg-black/25 p-1">
@@ -558,7 +571,7 @@ export function MotionStudio() {
                         </span>
                         <span className="block text-[0.7rem] text-fg-subtle">
                           {isGenjutsuMotion
-                            ? `${genjutsuCreditsPerSecond(resolution).toLocaleString()} cr/s · ${resolution}`
+                            ? `${genjutsuCreditsPerSecond(resolution).toLocaleString()} credits/s · ${resolution}`
                             : model.meta}
                         </span>
                       </span>
@@ -610,8 +623,8 @@ export function MotionStudio() {
                                 <span className="block text-xs text-fg-subtle">
                                   {item.meta}
                                   {duration != null
-                                    ? ` · ${itemCredits.toLocaleString()} cr / ${duration}s`
-                                    : ` · ${itemCredits.toLocaleString()} cr/s`}
+                                    ? ` · ${itemCredits.toLocaleString()} credits / ${duration}s`
+                                    : ` · ${itemCredits.toLocaleString()} credits/s`}
                                 </span>
                               </span>
                             </button>
@@ -713,6 +726,8 @@ export function MotionStudio() {
                   button="Add video"
                   accept="video/*"
                   fileName={videoName}
+                  previewUrl={videoUrl}
+                  previewKind="video"
                   onPick={onVideo}
                   icon="video"
                 />
@@ -727,6 +742,7 @@ export function MotionStudio() {
                   accept="image/*"
                   fileName={imageName}
                   previewUrl={imageUrl}
+                  previewKind="image"
                   onPick={onImage}
                   icon="image"
                   compact
@@ -742,6 +758,8 @@ export function MotionStudio() {
                   button="Add video"
                   accept="video/*"
                   fileName={videoName}
+                  previewUrl={videoUrl}
+                  previewKind="video"
                   onPick={onVideo}
                   icon="video"
                   compact
@@ -868,13 +886,13 @@ export function MotionStudio() {
                       >
                         ·
                       </span>
-                      <span>{sellCredits.toLocaleString()} cr</span>
+                      <span>{sellCredits.toLocaleString()} credits</span>
                     </>
                   ) : (
                     <span>
                       {usesGenjutsuPricing
-                        ? `${genjutsuCreditsPerSecond(resolution).toLocaleString()} cr/s · ${resolution}`
-                        : `${CREDITS_PER_SECOND} cr/s · ×${model.multiplier}`}
+                        ? `${genjutsuCreditsPerSecond(resolution).toLocaleString()} credits/s · ${resolution}`
+                        : `${CREDITS_PER_SECOND} credits/s · ×${model.multiplier}`}
                     </span>
                   )}
                 </span>
@@ -902,8 +920,8 @@ export function MotionStudio() {
                       ? `Done · ${duration ?? "?"}s · ${modelMark}${usesGenjutsuPricing ? ` · ${resolution}` : ""}${lastPrompt ? (usingDefaultPrompt ? " · default prompt" : " · custom prompt") : ""}.`
                       : duration != null
                         ? usesGenjutsuPricing
-                          ? `Credits follow video length · ${genjutsuCreditsPerSecond(resolution).toLocaleString()} cr/s · ${resolution}`
-                          : `Credits follow motion length · ${CREDITS_PER_SECOND} cr/s ×${model.multiplier}`
+                          ? `Credits follow video length · ${genjutsuCreditsPerSecond(resolution).toLocaleString()} credits/s · ${resolution}`
+                          : `Credits follow motion length · ${CREDITS_PER_SECOND} credits/s ×${model.multiplier}`
                         : isObjectSwap
                           ? "Reference + video → object swap"
                           : "Character + motion → AI video"}
@@ -1076,6 +1094,39 @@ export function MotionStudio() {
   );
 }
 
+function MediaPreview({
+  url,
+  kind,
+}: {
+  url: string;
+  kind: "image" | "video";
+}) {
+  if (kind === "video") {
+    return (
+      <video
+        src={url}
+        muted
+        playsInline
+        preload="metadata"
+        className="absolute inset-0 h-full w-full object-cover"
+        aria-hidden
+        onLoadedMetadata={(e) => {
+          const el = e.currentTarget;
+          // Seek slightly in so the thumbnail isn't a black first frame.
+          try {
+            if (el.duration > 0.1) el.currentTime = 0.08;
+          } catch {
+            /* ignore */
+          }
+        }}
+      />
+    );
+  }
+  return (
+    <Image src={url} alt="" fill unoptimized className="object-cover" />
+  );
+}
+
 function UploadField({
   label,
   required,
@@ -1084,6 +1135,7 @@ function UploadField({
   accept,
   fileName,
   previewUrl,
+  previewKind = "image",
   onPick,
   icon,
   compact,
@@ -1095,6 +1147,7 @@ function UploadField({
   accept: string;
   fileName: string | null;
   previewUrl?: string | null;
+  previewKind?: "image" | "video";
   onPick: (file: File | null) => void;
   icon: "image" | "video";
   compact?: boolean;
@@ -1120,13 +1173,7 @@ function UploadField({
           ].join(" ")}
         >
           {previewUrl ? (
-            <Image
-              src={previewUrl}
-              alt=""
-              fill
-              unoptimized
-              className="object-cover"
-            />
+            <MediaPreview url={previewUrl} kind={previewKind} />
           ) : (
             <UploadIcon type={icon} />
           )}
@@ -1172,13 +1219,7 @@ function UploadField({
           ].join(" ")}
         >
           {previewUrl ? (
-            <Image
-              src={previewUrl}
-              alt=""
-              fill
-              unoptimized
-              className="object-cover"
-            />
+            <MediaPreview url={previewUrl} kind={previewKind} />
           ) : (
             <UploadIcon type={icon} />
           )}
