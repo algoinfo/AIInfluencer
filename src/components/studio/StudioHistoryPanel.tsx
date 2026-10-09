@@ -177,7 +177,13 @@ export function StudioHistoryPanel({
                 </button>
                 <button
                   type="button"
-                  onClick={() => onDelete?.(item)}
+                  onClick={() => {
+                    if (!onDelete || isGenerating) return;
+                    const ok = window.confirm(
+                      `Delete “${item.title}”? This cannot be undone.`,
+                    );
+                    if (ok) onDelete(item);
+                  }}
                   disabled={!onDelete || isGenerating}
                   className="min-w-[4.5rem] rounded-full border border-white/12 px-2.5 py-1 text-[0.65rem] font-medium text-fg-muted transition hover:border-red-400/35 hover:bg-red-500/10 hover:text-red-300 disabled:cursor-not-allowed disabled:opacity-35"
                 >
