@@ -101,8 +101,8 @@ const models: StudioModel[] = [
     mark: "gj",
     multiplier: 1,
     provider: "higgsfield",
-    etaLabel: "~2–4 min",
-    typicalWaitSec: 180,
+    etaLabel: "~3–6 min",
+    typicalWaitSec: 240,
   },
   {
     id: "kling-v3-pro",
@@ -111,8 +111,8 @@ const models: StudioModel[] = [
     mark: "K3",
     multiplier: 1.5,
     provider: "fal",
-    etaLabel: "~2–4 min",
-    typicalWaitSec: 180,
+    etaLabel: "~3–6 min",
+    typicalWaitSec: 240,
   },
   {
     id: "kling-v3-standard",
@@ -121,8 +121,8 @@ const models: StudioModel[] = [
     mark: "V3",
     multiplier: 1.2,
     provider: "fal",
-    etaLabel: "~2–3 min",
-    typicalWaitSec: 150,
+    etaLabel: "~3–5 min",
+    typicalWaitSec: 210,
   },
   {
     id: "kling-v26-standard",
@@ -131,12 +131,12 @@ const models: StudioModel[] = [
     mark: "2.6",
     multiplier: 1,
     provider: "fal",
-    etaLabel: "~1–3 min",
-    typicalWaitSec: 120,
+    etaLabel: "~2–4 min",
+    typicalWaitSec: 180,
   },
 ];
 
-const OBJECT_SWAP_ETA = { etaLabel: "~2–4 min", typicalWaitSec: 180 };
+const OBJECT_SWAP_ETA = { etaLabel: "~3–6 min", typicalWaitSec: 240 };
 
 export function MotionStudio() {
   const { isLoggedIn, openAuthModal, refreshSession } = useAuth();
