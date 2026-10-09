@@ -1,92 +1,93 @@
 import { UseCasePage } from "@/components/seo/UseCasePage";
+import { WELCOME_CREDITS } from "@/lib/credit-limits";
 import { pageMetadata } from "@/lib/seo";
 
 export const metadata = pageMetadata({
-  title: "AI Dance Video Generator — Photo to Dance | Genjutsu",
-  description:
-    "Turn a still character into an AI dance video with motion transfer. Upload an image and a dance reference, then generate in the Genjutsu studio.",
+  title: "Free AI Dance Video Generator | Genjutsu",
+  description: `Free AI dance video generator to start: sign up for ${WELCOME_CREDITS} welcome credits, upload a photo and dance reference, and generate with motion transfer.`,
   path: "/dance-video",
   absoluteTitle: true,
-  keywords: [
-    "ai dance video generator",
-    "AI dance video",
-    "photo to dance video",
-    "motion transfer dance",
-  ],
+  keywords: ["free ai dance video generator", "free AI dance video generator"],
 });
 
 export default function DanceVideoPage() {
   return (
     <UseCasePage
-      eyebrow="Use case · Dance"
-      title="AI Dance Video Generator"
-      subtitle="Map choreography from a reference clip onto a still character — an AI dance video without reshooting the performance."
-      tags={["Image + dance reference", "Motion transfer", "Short-form"]}
-      primaryCta={{ href: "/#studio", label: "Generate dance video" }}
-      secondaryCta={{ href: "/examples", label: "See Examples" }}
+      eyebrow="Use case · Free dance"
+      title="Free AI Dance Video Generator"
+      subtitle={`Start free with ${WELCOME_CREDITS} welcome credits — upload a photo, add a dance reference, and generate a real motion-transfer clip in the studio.`}
+      tags={["Free to start", "Photo → dance", "Welcome credits"]}
+      primaryCta={{ href: "/login", label: "Start free" }}
+      secondaryCta={{ href: "/#studio", label: "Open studio" }}
       demos={[
-        { label: "Character still", tone: "character" },
+        { label: "Your photo", tone: "character" },
         { label: "Dance reference", tone: "reference" },
-        { label: "AI dance video", tone: "output" },
+        { label: "Dance video", tone: "output" },
       ]}
       features={[
         {
-          title: "Choreography you choose",
-          body: "The dance comes from your reference clip, not a prompt guessing footwork.",
+          title: `${WELCOME_CREDITS} free credits on signup`,
+          body: "Create an account and run real generations — not a watermark-only tease with no render path.",
         },
         {
-          title: "Identity from the still",
-          body: "Keep one face and wardrobe across many songs or hooks by freezing the character image.",
+          title: "Your choreography, not a prompt guess",
+          body: "Motion comes from the dance clip you upload, so footwork timing stays intentional.",
         },
         {
-          title: "Credits by motion length",
-          body: "Trim the reference to the usable phrase so tests stay cheap before you commit.",
+          title: "Same free studio as paid",
+          body: "Welcome credits use the production motion-transfer pipeline. Packs on Pricing only when you scale past the free balance.",
         },
       ]}
       sections={[
         {
-          heading: "How AI dance video works on Genjutsu",
+          heading: "How the free AI dance video generator works",
           paragraphs: [
-            "Upload a clear character still and a short dance reference. Genjutsu motion transfer reads pose timing from the clip and applies it to your subject. That is the core of an AI dance video generator workflow: performance in, identity held, clip out.",
-            "Results are strongest with readable full-body motion, matched camera height, and a front-facing or three-quarter still. Extreme crops and whip-pan references are the usual failure modes.",
+            "Competitors crowd the SERP with “free, no signup” claims. Genjutsu’s free path is honest: sign up, receive welcome credits, generate in the homepage studio. Credits scale with motion length, so trim the dance phrase before you burn the free balance on a 30s clip.",
+            "Workflow: clear full-body or three-quarter photo → short dance reference → generate. Identity stays on the still; performance stays on the plate.",
           ],
         },
         {
-          heading: "When to use this vs prompt-only video",
+          heading: "What “free” includes (and what it does not)",
           paragraphs: [
-            "Use Genjutsu when the steps must match a specific performance — a reel hook, a branded challenge, or a choreographer’s phrase. Use a generative video model when you want invented motion from text and can accept identity drift.",
-            "Many creators explore moves elsewhere, then lock the keeper phrase here onto a stable AI influencer still.",
+            `Includes: account signup, ${WELCOME_CREDITS} welcome credits, access to the same studio used for paid packs, history for your takes.`,
+            "Does not include: unlimited anonymous renders, or pretending the /motion-transfer layout demo exports video. That page is a UI preview; free generation needs login.",
           ],
         },
         {
-          heading: "Practical setup",
+          heading: "Tips so free credits produce a postable take",
           paragraphs: [
-            "1) Lock identity (see the consistent characters guide). 2) Trim dance audio/visual to the phrase you need. 3) Log in and generate from the homepage studio — the /motion-transfer page is a UI demo only. 4) Iterate crop and still quality before changing songs.",
+            "Match camera height between photo and dance. Prefer readable full-body references. Start with a 4–8s hook. If face drifts, fix the still before trying a harder choreography.",
+            "This page targets free AI dance video generator intent only. UGC ads → /ugc-video-generator. Pet dances → /ai-pet-dance. Avatar talking clips → /avatar-video-generator.",
           ],
         },
       ]}
       faq={[
         {
-          q: "Is this an online AI dance video generator?",
-          a: "Yes after login. Real renders run in the homepage studio with your credits; marketing demos do not bill or export final video.",
+          q: "Is the AI dance video generator really free?",
+          a: `Yes to start: new accounts receive ${WELCOME_CREDITS} welcome credits for real studio generations. After that, buy one-time packs — credits do not expire.`,
         },
         {
-          q: "What reference length works best?",
-          a: "Short hooks for testing, longer phrases once identity holds. Credits scale with uploaded motion length.",
+          q: "Do I need to sign up?",
+          a: "Yes. Anonymous generation is not available. Signup unlocks welcome credits and history.",
         },
         {
-          q: "Can I reuse one character across many dances?",
-          a: "That is the intended batch pattern: freeze the still, swap only the dance reference.",
+          q: "Can I upload my own dance, not a template?",
+          a: "Yes — that is the default. Upload any dance reference you have rights to use.",
+        },
+        {
+          q: "Where do I generate?",
+          a: "Log in, then open the homepage studio. Start Free takes you to signup/login first.",
         },
       ]}
       related={[
-        { href: "/ai-influencer", label: "AI Influencer" },
+        { href: "/login", label: "Start free" },
+        { href: "/pricing", label: "Pricing" },
+        { href: "/ai-pet-dance", label: "AI pet dance" },
+        { href: "/ugc-video-generator", label: "UGC video generator" },
         { href: "/guides/how-to-create-ai-influencer-videos", label: "Influencer how-to" },
-        { href: "/motion-transfer", label: "Motion Transfer" },
-        { href: "/ugc-ads", label: "UGC ads" },
       ]}
-      ctaTitle="Turn a still into a dance clip"
-      ctaBody="Open the studio, upload your character and dance reference, and generate after login."
+      ctaTitle="Start your free dance video"
+      ctaBody={`Sign up for ${WELCOME_CREDITS} welcome credits, then generate photo-to-dance in the studio.`}
     />
   );
 }

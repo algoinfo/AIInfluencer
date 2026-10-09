@@ -59,6 +59,12 @@ const nextConfig: NextConfig = {
         destination: "/genjutsu-alternatives",
         permanent: true,
       },
+      // Keyword landings: keep one canonical URL per money query
+      {
+        source: "/ugc-ads",
+        destination: "/ugc-video-generator",
+        permanent: true,
+      },
     ];
   },
   turbopack: {

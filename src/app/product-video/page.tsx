@@ -76,11 +76,11 @@ export default function ProductVideoPage() {
         },
         {
           q: "Where should I go for UGC-style product demos?",
-          a: "Use /ugc-ads when the job is phone-native ad variants; stay here for pack-shot and turntable-style product motion.",
+          a: "Use /ugc-video-generator when the job is phone-native ad variants; stay here for pack-shot and turntable-style product motion.",
         },
       ]}
       related={[
-        { href: "/ugc-ads", label: "UGC ads" },
+        { href: "/ugc-video-generator", label: "UGC video generator" },
         { href: "/examples", label: "Examples" },
         { href: "/motion-transfer", label: "Motion Transfer" },
         { href: "/guides/how-to-use-genjutsu", label: "How to use Genjutsu" },

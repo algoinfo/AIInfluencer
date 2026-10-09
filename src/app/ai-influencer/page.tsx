@@ -58,7 +58,7 @@ export default function AIInfluencerPage() {
         {
           heading: "Route by content job",
           paragraphs: [
-            "Dance-led reels → /dance-video. Paid UGC variants → /ugc-ads. Pack and hold demos → /product-video. Prep identity → /guides/how-to-create-consistent-ai-characters. Full batch how-to → /guides/how-to-create-ai-influencer-videos.",
+            "Dance-led reels → /dance-video. Paid UGC variants → /ugc-video-generator. Pack and hold demos → /product-video. Prep identity → /guides/how-to-create-consistent-ai-characters. Full batch how-to → /guides/how-to-create-ai-influencer-videos.",
             "/motion-transfer remains the vocabulary support page; do not treat it as the primary acquisition URL for influencer intent.",
           ],
         },
@@ -85,7 +85,7 @@ export default function AIInfluencerPage() {
       ]}
       related={[
         { href: "/dance-video", label: "Dance video" },
-        { href: "/ugc-ads", label: "UGC ads" },
+        { href: "/ugc-video-generator", label: "UGC video generator" },
         { href: "/guides/how-to-create-ai-influencer-videos", label: "How-to guide" },
         { href: "/genjutsu-alternatives", label: "Alternatives" },
       ]}

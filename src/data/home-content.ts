@@ -62,7 +62,7 @@ export const homeUseCases: HomeUseCase[] = [
   {
     id: "ugc-ads",
     title: "Create UGC-Style AI Video Ads",
-    href: "/ugc-ads",
+    href: "/ugc-video-generator",
     paragraphs: [
       "Performance ads burn through demo and walk-and-talk variants. Reuse a winning camera pattern from a reference clip, then recast it with a new face or product still to create UGC-style AI advertising video without another filming day.",
       "Generation is billed by motion length, so A/B tests stay predictable: same hook length, different images. Check Pricing for packs and welcome credits, then iterate in the studio preview.",
@@ -97,7 +97,7 @@ export const homeWhatYouCanCreate = {
     {
       title: "UGC Ads",
       body: "Recast a proven camera pattern with a new face or product.",
-      href: "/ugc-ads",
+      href: "/ugc-video-generator",
     },
     {
       title: "Character Videos",

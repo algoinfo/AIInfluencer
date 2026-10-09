@@ -5,9 +5,11 @@ import { CONTACT_EMAIL } from "@/lib/seo";
 const product = [
   { href: "/#studio", label: "Studio" },
   { href: "/pricing", label: "Pricing" },
-  { href: "/dance-video", label: "Dance video" },
+  { href: "/ugc-video-generator", label: "UGC video generator" },
+  { href: "/dance-video", label: "Free dance video" },
+  { href: "/ai-pet-dance", label: "AI pet dance" },
+  { href: "/avatar-video-generator", label: "Avatar video" },
   { href: "/ai-influencer", label: "AI Influencer" },
-  { href: "/ugc-ads", label: "UGC ads" },
   { href: "/product-video", label: "Product video" },
 ];
 

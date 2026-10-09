@@ -8,9 +8,11 @@ const staticPaths = [
   "/",
   "/guides",
   "/motion-transfer",
+  "/ugc-video-generator",
   "/dance-video",
+  "/ai-pet-dance",
+  "/avatar-video-generator",
   "/ai-influencer",
-  "/ugc-ads",
   "/product-video",
   "/examples",
   "/pricing",
@@ -19,7 +21,6 @@ const staticPaths = [
   "/genjutsu-alternatives",
   "/genjutsu-api",
   "/about",
-  "/login",
 ];
 
 export default function sitemap(): MetadataRoute.Sitemap {

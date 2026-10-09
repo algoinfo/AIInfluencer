@@ -36,8 +36,11 @@ export function GuidesPreview() {
           <Link href="/dance-video" className="text-accent hover:text-accent-strong">
             Dance video →
           </Link>
-          <Link href="/ugc-ads" className="text-accent hover:text-accent-strong">
-            UGC ads →
+          <Link
+            href="/ugc-video-generator"
+            className="text-accent hover:text-accent-strong"
+          >
+            UGC generator →
           </Link>
         </div>
       </div>

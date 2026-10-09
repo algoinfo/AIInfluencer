@@ -20,6 +20,11 @@ type CtaLink = {
   external?: boolean;
 };
 
+export type UseCaseTemplate = {
+  name: string;
+  description: string;
+};
+
 export type UseCasePageProps = {
   eyebrow: string;
   title: string;
@@ -29,6 +34,8 @@ export type UseCasePageProps = {
   secondaryCta?: CtaLink;
   demos?: { label: string; tone: "character" | "reference" | "output" }[];
   features: { title: string; body: string }[];
+  templatesHeading?: string;
+  templates?: UseCaseTemplate[];
   sections: UseCaseSection[];
   faq: UseCaseFaq[];
   related: { href: string; label: string }[];
@@ -49,6 +56,8 @@ export function UseCasePage({
     { label: "Output", tone: "output" },
   ],
   features,
+  templatesHeading = "Templates",
+  templates,
   sections,
   faq,
   related,
@@ -100,6 +109,36 @@ export function UseCasePage({
           </div>
         </div>
       </section>
+
+      {templates?.length ? (
+        <section className="section-pad border-t border-border">
+          <div className="page-shell">
+            <h2 className="font-display text-2xl font-semibold tracking-tight sm:text-3xl">
+              {templatesHeading}
+            </h2>
+            <p className="mt-3 max-w-2xl text-base leading-relaxed text-fg-muted">
+              Pick a named template, then run it in the studio with your photo
+              and a matching motion clip for that style.
+            </p>
+            <ul className="mt-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {templates.map((template, index) => (
+                <li
+                  key={template.name}
+                  className="rounded-2xl border border-border bg-surface/60 px-4 py-4"
+                >
+                  <p className="text-xs uppercase tracking-[0.16em] text-fg-subtle">
+                    {String(index + 1).padStart(2, "0")}
+                  </p>
+                  <p className="mt-2 font-medium text-fg">{template.name}</p>
+                  <p className="mt-1.5 text-sm leading-relaxed text-fg-muted">
+                    {template.description}
+                  </p>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </section>
+      ) : null}
 
       <section className="section-pad border-t border-border bg-bg-soft">
         <div className="page-shell max-w-3xl space-y-10">

@@ -145,7 +145,7 @@ export const guides: Guide[] = [
       {
         heading: "Use-case routes on this site",
         paragraphs: [
-          "Dance-led social: start at /dance-video. Brand talking-head and hook variants: /ugc-ads. Pack shots and held products: /product-video. Persona overview: /ai-influencer. Motion theory support: /motion-transfer.",
+          "Dance-led social: start at /dance-video. Brand talking-head and hook variants: /ugc-video-generator. Pack shots and held products: /product-video. Persona overview: /ai-influencer. Motion theory support: /motion-transfer.",
           "Those pages are built around jobs-to-be-done keywords. Guides like this one stay instructional; the use-case URLs carry the search intent for generators and workflows.",
         ],
       },
@@ -198,7 +198,7 @@ export const guides: Guide[] = [
     related: [
       { href: "/ai-influencer", label: "AI Influencer" },
       { href: "/dance-video", label: "Dance video" },
-      { href: "/ugc-ads", label: "UGC ads" },
+      { href: "/ugc-video-generator", label: "UGC video generator" },
       { href: "/guides/how-to-create-consistent-ai-characters", label: "Consistent characters" },
       { href: "https://aiinfluencer.world", label: "AIInfluencer.world" },
     ],
@@ -235,7 +235,7 @@ export const guides: Guide[] = [
       {
         heading: "Hand-off into Genjutsu use cases",
         paragraphs: [
-          "Once the package passes, route by job: dance socials → /dance-video, ad variants → /ugc-ads, pack and hold demos → /product-video. Keep the same still across those routes when you want one influencer universe.",
+          "Once the package passes, route by job: dance socials → /dance-video, ad variants → /ugc-video-generator, pack and hold demos → /product-video. Keep the same still across those routes when you want one influencer universe.",
           "For tool shopping and “what else exists,” use /genjutsu-alternatives rather than thin vs-pages. Motion vocabulary lives on /motion-transfer as a support page, not the primary acquisition URL.",
         ],
       },
