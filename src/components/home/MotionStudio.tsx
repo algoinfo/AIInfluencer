@@ -97,19 +97,11 @@ type StudioModel = {
   /** Typical wall-clock wait for a short clip (shown on Generate + busy UI). */
   etaLabel: string;
   typicalWaitSec: number;
+  /** Temporarily unavailable — shown grayed out, not selectable. */
+  disabled?: boolean;
 };
 
 const models: StudioModel[] = [
-  {
-    id: "genjutsu",
-    name: "genjutsu",
-    meta: "Higgsfield · by resolution",
-    mark: "gj",
-    multiplier: 1,
-    provider: "higgsfield",
-    etaLabel: "~5–8 min",
-    typicalWaitSec: 360,
-  },
   {
     id: "kling-v3-pro",
     name: "Kling V3 Pro Motion Control",
@@ -119,6 +111,17 @@ const models: StudioModel[] = [
     provider: "fal",
     etaLabel: "~5–8 min",
     typicalWaitSec: 360,
+  },
+  {
+    id: "genjutsu",
+    name: "genjutsu",
+    meta: "Higgsfield · by resolution",
+    mark: "gj",
+    multiplier: 1,
+    provider: "higgsfield",
+    etaLabel: "~5–8 min",
+    typicalWaitSec: 360,
+    disabled: true,
   },
   {
     id: "kling-v3-standard",
@@ -142,15 +145,18 @@ const models: StudioModel[] = [
   },
 ];
 
+const DEFAULT_MOTION_MODEL =
+  models.find((m) => m.id === "kling-v3-pro" && !m.disabled) ??
+  models.find((m) => !m.disabled) ??
+  models[0];
+
 export function MotionStudio() {
   const { isLoggedIn, openAuthModal, refreshSession } = useAuth();
   const [studioMode, setStudioMode] = useState<StudioMode>("motion-transfer");
   const [resolution, setResolution] = useState<
     GenjutsuResolution | FalMotionResolution | PixverseSwapResolution
-  >(GENJUTSU_DEFAULT_RESOLUTION);
-  const [model, setModel] = useState(
-    () => models.find((m) => m.id === "genjutsu") ?? models[0],
-  );
+  >(FAL_MOTION_DEFAULT_RESOLUTION);
+  const [model, setModel] = useState(() => DEFAULT_MOTION_MODEL);
   const [open, setOpen] = useState(false);
   const [imageName, setImageName] = useState<string | null>(null);
   const [imageUrl, setImageUrl] = useState<string | null>(null);
@@ -300,9 +306,10 @@ export function MotionStudio() {
         );
         setPrompt(draft.prompt);
         setPromptOn(draft.promptOn);
-        const matched =
-          models.find((item) => item.id === draft.modelId) ?? models[0];
-        setModel(matched);
+        const matched = models.find((item) => item.id === draft.modelId);
+        setModel(
+          matched && !matched.disabled ? matched : DEFAULT_MOTION_MODEL,
+        );
 
         setVideoUrl((prev) => {
           if (prev) URL.revokeObjectURL(prev);
@@ -768,12 +775,11 @@ export function MotionStudio() {
                       setStatus("idle");
                       setErrorMessage(null);
                       if (tab.id === "motion-transfer") {
-                        setModel(
-                          models.find((m) => m.id === "genjutsu") ?? models[0],
-                        );
+                        setModel(DEFAULT_MOTION_MODEL);
                         if (
                           resolution === "360p" ||
-                          resolution === "540p"
+                          resolution === "540p" ||
+                          resolution === "1080p"
                         ) {
                           setResolution(FAL_MOTION_DEFAULT_RESOLUTION);
                         }
@@ -893,6 +899,7 @@ export function MotionStudio() {
                       className="absolute left-0 right-0 z-20 mt-2 overflow-hidden rounded-2xl border border-white/[0.1] bg-[#141416] p-1.5 shadow-[0_20px_50px_rgba(0,0,0,0.5)]"
                     >
                       {models.map((item) => {
+                        const disabled = Boolean(item.disabled);
                         const itemCredits =
                           item.provider === "higgsfield"
                             ? duration != null
@@ -912,7 +919,10 @@ export function MotionStudio() {
                               type="button"
                               role="option"
                               aria-selected={item.id === model.id}
+                              aria-disabled={disabled}
+                              disabled={disabled}
                               onClick={() => {
+                                if (disabled) return;
                                 setModel(item);
                                 setOpen(false);
                                 // Clamp resolution to the selected provider's options.
@@ -936,17 +946,32 @@ export function MotionStudio() {
                               }}
                               className={[
                                 "flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition-colors",
-                                item.id === model.id
-                                  ? "bg-white/[0.08]"
-                                  : "hover:bg-white/[0.04]",
+                                disabled
+                                  ? "cursor-not-allowed opacity-40"
+                                  : item.id === model.id
+                                    ? "bg-white/[0.08]"
+                                    : "hover:bg-white/[0.04]",
                               ].join(" ")}
                             >
-                              <span className="flex h-8 min-w-8 items-center justify-center rounded-lg bg-accent/90 px-1 font-display text-[0.6rem] font-semibold leading-none text-[#0a0a0c]">
+                              <span
+                                className={[
+                                  "flex h-8 min-w-8 items-center justify-center rounded-lg px-1 font-display text-[0.6rem] font-semibold leading-none",
+                                  disabled
+                                    ? "bg-white/15 text-fg-muted"
+                                    : "bg-accent/90 text-[#0a0a0c]",
+                                ].join(" ")}
+                              >
                                 {item.mark}
                               </span>
                               <span className="min-w-0">
-                                <span className="block truncate text-sm text-fg">
+                                <span
+                                  className={[
+                                    "block truncate text-sm",
+                                    disabled ? "text-fg-muted" : "text-fg",
+                                  ].join(" ")}
+                                >
                                   {item.name}
+                                  {disabled ? " · soon" : ""}
                                 </span>
                                 <span className="mt-0.5 block text-xs font-medium text-fg-muted">
                                   {item.meta}
@@ -1083,11 +1108,6 @@ export function MotionStudio() {
 
           {/* Sticky generate */}
           <div className="shrink-0 border-t border-white/[0.07] p-3.5 sm:p-4">
-            <p className="mb-2.5 text-center text-[0.72rem] leading-snug text-fg-muted">
-              {isObjectSwap
-                ? "Tip: use a clear swap image that matches the subject size and angle in the source video."
-                : "Tip: keep the person a similar size and framing in the photo and the motion video."}
-            </p>
             <button
               type="button"
               onClick={() => void onGenerate()}
@@ -1184,34 +1204,34 @@ export function MotionStudio() {
                 </span>
               )}
             </button>
-            <p
-              className={[
-                "mt-2 text-center text-[0.72rem] leading-tight",
-                status === "need" || status === "error"
-                  ? "text-accent"
-                  : "text-fg-muted",
-              ].join(" ")}
-            >
-              {status === "need"
-                ? isObjectSwap
-                  ? "Add a swap image and source video first."
-                  : "Add a character image and motion video first."
-                : status === "generating"
-                  ? `${phaseHint} · ${elapsedParts.label} / ${eta.etaLabel}`
-                  : status === "error"
-                    ? errorMessage || "Generation failed."
-                    : status === "done"
-                      ? `Done in ${lastElapsedSec != null ? formatElapsedParts(lastElapsedSec).label : "—"} · ${duration ?? "?"}s clip · ${modelMark} · ${resolution}${lastPrompt ? (usingDefaultPrompt ? " · default prompt" : " · custom prompt") : ""}.`
-                      : duration != null
-                        ? usesPixversePricing
-                          ? `Credits follow video length · ${pixverseSwapCreditsPerSecond(pixverseResolution).toLocaleString()} credits/s · usually ${eta.etaLabel}`
-                          : usesGenjutsuPricing
-                            ? `Credits follow video length · ${genjutsuCreditsPerSecond(genjutsuResolution).toLocaleString()} credits/s · usually ${eta.etaLabel}`
-                            : `Credits follow motion length · ${CREDITS_PER_SECOND} credits/s ×${model.multiplier} · usually ${eta.etaLabel}`
-                        : isObjectSwap
-                          ? `Image + video → Object Swap · usually ${eta.etaLabel}`
-                          : `Character + motion → AI video · usually ${eta.etaLabel}`}
+            <p className="mt-2.5 text-center text-[0.72rem] leading-snug text-fg-muted">
+              {isObjectSwap
+                ? "Tip: use a clear swap image that matches the subject size and angle in the source video."
+                : "Tip: keep the person a similar size and framing in the photo and the motion video."}
             </p>
+            {status === "need" ||
+            status === "error" ||
+            status === "generating" ||
+            status === "done" ? (
+              <p
+                className={[
+                  "mt-1.5 text-center text-[0.72rem] leading-tight",
+                  status === "need" || status === "error"
+                    ? "text-accent"
+                    : "text-fg-muted",
+                ].join(" ")}
+              >
+                {status === "need"
+                  ? isObjectSwap
+                    ? "Add a swap image and source video first."
+                    : "Add a character image and motion video first."
+                  : status === "generating"
+                    ? `${phaseHint} · ${elapsedParts.label} / ${eta.etaLabel}`
+                    : status === "error"
+                      ? errorMessage || "Generation failed."
+                      : `Done in ${lastElapsedSec != null ? formatElapsedParts(lastElapsedSec).label : "—"} · ${duration ?? "?"}s clip · ${modelMark} · ${resolution}${lastPrompt ? (usingDefaultPrompt ? " · default prompt" : " · custom prompt") : ""}.`}
+              </p>
+            ) : null}
           </div>
         </div>
 
