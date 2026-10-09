@@ -11,6 +11,11 @@ import {
 } from "@/components/studio/StudioPreviewHistoryTabs";
 import { CREDITS_PER_SECOND, creditsForRun } from "@/data/credits";
 import {
+  FAL_MOTION_DEFAULT_RESOLUTION,
+  FAL_MOTION_RESOLUTIONS,
+  type FalMotionResolution,
+} from "@/data/fal-motion-resolution";
+import {
   creditsForGenjutsuRun,
   GENJUTSU_DEFAULT_RESOLUTION,
   GENJUTSU_MAX_REFERENCE_IMAGES,
@@ -44,10 +49,20 @@ type ReferenceAsset = {
   name: string;
 };
 
-function formatElapsed(totalSeconds: number): string {
+function formatElapsedParts(totalSeconds: number): {
+  mm: string;
+  ss: string;
+  label: string;
+} {
   const m = Math.floor(totalSeconds / 60);
   const s = totalSeconds % 60;
-  return `${m}:${s.toString().padStart(2, "0")}`;
+  const mm = m.toString().padStart(2, "0");
+  const ss = s.toString().padStart(2, "0");
+  return {
+    mm,
+    ss,
+    label: m > 0 ? `${m}m ${ss}s` : `${s}s`,
+  };
 }
 
 type StudioMode = "object-swap" | "motion-transfer";
@@ -108,9 +123,9 @@ const models: StudioModel[] = [
 export function MotionStudio() {
   const { isLoggedIn, openAuthModal, refreshSession } = useAuth();
   const [studioMode, setStudioMode] = useState<StudioMode>("motion-transfer");
-  const [resolution, setResolution] = useState<GenjutsuResolution>(
-    GENJUTSU_DEFAULT_RESOLUTION,
-  );
+  const [resolution, setResolution] = useState<
+    GenjutsuResolution | FalMotionResolution
+  >(GENJUTSU_DEFAULT_RESOLUTION);
   const [model, setModel] = useState(
     () => models.find((m) => m.id === "genjutsu") ?? models[0],
   );
@@ -136,6 +151,8 @@ export function MotionStudio() {
   const [panelMode, setPanelMode] = useState<StudioPanelMode>("preview");
   const [history, setHistory] = useState<StudioHistoryItem[]>([]);
   const [elapsedSec, setElapsedSec] = useState(0);
+  const [lastElapsedSec, setLastElapsedSec] = useState<number | null>(null);
+  const elapsedRef = useRef(0);
   const menuRef = useRef<HTMLDivElement>(null);
   const listId = useId();
   const promptId = useId();
@@ -144,11 +161,22 @@ export function MotionStudio() {
   const isGenjutsuMotion =
     !isObjectSwap && model.provider === "higgsfield";
   const usesGenjutsuPricing = isObjectSwap || isGenjutsuMotion;
+  const motionResolutions = isGenjutsuMotion
+    ? GENJUTSU_RESOLUTIONS
+    : FAL_MOTION_RESOLUTIONS;
+  const genjutsuResolution: GenjutsuResolution =
+    resolution === "480p" || resolution === "720p" || resolution === "1080p"
+      ? resolution
+      : GENJUTSU_DEFAULT_RESOLUTION;
+  const falResolution: FalMotionResolution =
+    resolution === "480p" || resolution === "580p" || resolution === "720p"
+      ? resolution
+      : FAL_MOTION_DEFAULT_RESOLUTION;
   const sellCredits =
     duration == null
       ? null
       : usesGenjutsuPricing
-        ? creditsForGenjutsuRun(duration, resolution)
+        ? creditsForGenjutsuRun(duration, genjutsuResolution)
         : creditsForRun(duration, model.multiplier);
   const usingDefaultPrompt = !promptOn || prompt.trim().length === 0;
   const modelMark = isObjectSwap ? "gj" : model.mark;
@@ -212,7 +240,14 @@ export function MotionStudio() {
         if (!draft) return;
 
         setStudioMode(draft.studioMode);
-        setResolution(draft.resolution);
+        setResolution(
+          draft.resolution === "480p" ||
+            draft.resolution === "580p" ||
+            draft.resolution === "720p" ||
+            draft.resolution === "1080p"
+            ? draft.resolution
+            : GENJUTSU_DEFAULT_RESOLUTION,
+        );
         setPrompt(draft.prompt);
         setPromptOn(draft.promptOn);
         const matched =
@@ -298,15 +333,15 @@ export function MotionStudio() {
   }, []);
 
   useEffect(() => {
-    if (status !== "generating") {
-      setElapsedSec(0);
-      return;
-    }
+    if (status !== "generating") return;
+    elapsedRef.current = 0;
     setElapsedSec(0);
     const startedAt = Date.now();
     const id = window.setInterval(() => {
-      setElapsedSec(Math.floor((Date.now() - startedAt) / 1000));
-    }, 250);
+      const next = Math.floor((Date.now() - startedAt) / 1000);
+      elapsedRef.current = next;
+      setElapsedSec(next);
+    }, 200);
     return () => window.clearInterval(id);
   }, [status]);
 
@@ -453,6 +488,7 @@ export function MotionStudio() {
       : resolveMotionPrompt(promptOn ? prompt : "");
     setLastPrompt(resolved || null);
     setErrorMessage(null);
+    setLastElapsedSec(null);
     setStatus("generating");
     setPanelMode("preview");
 
@@ -474,7 +510,10 @@ export function MotionStudio() {
       form.set("prompt", resolved);
       form.set("durationSec", String(duration));
       form.set("modelMultiplier", String(model.multiplier));
-      form.set("resolution", resolution);
+      form.set(
+        "resolution",
+        usesGenjutsuPricing ? genjutsuResolution : falResolution,
+      );
       if (videoFramePixels != null && videoFramePixels > 0) {
         form.set("framePixels", String(videoFramePixels));
       }
@@ -520,6 +559,7 @@ export function MotionStudio() {
       if (resultUrl?.startsWith("blob:")) URL.revokeObjectURL(resultUrl);
       // Play the provider CDN URL immediately — no blob proxy through our API.
       setResultUrl(sourceUrl);
+      setLastElapsedSec(elapsedRef.current);
       setStatus("done");
       setPanelMode("preview");
       void clearStudioDraft();
@@ -538,6 +578,7 @@ export function MotionStudio() {
       setHistory((prev) => prependStudioHistory(prev, item));
       void refreshSession();
     } catch (err) {
+      setLastElapsedSec(elapsedRef.current);
       setStatus("error");
       setErrorMessage(
         err instanceof Error ? err.message : "Generation failed.",
@@ -574,6 +615,17 @@ export function MotionStudio() {
       duration != null,
   );
   const busy = status === "generating";
+  const elapsedParts = formatElapsedParts(elapsedSec);
+  const typicalWaitSec = 150;
+  const progressPct = Math.min(96, (elapsedSec / typicalWaitSec) * 100);
+  const phaseHint =
+    elapsedSec < 15
+      ? "Uploading assets…"
+      : elapsedSec < 45
+        ? "Starting the model…"
+        : elapsedSec < 120
+          ? "Rendering frames…"
+          : "Almost there…";
 
   return (
     <div
@@ -654,7 +706,7 @@ export function MotionStudio() {
                     Resolution
                   </p>
                   <p className="text-[0.68rem] font-medium tabular-nums text-fg-muted">
-                    {genjutsuCreditsPerSecond(resolution).toLocaleString()}{" "}
+                    {genjutsuCreditsPerSecond(genjutsuResolution).toLocaleString()}{" "}
                     credits/s
                   </p>
                 </div>
@@ -703,8 +755,8 @@ export function MotionStudio() {
                         </span>
                         <span className="mt-0.5 block text-[0.72rem] font-medium text-fg-muted">
                           {isGenjutsuMotion
-                            ? `${genjutsuCreditsPerSecond(resolution).toLocaleString()} credits/s · ${resolution}`
-                            : model.meta}
+                            ? `${genjutsuCreditsPerSecond(genjutsuResolution).toLocaleString()} credits/s · ${resolution}`
+                            : `${model.meta} · ${resolution}`}
                         </span>
                       </span>
                     </span>
@@ -721,8 +773,11 @@ export function MotionStudio() {
                         const itemCredits =
                           item.provider === "higgsfield"
                             ? duration != null
-                              ? creditsForGenjutsuRun(duration, resolution)
-                              : genjutsuCreditsPerSecond(resolution)
+                              ? creditsForGenjutsuRun(
+                                  duration,
+                                  genjutsuResolution,
+                                )
+                              : genjutsuCreditsPerSecond(genjutsuResolution)
                             : duration != null
                               ? creditsForRun(duration, item.multiplier)
                               : Math.round(
@@ -737,6 +792,24 @@ export function MotionStudio() {
                               onClick={() => {
                                 setModel(item);
                                 setOpen(false);
+                                // Clamp resolution to the selected provider's options.
+                                if (item.provider === "fal") {
+                                  setResolution((prev) =>
+                                    prev === "480p" ||
+                                    prev === "580p" ||
+                                    prev === "720p"
+                                      ? prev
+                                      : FAL_MOTION_DEFAULT_RESOLUTION,
+                                  );
+                                } else {
+                                  setResolution((prev) =>
+                                    prev === "480p" ||
+                                    prev === "720p" ||
+                                    prev === "1080p"
+                                      ? prev
+                                      : GENJUTSU_DEFAULT_RESOLUTION,
+                                  );
+                                }
                               }}
                               className={[
                                 "flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition-colors",
@@ -767,33 +840,31 @@ export function MotionStudio() {
                   ) : null}
                 </div>
 
-                {isGenjutsuMotion ? (
-                  <div>
-                    <p className="mb-1.5 text-[0.68rem] font-medium uppercase tracking-[0.14em] text-fg-muted">
-                      Resolution
-                    </p>
-                    <div className="grid grid-cols-3 gap-1 rounded-xl border border-white/[0.08] bg-black/25 p-1">
-                      {GENJUTSU_RESOLUTIONS.map((option) => {
-                        const active = option === resolution;
-                        return (
-                          <button
-                            key={option}
-                            type="button"
-                            onClick={() => setResolution(option)}
-                            className={[
-                              "rounded-lg px-1 py-2 text-center text-xs font-medium transition-colors",
-                              active
-                                ? "bg-accent text-[#0a0a0c]"
-                                : "text-fg-muted hover:bg-white/[0.05] hover:text-fg",
-                            ].join(" ")}
-                          >
-                            {option}
-                          </button>
-                        );
-                      })}
-                    </div>
+                <div>
+                  <p className="mb-1.5 text-[0.68rem] font-medium uppercase tracking-[0.14em] text-fg-muted">
+                    Resolution
+                  </p>
+                  <div className="grid grid-cols-3 gap-1 rounded-xl border border-white/[0.08] bg-black/25 p-1">
+                    {motionResolutions.map((option) => {
+                      const active = option === resolution;
+                      return (
+                        <button
+                          key={option}
+                          type="button"
+                          onClick={() => setResolution(option)}
+                          className={[
+                            "rounded-lg px-1 py-2 text-center text-xs font-medium transition-colors",
+                            active
+                              ? "bg-accent text-[#0a0a0c]"
+                              : "text-fg-muted hover:bg-white/[0.05] hover:text-fg",
+                          ].join(" ")}
+                        >
+                          {option}
+                        </button>
+                      );
+                    })}
                   </div>
-                ) : null}
+                </div>
               </div>
             )}
 
@@ -999,7 +1070,16 @@ export function MotionStudio() {
                   {busy ? "Generating…" : "Generate"}
                 </span>
               </span>
-              {!busy ? (
+              {busy ? (
+                <span
+                  className="relative flex shrink-0 items-baseline gap-0.5 rounded-full bg-accent-ink/10 px-2.5 py-1 font-mono text-[0.8rem] font-semibold tabular-nums text-accent-ink"
+                  aria-live="polite"
+                >
+                  <span>{elapsedParts.mm}</span>
+                  <span className="animate-pulse opacity-70">:</span>
+                  <span>{elapsedParts.ss}</span>
+                </span>
+              ) : (
                 <span
                   className={[
                     "relative flex shrink-0 items-center gap-1.5 rounded-full px-2.5 py-1 text-[0.7rem] font-medium tabular-nums",
@@ -1023,12 +1103,12 @@ export function MotionStudio() {
                   ) : (
                     <span>
                       {usesGenjutsuPricing
-                        ? `${genjutsuCreditsPerSecond(resolution).toLocaleString()} credits/s · ${resolution}`
-                        : `${CREDITS_PER_SECOND} credits/s · ×${model.multiplier}`}
+                        ? `${genjutsuCreditsPerSecond(genjutsuResolution).toLocaleString()} credits/s · ${resolution}`
+                        : `${CREDITS_PER_SECOND} credits/s · ×${model.multiplier} · ${resolution}`}
                     </span>
                   )}
                 </span>
-              ) : null}
+              )}
             </button>
             <p
               className={[
@@ -1043,17 +1123,15 @@ export function MotionStudio() {
                   ? "Add a reference image and source video first."
                   : "Add a character image and motion video first."
                 : status === "generating"
-                  ? isObjectSwap
-                    ? "Uploading + swapping objects…"
-                    : "Uploading + transferring motion…"
+                  ? `${phaseHint} · ${elapsedParts.label}`
                   : status === "error"
                     ? errorMessage || "Generation failed."
                     : status === "done"
-                      ? `Done · ${duration ?? "?"}s · ${modelMark}${usesGenjutsuPricing ? ` · ${resolution}` : ""}${lastPrompt ? (usingDefaultPrompt ? " · default prompt" : " · custom prompt") : ""}.`
+                      ? `Done in ${lastElapsedSec != null ? formatElapsedParts(lastElapsedSec).label : "—"} · ${duration ?? "?"}s clip · ${modelMark} · ${resolution}${lastPrompt ? (usingDefaultPrompt ? " · default prompt" : " · custom prompt") : ""}.`
                       : duration != null
                         ? usesGenjutsuPricing
-                          ? `Credits follow video length · ${genjutsuCreditsPerSecond(resolution).toLocaleString()} credits/s · ${resolution}`
-                          : `Credits follow motion length · ${CREDITS_PER_SECOND} credits/s ×${model.multiplier}`
+                          ? `Credits follow video length · ${genjutsuCreditsPerSecond(genjutsuResolution).toLocaleString()} credits/s · ${resolution}`
+                          : `Credits follow motion length · ${CREDITS_PER_SECOND} credits/s ×${model.multiplier} · ${resolution}`
                         : isObjectSwap
                           ? "Reference + video → object swap"
                           : "Character + motion → AI video"}
@@ -1069,7 +1147,7 @@ export function MotionStudio() {
             trailing={
               <>
                 {duration != null ? `${duration}s · ` : ""}
-                {usesGenjutsuPricing ? `${resolution} · ` : ""}
+                {`${resolution} · `}
                 {modelMark}
                 {status === "error" &&
                 errorMessage?.toLowerCase().includes("credit") ? (
@@ -1137,71 +1215,61 @@ export function MotionStudio() {
                   )}
 
                   {busy ? (
-                    <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-3 bg-[#0a0a0c]/85 px-6 backdrop-blur-[3px]">
-                      <div className="h-8 w-8 animate-spin rounded-full border-2 border-accent/30 border-t-accent" />
-                      <p
-                        className="font-mono text-4xl font-semibold tabular-nums tracking-tight text-fg sm:text-5xl"
-                        aria-live="polite"
-                      >
-                        {formatElapsed(elapsedSec)}
-                      </p>
-                      <p className="text-sm font-medium text-fg">
-                        Generating your video
-                      </p>
-                      <div
-                        className="flex items-end gap-6"
-                        aria-label="Expected wait in minutes"
-                      >
-                        {([1, 2, 3] as const).map((min) => {
-                          const reached = elapsedSec >= min * 60;
-                          const active =
-                            !reached && elapsedSec >= (min - 1) * 60;
-                          return (
-                            <div
-                              key={min}
-                              className="flex flex-col items-center gap-1"
-                            >
-                              <span
-                                className={[
-                                  "font-mono text-2xl font-bold tabular-nums leading-none sm:text-3xl",
-                                  reached
-                                    ? "text-accent"
-                                    : active
-                                      ? "text-fg"
-                                      : "text-fg-subtle/45",
-                                ].join(" ")}
-                              >
-                                {min}
-                              </span>
-                              <span
-                                className={[
-                                  "text-[10px] font-medium uppercase tracking-wide",
-                                  reached || active
-                                    ? "text-fg-subtle"
-                                    : "text-fg-subtle/45",
-                                ].join(" ")}
-                              >
-                                min
-                              </span>
-                            </div>
-                          );
-                        })}
+                    <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-[#0a0a0c]/88 px-6 backdrop-blur-[4px]">
+                      <div className="relative mb-5 flex h-16 w-16 items-center justify-center">
+                        <div
+                          className="absolute inset-0 rounded-full border border-white/[0.08]"
+                          aria-hidden
+                        />
+                        <div
+                          className="absolute inset-0 animate-spin rounded-full border-2 border-transparent border-t-accent"
+                          style={{ animationDuration: "1.1s" }}
+                          aria-hidden
+                        />
+                        <span className="font-mono text-[0.65rem] font-medium tabular-nums text-fg-subtle">
+                          {Math.round(progressPct)}%
+                        </span>
                       </div>
-                      <p className="text-center text-[11px] text-fg-subtle">
-                        Keep this tab open
+                      <p
+                        className="flex items-baseline gap-1 font-mono text-[2.75rem] font-semibold leading-none tracking-tight text-fg sm:text-5xl"
+                        aria-live="polite"
+                        aria-label={`Elapsed ${elapsedParts.label}`}
+                      >
+                        <span className="tabular-nums">{elapsedParts.mm}</span>
+                        <span className="animate-pulse text-accent">:</span>
+                        <span className="tabular-nums">{elapsedParts.ss}</span>
+                      </p>
+                      <p className="mt-3 text-sm font-medium text-fg">
+                        {phaseHint}
+                      </p>
+                      <div className="mt-4 h-1 w-44 overflow-hidden rounded-full bg-white/[0.08]">
+                        <div
+                          className="h-full rounded-full bg-accent transition-[width] duration-300 ease-out"
+                          style={{ width: `${progressPct}%` }}
+                        />
+                      </div>
+                      <p className="mt-3 text-center text-[11px] text-fg-subtle">
+                        Usually 1–3 min · keep this tab open
                       </p>
                     </div>
                   ) : null}
                 </div>
 
                 {resultUrl && !busy ? (
-                  <button
-                    type="button"
-                    onClick={downloadResult}
-                    className="mt-3 inline-flex h-10 w-full items-center justify-center gap-2 rounded-full border border-white/[0.12] bg-white/[0.04] text-sm font-medium text-fg transition hover:border-white/[0.2] hover:bg-white/[0.07]"
-                  >
-                    Download MP4
-                  </button>
+                  <div className="mt-3 flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={downloadResult}
+                      className="inline-flex h-10 min-w-0 flex-1 items-center justify-center gap-2 rounded-full border border-white/[0.12] bg-white/[0.04] text-sm font-medium text-fg transition hover:border-white/[0.2] hover:bg-white/[0.07]"
+                    >
+                      Download MP4
+                    </button>
+                    {lastElapsedSec != null ? (
+                      <span className="shrink-0 rounded-full border border-white/[0.1] bg-white/[0.04] px-3 py-2 font-mono text-[0.7rem] font-medium tabular-nums text-fg-subtle">
+                        {formatElapsedParts(lastElapsedSec).label}
+                      </span>
+                    ) : null}
+                  </div>
                 ) : null}
               </>
             )}

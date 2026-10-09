@@ -13,6 +13,7 @@ import {
   OBJECT_SWAP_MIN_FRAME_PIXELS,
   parseGenjutsuResolution,
 } from "@/data/genjutsu-pricing";
+import { parseFalMotionResolution } from "@/data/fal-motion-resolution";
 import { resolveMotionPrompt } from "@/data/motion-prompt";
 import { generateGenjutsuMotionTransfer } from "@/lib/genjutsu-motion-transfer";
 import { generateGenjutsuObjectSwap } from "@/lib/genjutsu-object-swap";
@@ -151,9 +152,9 @@ export async function POST(req: NextRequest) {
       1,
       Number(form.get("modelMultiplier") ?? 1) || 1,
     );
-    const resolution = parseGenjutsuResolution(
-      form.get("resolution")?.toString(),
-    );
+    const rawResolution = form.get("resolution")?.toString();
+    const resolution = parseGenjutsuResolution(rawResolution);
+    const falResolution = parseFalMotionResolution(rawResolution);
     const clientDurationHint = Number(form.get("durationSec") ?? 0) || 0;
 
     const characterBuffer = Buffer.from(await characterFile.arrayBuffer());
@@ -251,6 +252,28 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    const provider =
+      mode === "object-swap"
+        ? "higgsfield/object-swap"
+        : useGenjutsuMotion
+          ? "higgsfield/motion-transfer"
+          : "fal/wan-motion";
+    const outResolution = useGenjutsuPricing ? resolution : falResolution;
+
+    log("request", {
+      mode,
+      modelId: modelId || "(default)",
+      provider,
+      resolution: outResolution,
+      durationSec,
+      creditCost,
+      refs: referenceFiles.length,
+      imageBytes: characterBuffer.byteLength,
+      videoBytes: motionBuffer.byteLength,
+      promptLen: prompt.length,
+      user: payload.user?.email ? "logged-in" : "anonymous",
+    });
+
     // Persist inputs under ges/ when R2 is configured (Kling / fal path only;
     // Genjutsu upload helpers may also write when using public R2 URLs).
     if (
@@ -272,56 +295,81 @@ export async function POST(req: NextRequest) {
       });
     }
 
+    const providerStartedAt = Date.now();
+    log("provider start", { provider, resolution: outResolution });
+
     let sourceUrl: string;
-    if (mode === "object-swap") {
-      const referenceImages = await Promise.all(
-        referenceFiles.map(async (file, index) => ({
-          buffer:
-            index === 0
-              ? characterBuffer
-              : Buffer.from(await file.arrayBuffer()),
-          mimeType: file.type || "image/jpeg",
-          filename: file.name || `reference-${index + 1}.jpg`,
-        })),
-      );
-      sourceUrl = await generateGenjutsuObjectSwap({
-        referenceImages,
-        sourceVideo: {
-          buffer: motionBuffer,
-          mimeType: motionFile.type || "video/mp4",
-          filename: motionFile.name || "motion.mp4",
-        },
-        prompt,
-        resolution,
+    try {
+      if (mode === "object-swap") {
+        const referenceImages = await Promise.all(
+          referenceFiles.map(async (file, index) => ({
+            buffer:
+              index === 0
+                ? characterBuffer
+                : Buffer.from(await file.arrayBuffer()),
+            mimeType: file.type || "image/jpeg",
+            filename: file.name || `reference-${index + 1}.jpg`,
+          })),
+        );
+        sourceUrl = await generateGenjutsuObjectSwap({
+          referenceImages,
+          sourceVideo: {
+            buffer: motionBuffer,
+            mimeType: motionFile.type || "video/mp4",
+            filename: motionFile.name || "motion.mp4",
+          },
+          prompt,
+          resolution,
+        });
+      } else if (useGenjutsuMotion) {
+        sourceUrl = await generateGenjutsuMotionTransfer({
+          characterImage: {
+            buffer: characterBuffer,
+            mimeType: characterFile.type || "image/jpeg",
+            filename: characterFile.name || "character.jpg",
+          },
+          motionVideo: {
+            buffer: motionBuffer,
+            mimeType: motionFile.type || "video/mp4",
+            filename: motionFile.name || "motion.mp4",
+          },
+          prompt,
+          resolution,
+        });
+      } else {
+        sourceUrl = await generateWanMotionVideo({
+          characterImage: {
+            buffer: characterBuffer,
+            mimeType: characterFile.type || "image/jpeg",
+          },
+          motionVideo: {
+            buffer: motionBuffer,
+            mimeType: motionFile.type || "video/mp4",
+          },
+          prompt,
+          resolution: falResolution,
+        });
+      }
+    } catch (providerError) {
+      log("provider failed", {
+        provider,
+        resolution: outResolution,
+        providerMs: Date.now() - providerStartedAt,
+        totalMs: Date.now() - startedAt,
+        error:
+          providerError instanceof Error
+            ? providerError.message
+            : String(providerError),
       });
-    } else if (useGenjutsuMotion) {
-      sourceUrl = await generateGenjutsuMotionTransfer({
-        characterImage: {
-          buffer: characterBuffer,
-          mimeType: characterFile.type || "image/jpeg",
-          filename: characterFile.name || "character.jpg",
-        },
-        motionVideo: {
-          buffer: motionBuffer,
-          mimeType: motionFile.type || "video/mp4",
-          filename: motionFile.name || "motion.mp4",
-        },
-        prompt,
-        resolution,
-      });
-    } else {
-      sourceUrl = await generateWanMotionVideo({
-        characterImage: {
-          buffer: characterBuffer,
-          mimeType: characterFile.type || "image/jpeg",
-        },
-        motionVideo: {
-          buffer: motionBuffer,
-          mimeType: motionFile.type || "video/mp4",
-        },
-        prompt,
-      });
+      throw providerError;
     }
+
+    const providerMs = Date.now() - providerStartedAt;
+    log("provider done", {
+      provider,
+      providerMs,
+      sourceUrl: sourceUrl.slice(0, 120),
+    });
 
     // Plan R2 key up front, return provider URL immediately for fast playback,
     // and mirror the file to R2 in the background for durable history.
@@ -334,23 +382,38 @@ export async function POST(req: NextRequest) {
     const r2Url = planned?.url ?? null;
 
     if (planned) {
+      log("r2 mirror scheduled", { r2Key, r2Url });
       after(async () => {
-        await mirrorRemoteUrlToR2Key({
+        const mirrorStartedAt = Date.now();
+        const ok = await mirrorRemoteUrlToR2Key({
           sourceUrl,
           key: planned.key,
           contentType: "video/mp4",
         });
+        log("r2 mirror finished", {
+          r2Key: planned.key,
+          ok,
+          mirrorMs: Date.now() - mirrorStartedAt,
+        });
       });
+    } else {
+      log("r2 mirror skipped — not configured");
     }
 
     const usage = await recordUsage(token ?? session.token, "generation");
+    const totalMs = Date.now() - startedAt;
 
     log("done", {
       mode,
-      ms: Date.now() - startedAt,
-      sourceUrl: sourceUrl.slice(0, 80),
-      r2Key,
+      modelId: modelId || "(default)",
+      provider,
+      resolution: outResolution,
+      durationSec,
       creditCost,
+      providerMs,
+      totalMs,
+      sourceUrl: sourceUrl.slice(0, 120),
+      r2Key,
     });
 
     const res = NextResponse.json(
@@ -359,11 +422,15 @@ export async function POST(req: NextRequest) {
         r2Url,
         r2Key,
         creditsCharged: payload.user ? creditCost : 0,
+        providerMs,
+        totalMs,
       },
       {
         headers: {
           "Cache-Control": "private, no-store",
           "X-Credits-Charged": String(payload.user ? creditCost : 0),
+          "X-Provider-Ms": String(providerMs),
+          "X-Total-Ms": String(totalMs),
           ...(r2Key ? { "X-R2-Key": r2Key } : {}),
           ...(r2Url ? { "X-Video-Url": r2Url } : { "X-Video-Url": sourceUrl }),
           "X-Source-Video-Url": sourceUrl,

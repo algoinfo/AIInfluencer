@@ -134,24 +134,46 @@ export async function subscribeGenjutsuVideo(params: {
     throw new Error("At least one reference image is required.");
   }
 
+  const startedAt = Date.now();
   log("subscribe start", {
     endpoint: params.endpoint,
     resolution,
     images: imageUrls.length,
+    promptLen: prompt.length,
+    videoUrl: params.videoUrl.slice(0, 80),
   });
 
-  const result = await higgsfield.subscribe(params.endpoint, {
-    input: {
-      prompt,
-      video_url: params.videoUrl,
-      image_urls: imageUrls,
-      resolution,
-    },
-    withPolling: true,
-  });
+  let result: Awaited<ReturnType<typeof higgsfield.subscribe>>;
+  try {
+    result = await higgsfield.subscribe(params.endpoint, {
+      input: {
+        prompt,
+        video_url: params.videoUrl,
+        image_urls: imageUrls,
+        resolution,
+      },
+      withPolling: true,
+    });
+  } catch (error) {
+    log("subscribe threw", {
+      endpoint: params.endpoint,
+      ms: Date.now() - startedAt,
+      error: error instanceof Error ? error.message : String(error),
+    });
+    throw error;
+  }
 
   // Status union differs across @higgsfield/client versions — compare as string.
   const status = String(result.status);
+  log("subscribe status", {
+    endpoint: params.endpoint,
+    status,
+    ms: Date.now() - startedAt,
+    requestId:
+      typeof (result as { request_id?: unknown }).request_id === "string"
+        ? (result as { request_id: string }).request_id
+        : undefined,
+  });
   if (status === "nsfw") {
     throw new Error("This request was blocked by content safety.");
   }
@@ -159,6 +181,12 @@ export async function subscribeGenjutsuVideo(params: {
     const apiErrorRaw = (result as unknown as { error?: unknown }).error;
     const apiError =
       typeof apiErrorRaw === "string" ? apiErrorRaw.trim() : "";
+    log("subscribe incomplete", {
+      endpoint: params.endpoint,
+      status,
+      error: apiError || "(none)",
+      ms: Date.now() - startedAt,
+    });
     throw new Error(
       apiError ||
         (status === "failed" || status === "canceled"
@@ -167,7 +195,11 @@ export async function subscribeGenjutsuVideo(params: {
     );
   }
 
-  log("subscribe completed", { url: result.video.url.slice(0, 80) });
+  log("subscribe completed", {
+    endpoint: params.endpoint,
+    ms: Date.now() - startedAt,
+    url: result.video.url.slice(0, 120),
+  });
   // Return the provider CDN URL — caller mirrors to R2 and/or streams to the client.
   return result.video.url;
 }

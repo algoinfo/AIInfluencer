@@ -1,7 +1,5 @@
 /** Persist Motion Studio selections across auth / OAuth redirects. */
 
-import type { GenjutsuResolution } from "@/data/genjutsu-pricing";
-
 const DB_NAME = "genjutsu-studio-draft";
 const DB_VERSION = 1;
 const STORE = "draft";
@@ -9,6 +7,8 @@ const DRAFT_ID = "current";
 const MAX_AGE_MS = 24 * 60 * 60 * 1000;
 
 export type StudioDraftMode = "motion-transfer" | "object-swap";
+/** Genjutsu: 480/720/1080 · fal wan-motion: 480/580/720 */
+export type StudioDraftResolution = "480p" | "580p" | "720p" | "1080p";
 
 type StoredFile = { name: string; type: string; blob: Blob };
 
@@ -16,7 +16,7 @@ type StoredDraft = {
   id: typeof DRAFT_ID;
   studioMode: StudioDraftMode;
   modelId: string;
-  resolution: GenjutsuResolution;
+  resolution: StudioDraftResolution;
   prompt: string;
   promptOn: boolean;
   resumeGenerate: boolean;
@@ -28,7 +28,7 @@ type StoredDraft = {
 export type StudioDraftInput = {
   studioMode: StudioDraftMode;
   modelId: string;
-  resolution: GenjutsuResolution;
+  resolution: StudioDraftResolution;
   prompt: string;
   promptOn: boolean;
   resumeGenerate: boolean;
@@ -39,7 +39,7 @@ export type StudioDraftInput = {
 export type StudioDraftRestored = {
   studioMode: StudioDraftMode;
   modelId: string;
-  resolution: GenjutsuResolution;
+  resolution: StudioDraftResolution;
   prompt: string;
   promptOn: boolean;
   resumeGenerate: boolean;
