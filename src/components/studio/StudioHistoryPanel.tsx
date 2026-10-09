@@ -3,6 +3,7 @@
 import {
   formatHistoryWhen,
   historyStatusLabel,
+  sortStudioHistoryNewestFirst,
   type StudioHistoryItem,
 } from "@/lib/studio-history";
 
@@ -47,12 +48,14 @@ export function StudioHistoryPanel({
   items,
   onSelect,
   onDownload,
+  onDelete,
   emptyHint,
   activeElapsedSec = 0,
 }: {
   items: StudioHistoryItem[];
   onSelect: (item: StudioHistoryItem) => void;
   onDownload: (item: StudioHistoryItem) => void;
+  onDelete?: (item: StudioHistoryItem) => void;
   emptyHint?: string;
   /** Live elapsed seconds for the in-flight generating row. */
   activeElapsedSec?: number;
@@ -69,9 +72,11 @@ export function StudioHistoryPanel({
     );
   }
 
+  const ordered = sortStudioHistoryNewestFirst(items);
+
   return (
     <ul className="space-y-2 overflow-y-auto [scrollbar-width:thin]">
-      {items.map((item) => {
+      {ordered.map((item) => {
         const isGenerating = item.status === "generating";
         const isFailed = item.status === "failed";
         const canPreview = item.status === "done" && Boolean(item.videoUrl);
@@ -85,7 +90,7 @@ export function StudioHistoryPanel({
           <li key={item.id}>
             <div
               className={[
-                "flex gap-3 rounded-xl border p-2 transition",
+                "flex items-stretch gap-3 rounded-xl border p-2 transition",
                 isGenerating
                   ? "border-accent/25 bg-[rgba(216,255,62,0.04)]"
                   : isFailed
@@ -134,6 +139,7 @@ export function StudioHistoryPanel({
                   </span>
                 )}
               </button>
+
               <div className="min-w-0 flex-1 py-0.5">
                 <div className="flex items-start justify-between gap-2">
                   <p className="truncate text-sm font-medium text-fg">
@@ -158,24 +164,25 @@ export function StudioHistoryPanel({
                     <div className="h-full w-1/3 animate-pulse rounded-full bg-accent" />
                   </div>
                 ) : null}
-                <div className="mt-2 flex gap-2">
-                  <button
-                    type="button"
-                    onClick={() => onSelect(item)}
-                    disabled={!canPreview}
-                    className="rounded-full border border-white/12 px-2.5 py-0.5 text-[0.65rem] text-fg-muted transition hover:border-white/25 hover:text-fg disabled:cursor-not-allowed disabled:opacity-40"
-                  >
-                    Preview
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => onDownload(item)}
-                    disabled={!canPreview}
-                    className="rounded-full border border-accent/30 bg-[rgba(216,255,62,0.08)] px-2.5 py-0.5 text-[0.65rem] text-accent transition hover:bg-[rgba(216,255,62,0.14)] disabled:cursor-not-allowed disabled:opacity-40"
-                  >
-                    Download
-                  </button>
-                </div>
+              </div>
+
+              <div className="flex shrink-0 flex-col justify-center gap-1.5 self-center">
+                <button
+                  type="button"
+                  onClick={() => onDownload(item)}
+                  disabled={!canPreview}
+                  className="min-w-[4.5rem] rounded-full border border-accent/30 bg-[rgba(216,255,62,0.08)] px-2.5 py-1 text-[0.65rem] font-medium text-accent transition hover:bg-[rgba(216,255,62,0.14)] disabled:cursor-not-allowed disabled:opacity-35"
+                >
+                  Download
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onDelete?.(item)}
+                  disabled={!onDelete || isGenerating}
+                  className="min-w-[4.5rem] rounded-full border border-white/12 px-2.5 py-1 text-[0.65rem] font-medium text-fg-muted transition hover:border-red-400/35 hover:bg-red-500/10 hover:text-red-300 disabled:cursor-not-allowed disabled:opacity-35"
+                >
+                  Delete
+                </button>
               </div>
             </div>
           </li>

@@ -20,6 +20,14 @@ export type StudioHistoryItem = {
 const STORAGE_KEY = "genjutsu:studio-history";
 const MAX_ITEMS = 24;
 
+/** DB/proxy bookkeeping failed after the video was already rendered. */
+export function isBookkeepingHistoryError(message?: string): boolean {
+  if (!message) return false;
+  return /disturbed or locked|interrupted|Could not load creations|Could not reach fal/i.test(
+    message,
+  );
+}
+
 function normalizeItem(
   raw: StudioHistoryItem,
   options?: { dropGenerating?: boolean },
@@ -121,13 +129,11 @@ export function loadStudioHistory(): StudioHistoryItem[] {
     return parsed
       .map((item) => normalizeItem(item, { dropGenerating: true }))
       .filter((item): item is StudioHistoryItem => item != null)
-      // Drop legacy false failures from the old generating→failed persist bug.
       .filter(
         (item) =>
           !(
             item.status === "failed" &&
-            item.errorMessage &&
-            /interrupted/i.test(item.errorMessage) &&
+            isBookkeepingHistoryError(item.errorMessage) &&
             !item.videoUrl
           ),
       )
@@ -146,8 +152,7 @@ export function saveStudioHistory(items: StudioHistoryItem[]) {
       (item) =>
         !(
           item.status === "failed" &&
-          item.errorMessage &&
-          /interrupted/i.test(item.errorMessage) &&
+          isBookkeepingHistoryError(item.errorMessage) &&
           !item.videoUrl
         ),
     )
@@ -181,6 +186,24 @@ export function updateStudioHistoryItem(
   );
   saveStudioHistory(merged);
   return merged;
+}
+
+export function removeStudioHistoryItem(
+  items: StudioHistoryItem[],
+  id: string,
+): StudioHistoryItem[] {
+  const merged = items.filter((item) => item.id !== id);
+  saveStudioHistory(merged);
+  return merged;
+}
+
+/** Newest first — safe for ISO and legacy SQL datetime strings. */
+export function sortStudioHistoryNewestFirst(
+  items: StudioHistoryItem[],
+): StudioHistoryItem[] {
+  return [...items].sort(
+    (a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt),
+  );
 }
 
 export function historyStatusLabel(status: StudioHistoryStatus): string {
@@ -257,13 +280,40 @@ export function mergeCloudStudioHistory(
     ) {
       continue;
     }
+    // Cloud Ready always replaces a local Failed / generating placeholder.
+    if (
+      existing &&
+      existing.status !== "done" &&
+      normalized.status === "done" &&
+      normalized.videoUrl
+    ) {
+      byId.set(normalized.id, {
+        ...normalized,
+        elapsedSec: existing.elapsedSec ?? normalized.elapsedSec,
+      });
+      continue;
+    }
     byId.set(normalized.id, normalized);
   }
-  const merged = Array.from(byId.values()).sort(
-    (a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt),
-  );
+  const merged = sortStudioHistoryNewestFirst(Array.from(byId.values()));
   saveStudioHistory(merged);
   return merged.slice(0, MAX_ITEMS);
+}
+
+/** Delete a cloud creation; returns false if unauthorized / not found. */
+export async function deleteCloudStudioHistory(id: string): Promise<boolean> {
+  try {
+    const res = await fetch(
+      `/api/user/creations?id=${encodeURIComponent(id)}`,
+      {
+        method: "DELETE",
+        credentials: "include",
+      },
+    );
+    return res.ok;
+  } catch {
+    return false;
+  }
 }
 
 export async function fetchCloudStudioHistory(

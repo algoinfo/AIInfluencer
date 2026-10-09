@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import {
+  deleteGenerationJobForUser,
   listGenerationJobsByUserEmail,
   saveCompletedGenerationJob,
   saveFailedGenerationJob,
@@ -129,6 +130,38 @@ export async function POST(req: NextRequest) {
     console.error("[user/creations POST]", error);
     return NextResponse.json(
       { error: "Could not save creation." },
+      { status: 503 },
+    );
+  }
+}
+
+export async function DELETE(req: NextRequest) {
+  ensureHttpsProxyDispatcher();
+  try {
+    const { payload } = await getRequestSessionFromReq(req);
+    const email = payload.user?.email;
+    if (!email) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const id = req.nextUrl.searchParams.get("id")?.trim() || "";
+    if (!id) {
+      return NextResponse.json({ error: "id is required." }, { status: 400 });
+    }
+
+    const deleted = await deleteGenerationJobForUser(id, email);
+    if (!deleted) {
+      return NextResponse.json({ error: "Not found." }, { status: 404 });
+    }
+
+    return NextResponse.json(
+      { ok: true },
+      { headers: { "Cache-Control": "private, no-store" } },
+    );
+  } catch (error) {
+    console.error("[user/creations DELETE]", error);
+    return NextResponse.json(
+      { error: "Could not delete creation." },
       { status: 503 },
     );
   }

@@ -58,9 +58,22 @@ interface AuthContextValue {
 const AuthContext = createContext<AuthContextValue | null>(null);
 
 async function fetchSession(): Promise<SessionPayload> {
-  const res = await fetch("/api/auth/session", { credentials: "include" });
-  if (!res.ok) throw new Error("Failed to load session");
-  return (await res.json()) as SessionPayload;
+  let lastError: unknown;
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      const res = await fetch("/api/auth/session", { credentials: "include" });
+      if (!res.ok) throw new Error("Failed to load session");
+      return (await res.json()) as SessionPayload;
+    } catch (error) {
+      lastError = error;
+      if (attempt < 2) {
+        await new Promise((r) => setTimeout(r, 400 * (attempt + 1)));
+      }
+    }
+  }
+  throw lastError instanceof Error
+    ? lastError
+    : new Error("Failed to load session");
 }
 
 export function AuthProvider({

@@ -40,8 +40,11 @@ import {
   fetchCloudStudioHistory,
   loadStudioHistory,
   mergeCloudStudioHistory,
+  deleteCloudStudioHistory,
+  isBookkeepingHistoryError,
   persistCloudStudioHistory,
   prependStudioHistory,
+  removeStudioHistoryItem,
   saveStudioHistory,
   updateStudioHistoryItem,
   type StudioHistoryItem,
@@ -101,8 +104,8 @@ const models: StudioModel[] = [
     mark: "gj",
     multiplier: 1,
     provider: "higgsfield",
-    etaLabel: "~3–6 min",
-    typicalWaitSec: 240,
+    etaLabel: "~5–8 min",
+    typicalWaitSec: 360,
   },
   {
     id: "kling-v3-pro",
@@ -111,8 +114,8 @@ const models: StudioModel[] = [
     mark: "K3",
     multiplier: 1.5,
     provider: "fal",
-    etaLabel: "~3–6 min",
-    typicalWaitSec: 240,
+    etaLabel: "~5–8 min",
+    typicalWaitSec: 360,
   },
   {
     id: "kling-v3-standard",
@@ -121,8 +124,8 @@ const models: StudioModel[] = [
     mark: "V3",
     multiplier: 1.2,
     provider: "fal",
-    etaLabel: "~3–5 min",
-    typicalWaitSec: 210,
+    etaLabel: "~5–7 min",
+    typicalWaitSec: 330,
   },
   {
     id: "kling-v26-standard",
@@ -131,12 +134,12 @@ const models: StudioModel[] = [
     mark: "2.6",
     multiplier: 1,
     provider: "fal",
-    etaLabel: "~2–4 min",
-    typicalWaitSec: 180,
+    etaLabel: "~4–6 min",
+    typicalWaitSec: 300,
   },
 ];
 
-const OBJECT_SWAP_ETA = { etaLabel: "~3–6 min", typicalWaitSec: 240 };
+const OBJECT_SWAP_ETA = { etaLabel: "~5–8 min", typicalWaitSec: 360 };
 
 export function MotionStudio() {
   const { isLoggedIn, openAuthModal, refreshSession } = useAuth();
@@ -165,12 +168,14 @@ export function MotionStudio() {
   >("idle");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [resultUrl, setResultUrl] = useState<string | null>(null);
+  const [resultAspect, setResultAspect] = useState("9 / 16");
   const [lastPrompt, setLastPrompt] = useState<string | null>(null);
   const [panelMode, setPanelMode] = useState<StudioPanelMode>("preview");
   const [history, setHistory] = useState<StudioHistoryItem[]>([]);
   const [elapsedSec, setElapsedSec] = useState(0);
   const [lastElapsedSec, setLastElapsedSec] = useState<number | null>(null);
   const elapsedRef = useRef(0);
+  const generateLockRef = useRef(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const listId = useId();
   const promptId = useId();
@@ -494,6 +499,9 @@ export function MotionStudio() {
   }
 
   async function onGenerate() {
+    // Sync lock so a second click can't fire before React re-renders disabled.
+    if (generateLockRef.current || status === "generating") return;
+
     if (!isLoggedIn) {
       promptLoginForGenerate();
       return;
@@ -519,202 +527,218 @@ export function MotionStudio() {
       return;
     }
 
-    const cost =
-      sellCredits ??
-      (usesGenjutsuPricing
-        ? creditsForGenjutsuRun(duration, genjutsuResolution)
-        : creditsForRun(duration, model.multiplier));
-    // Check balance before entering the generating UI.
-    try {
-      const creditsRes = await fetch("/api/user/credits", {
-        credentials: "include",
-      });
-      if (creditsRes.ok) {
-        const creditsData = (await creditsRes.json()) as { credits?: number };
-        const available = Number(creditsData.credits ?? 0);
-        if (available < cost) {
-          setStatus("error");
-          setErrorMessage(
-            `Not enough credits. This video needs ${cost.toLocaleString("en-US")} credits — you have ${available.toLocaleString("en-US")}.`,
-          );
-          setPanelMode("preview");
-          return;
-        }
-      }
-    } catch {
-      /* server still enforces balance */
-    }
-
-    const resolved = usesGenjutsuPricing
-      ? promptOn
-        ? prompt.trim()
-        : ""
-      : resolveMotionPrompt(promptOn ? prompt : "");
-    setLastPrompt(resolved || null);
+    generateLockRef.current = true;
     setErrorMessage(null);
     setLastElapsedSec(null);
     setStatus("generating");
     setPanelMode("history");
 
-    if (resultUrl?.startsWith("blob:")) URL.revokeObjectURL(resultUrl);
-    setResultUrl(null);
-
-    const historyId = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-    const outResolution = usesGenjutsuPricing
-      ? genjutsuResolution
-      : falResolution;
-    const pendingItem: StudioHistoryItem = {
-      id: historyId,
-      title:
-        primaryImage.name.replace(/\.[^.]+$/, "") ||
-        (isObjectSwap ? "Object swap" : "Motion transfer"),
-      createdAt: new Date().toISOString(),
-      videoUrl: "",
-      durationSec: duration,
-      modelMark: modelMark,
-      status: "generating",
-      resolution: outResolution,
-    };
-    setHistory((prev) => prependStudioHistory(prev, pendingItem));
+    const cost =
+      sellCredits ??
+      (usesGenjutsuPricing
+        ? creditsForGenjutsuRun(duration, genjutsuResolution)
+        : creditsForRun(duration, model.multiplier));
 
     try {
-      const form = new FormData();
-      form.set("mode", studioMode);
-      form.set("modelId", isObjectSwap ? "genjutsu" : model.id);
-      form.set("modelMark", modelMark);
-      form.set("clientJobId", historyId);
-      if (isObjectSwap) {
-        for (const file of swapRefs) {
-          form.append("referenceImage", file);
+      // Balance check after UI is already locked; fail soft back to error.
+      try {
+        const creditsRes = await fetch("/api/user/credits", {
+          credentials: "include",
+        });
+        if (creditsRes.ok) {
+          const creditsData = (await creditsRes.json()) as { credits?: number };
+          const available = Number(creditsData.credits ?? 0);
+          if (available < cost) {
+            setStatus("error");
+            setErrorMessage(
+              `Not enough credits. This video needs ${cost.toLocaleString("en-US")} credits — you have ${available.toLocaleString("en-US")}.`,
+            );
+            setPanelMode("preview");
+            return;
+          }
         }
-      } else {
-        form.set("characterImage", primaryImage);
-      }
-      form.set("motionVideo", videoFile);
-      form.set("prompt", resolved);
-      form.set("durationSec", String(duration));
-      form.set("modelMultiplier", String(model.multiplier));
-      form.set("resolution", outResolution);
-      if (videoFramePixels != null && videoFramePixels > 0) {
-        form.set("framePixels", String(videoFramePixels));
+      } catch {
+        /* server still enforces balance */
       }
 
-      const res = await fetch("/api/video/generate", {
-        method: "POST",
-        body: form,
-        credentials: "include",
-      });
-
-      if (!res.ok) {
-        const data = (await res.json().catch(() => null)) as {
-          error?: string;
-          needsLogin?: boolean;
-          needsCredits?: boolean;
-        } | null;
-        if (res.status === 403 && data?.needsLogin) {
-          setHistory((prev) =>
-            updateStudioHistoryItem(prev, historyId, {
-              status: "failed",
-              errorMessage: "Sign in required.",
-              elapsedSec: elapsedRef.current,
-            }),
-          );
-          setStatus("idle");
-          promptLoginForGenerate();
-          return;
-        }
-        if (res.status === 402 && data?.needsCredits) {
-          const message =
-            data.error ||
-            "Not enough credits. Buy a pack on Pricing to continue.";
-          setHistory((prev) =>
-            updateStudioHistoryItem(prev, historyId, {
-              status: "failed",
-              errorMessage: message,
-              elapsedSec: elapsedRef.current,
-            }),
-          );
-          setStatus("error");
-          setErrorMessage(message);
-          return;
-        }
-        throw new Error(data?.error || "Generation failed.");
-      }
-
-      const data = (await res.json()) as {
-        videoUrl?: string;
-        r2Url?: string | null;
-        r2Key?: string | null;
-        jobId?: string | null;
-      };
-      const sourceUrl = data.videoUrl?.trim() || "";
-      const historyUrl = data.r2Url?.trim() || sourceUrl;
-      let cloudId = data.jobId?.trim() || historyId;
-      if (!sourceUrl) {
-        throw new Error("Generation returned no video URL.");
-      }
+      const resolved = usesGenjutsuPricing
+        ? promptOn
+          ? prompt.trim()
+          : ""
+        : resolveMotionPrompt(promptOn ? prompt : "");
+      setLastPrompt(resolved || null);
 
       if (resultUrl?.startsWith("blob:")) URL.revokeObjectURL(resultUrl);
-      // Play the provider CDN URL immediately — no blob proxy through our API.
-      setResultUrl(sourceUrl);
-      setLastElapsedSec(elapsedRef.current);
-      setStatus("done");
-      setPanelMode("preview");
-      void clearStudioDraft();
+      setResultUrl(null);
 
-      // Always sync finished work into Turso (server + client fallback).
-      const saved = await persistCloudStudioHistory({
-        id: cloudId,
-        title: pendingItem.title,
-        videoUrl: historyUrl,
-        r2Key: data.r2Key ?? null,
+      const historyId = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+      const outResolution = usesGenjutsuPricing
+        ? genjutsuResolution
+        : falResolution;
+      const pendingItem: StudioHistoryItem = {
+        id: historyId,
+        title:
+          primaryImage.name.replace(/\.[^.]+$/, "") ||
+          (isObjectSwap ? "Object swap" : "Motion transfer"),
+        createdAt: new Date().toISOString(),
+        videoUrl: "",
         durationSec: duration,
         modelMark: modelMark,
+        status: "generating",
         resolution: outResolution,
-        product: studioMode,
-        status: "done",
-      });
-      if (saved?.id) cloudId = saved.id;
+      };
+      setHistory((prev) => prependStudioHistory(prev, pendingItem));
 
-      setHistory((prev) => {
-        const withoutLocal = prev.filter((item) => item.id !== historyId);
-        return prependStudioHistory(withoutLocal, {
+      try {
+        const form = new FormData();
+        form.set("mode", studioMode);
+        form.set("modelId", isObjectSwap ? "genjutsu" : model.id);
+        form.set("modelMark", modelMark);
+        form.set("clientJobId", historyId);
+        if (isObjectSwap) {
+          for (const file of swapRefs) {
+            form.append("referenceImage", file);
+          }
+        } else {
+          form.set("characterImage", primaryImage);
+        }
+        form.set("motionVideo", videoFile);
+        form.set("prompt", resolved);
+        form.set("durationSec", String(duration));
+        form.set("modelMultiplier", String(model.multiplier));
+        form.set("resolution", outResolution);
+        if (videoFramePixels != null && videoFramePixels > 0) {
+          form.set("framePixels", String(videoFramePixels));
+        }
+
+        const res = await fetch("/api/video/generate", {
+          method: "POST",
+          body: form,
+          credentials: "include",
+        });
+
+        if (!res.ok) {
+          const data = (await res.json().catch(() => null)) as {
+            error?: string;
+            needsLogin?: boolean;
+            needsCredits?: boolean;
+          } | null;
+          if (res.status === 403 && data?.needsLogin) {
+            setHistory((prev) =>
+              updateStudioHistoryItem(prev, historyId, {
+                status: "failed",
+                errorMessage: "Sign in required.",
+                elapsedSec: elapsedRef.current,
+              }),
+            );
+            setStatus("idle");
+            promptLoginForGenerate();
+            return;
+          }
+          if (res.status === 402 && data?.needsCredits) {
+            const message =
+              data.error ||
+              "Not enough credits. Buy a pack on Pricing to continue.";
+            setHistory((prev) =>
+              updateStudioHistoryItem(prev, historyId, {
+                status: "failed",
+                errorMessage: message,
+                elapsedSec: elapsedRef.current,
+              }),
+            );
+            setStatus("error");
+            setErrorMessage(message);
+            return;
+          }
+          throw new Error(data?.error || "Generation failed.");
+        }
+
+        const data = (await res.json()) as {
+          videoUrl?: string;
+          r2Url?: string | null;
+          r2Key?: string | null;
+          jobId?: string | null;
+        };
+        const sourceUrl = data.videoUrl?.trim() || "";
+        const historyUrl = data.r2Url?.trim() || sourceUrl;
+        let cloudId = data.jobId?.trim() || historyId;
+        if (!sourceUrl) {
+          throw new Error("Generation returned no video URL.");
+        }
+
+        if (resultUrl?.startsWith("blob:")) URL.revokeObjectURL(resultUrl);
+        // Play the provider CDN URL immediately — no blob proxy through our API.
+        setResultUrl(sourceUrl);
+        setLastElapsedSec(elapsedRef.current);
+        setStatus("done");
+        setPanelMode("preview");
+        void clearStudioDraft();
+
+        // Always sync finished work into Turso (server + client fallback).
+        const saved = await persistCloudStudioHistory({
           id: cloudId,
           title: pendingItem.title,
-          createdAt: pendingItem.createdAt,
           videoUrl: historyUrl,
+          r2Key: data.r2Key ?? null,
           durationSec: duration,
           modelMark: modelMark,
-          status: "done",
           resolution: outResolution,
-          elapsedSec: elapsedRef.current,
+          product: studioMode,
+          status: "done",
         });
-      });
-      void refreshSession();
-      refreshCloudHistory();
-    } catch (err) {
-      const message =
-        err instanceof Error ? err.message : "Generation failed.";
-      setLastElapsedSec(elapsedRef.current);
-      setHistory((prev) =>
-        updateStudioHistoryItem(prev, historyId, {
+        if (saved?.id) cloudId = saved.id;
+
+        setHistory((prev) => {
+          const withoutLocal = prev.filter((item) => item.id !== historyId);
+          return prependStudioHistory(withoutLocal, {
+            id: cloudId,
+            title: pendingItem.title,
+            createdAt: pendingItem.createdAt,
+            videoUrl: historyUrl,
+            durationSec: duration,
+            modelMark: modelMark,
+            status: "done",
+            resolution: outResolution,
+            elapsedSec: elapsedRef.current,
+          });
+        });
+        void refreshSession();
+        refreshCloudHistory();
+      } catch (err) {
+        const message =
+          err instanceof Error ? err.message : "Generation failed.";
+        setLastElapsedSec(elapsedRef.current);
+        // Video may already exist in Turso; don't overwrite completed with a
+        // bookkeeping error, and don't keep a false Failed row locally.
+        if (isBookkeepingHistoryError(message)) {
+          setHistory((prev) => prev.filter((item) => item.id !== historyId));
+          setStatus("idle");
+          setErrorMessage(null);
+          refreshCloudHistory();
+          return;
+        }
+        setHistory((prev) =>
+          updateStudioHistoryItem(prev, historyId, {
+            status: "failed",
+            errorMessage: message,
+            elapsedSec: elapsedRef.current,
+          }),
+        );
+        setStatus("error");
+        setErrorMessage(message);
+        void persistCloudStudioHistory({
+          id: historyId,
+          title: pendingItem.title,
+          durationSec: duration,
+          modelMark: modelMark,
+          resolution: outResolution,
+          product: studioMode,
           status: "failed",
           errorMessage: message,
-          elapsedSec: elapsedRef.current,
-        }),
-      );
-      setStatus("error");
-      setErrorMessage(message);
-      void persistCloudStudioHistory({
-        id: historyId,
-        title: pendingItem.title,
-        durationSec: duration,
-        modelMark: modelMark,
-        resolution: outResolution,
-        product: studioMode,
-        status: "failed",
-        errorMessage: message,
-      }).then(() => refreshCloudHistory());
+        }).then(() => refreshCloudHistory());
+      }
+    } finally {
+      generateLockRef.current = false;
     }
   }
 
@@ -730,6 +754,7 @@ export function MotionStudio() {
 
   const openHistoryItem = useCallback((item: StudioHistoryItem) => {
     if (item.status !== "done" || !item.videoUrl) return;
+    setResultAspect("9 / 16");
     setResultUrl(item.videoUrl);
     setStatus("done");
     setPanelMode("preview");
@@ -742,6 +767,21 @@ export function MotionStudio() {
     a.download = `genjutsu-${item.id}.mp4`;
     a.click();
   }, []);
+
+  const deleteHistoryItem = useCallback(
+    (item: StudioHistoryItem) => {
+      if (item.status === "generating") return;
+      setHistory((prev) => removeStudioHistoryItem(prev, item.id));
+      if (resultUrl && item.videoUrl && resultUrl === item.videoUrl) {
+        setResultUrl(null);
+        setStatus("idle");
+      }
+      if (isLoggedIn) {
+        void deleteCloudStudioHistory(item.id);
+      }
+    },
+    [isLoggedIn, resultUrl],
+  );
 
   const ready = Boolean(
     (isObjectSwap ? referenceAssets.length > 0 : imageFile) &&
@@ -1168,16 +1208,23 @@ export function MotionStudio() {
 
           {/* Sticky generate */}
           <div className="shrink-0 border-t border-white/[0.07] p-3.5 sm:p-4">
+            <p className="mb-2.5 text-center text-[0.72rem] leading-snug text-fg-muted">
+              {isObjectSwap
+                ? "Tip: keep the subject a similar size and crop in the references and the source video."
+                : "Tip: keep the person a similar size and framing in the photo and the motion video."}
+            </p>
             <button
               type="button"
               onClick={() => void onGenerate()}
               disabled={busy}
+              aria-busy={busy}
               className={[
-                "group relative flex h-12 w-full items-center justify-between gap-3 overflow-hidden rounded-2xl px-4 text-left transition-all duration-200 disabled:cursor-wait",
-                ready
+                "group relative flex h-12 w-full items-center justify-between gap-3 overflow-hidden rounded-2xl px-4 text-left transition-all duration-200 disabled:pointer-events-none disabled:cursor-wait",
+                ready && !busy
                   ? "bg-accent text-accent-ink shadow-[0_8px_28px_rgba(216,255,62,0.18)] hover:bg-accent-strong hover:shadow-[0_10px_32px_rgba(216,255,62,0.28)] active:scale-[0.985]"
-                  : "bg-white/[0.08] text-fg ring-1 ring-inset ring-white/[0.1] hover:bg-white/[0.12]",
-                busy ? "opacity-90" : "",
+                  : busy
+                    ? "bg-accent/80 text-accent-ink opacity-80 shadow-none"
+                    : "bg-white/[0.08] text-fg ring-1 ring-inset ring-white/[0.1] hover:bg-white/[0.12]",
               ].join(" ")}
             >
               {ready ? (
@@ -1320,6 +1367,7 @@ export function MotionStudio() {
                 items={history}
                 onSelect={openHistoryItem}
                 onDownload={downloadHistoryItem}
+                onDelete={deleteHistoryItem}
                 activeElapsedSec={elapsedSec}
               />
             ) : (
@@ -1329,14 +1377,29 @@ export function MotionStudio() {
                   aria-busy={busy}
                 >
                   {resultUrl && !busy ? (
-                    <video
-                      key={resultUrl}
-                      src={resultUrl}
-                      controls
-                      autoPlay
-                      playsInline
-                      className="absolute inset-0 h-full w-full object-contain bg-black"
-                    />
+                    <div className="absolute inset-0 flex items-center justify-center bg-black p-3 sm:p-4">
+                      <div
+                        className="relative h-full max-h-full w-auto max-w-full overflow-hidden rounded-lg bg-black shadow-[0_0_0_1px_rgba(255,255,255,0.08)]"
+                        style={{ aspectRatio: resultAspect }}
+                      >
+                        <video
+                          key={resultUrl}
+                          src={resultUrl}
+                          controls
+                          autoPlay
+                          playsInline
+                          className="h-full w-full object-contain"
+                          onLoadedMetadata={(e) => {
+                            const el = e.currentTarget;
+                            if (el.videoWidth > 0 && el.videoHeight > 0) {
+                              setResultAspect(
+                                `${el.videoWidth} / ${el.videoHeight}`,
+                              );
+                            }
+                          }}
+                        />
+                      </div>
+                    </div>
                   ) : (
                     <>
                       <div className="absolute inset-0 flex items-center justify-center p-3 sm:p-4">

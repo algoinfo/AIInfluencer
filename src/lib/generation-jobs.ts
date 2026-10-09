@@ -23,6 +23,22 @@ export type GenerationJob = {
   updatedAt: string;
 };
 
+/** Turso `datetime('now')` is UTC without a Z — normalize so clients sort/display correctly. */
+function sqlUtcToIso(value: unknown): string {
+  const raw = String(value ?? "").trim();
+  if (!raw) return new Date().toISOString();
+  if (raw.endsWith("Z") || /[+-]\d{2}:\d{2}$/.test(raw)) {
+    const parsed = Date.parse(raw);
+    return Number.isFinite(parsed) ? new Date(parsed).toISOString() : raw;
+  }
+  const asUtc = Date.parse(raw.includes("T") ? `${raw}Z` : `${raw.replace(" ", "T")}Z`);
+  if (Number.isFinite(asUtc)) return new Date(asUtc).toISOString();
+  const fallback = Date.parse(raw);
+  return Number.isFinite(fallback)
+    ? new Date(fallback).toISOString()
+    : new Date().toISOString();
+}
+
 function rowToJob(row: Record<string, unknown>): GenerationJob {
   const product =
     row.product === "motion-transfer" || row.product === "object-swap"
@@ -47,8 +63,8 @@ function rowToJob(row: Record<string, unknown>): GenerationJob {
           : null,
     modelMark: row.model_mark ? String(row.model_mark) : null,
     resolution: row.resolution ? String(row.resolution) : null,
-    createdAt: String(row.created_at),
-    updatedAt: String(row.updated_at),
+    createdAt: sqlUtcToIso(row.created_at),
+    updatedAt: sqlUtcToIso(row.updated_at),
   };
 }
 
@@ -134,7 +150,7 @@ export async function markGenerationJobFailed(id: string, error: string) {
   await db.execute({
     sql: `UPDATE generation_jobs
           SET status = 'failed', error = ?, updated_at = datetime('now')
-          WHERE id = ?`,
+          WHERE id = ? AND status != 'completed'`,
     args: [error.slice(0, 500), id],
   });
 }
@@ -230,6 +246,10 @@ export async function saveFailedGenerationJob(input: {
   const existing = await getGenerationJob(id);
   const error = input.error.slice(0, 500);
 
+  if (existing?.status === "completed" && existing.outputUrl) {
+    return existing;
+  }
+
   if (existing) {
     await markGenerationJobFailed(id, error);
   } else {
@@ -275,4 +295,17 @@ export async function listGenerationJobsByUserEmail(
     args: [userEmail, capped],
   });
   return result.rows.map((row) => rowToJob(row as Record<string, unknown>));
+}
+
+export async function deleteGenerationJobForUser(
+  id: string,
+  userEmail: string,
+): Promise<boolean> {
+  await ensureSchema();
+  const db = getDb();
+  const result = await db.execute({
+    sql: `DELETE FROM generation_jobs WHERE id = ? AND user_email = ?`,
+    args: [id, userEmail],
+  });
+  return (result.rowsAffected ?? 0) > 0;
 }

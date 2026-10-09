@@ -6,6 +6,7 @@ import { useAuth } from "@/components/auth/AuthProvider";
 import { StudioHistoryPanel } from "@/components/studio/StudioHistoryPanel";
 import { WELCOME_CREDITS } from "@/lib/credit-limits";
 import {
+  deleteCloudStudioHistory,
   fetchCloudStudioHistory,
   type StudioHistoryItem,
 } from "@/lib/studio-history";
@@ -60,6 +61,12 @@ export default function AccountPage() {
     a.rel = "noopener";
     a.target = "_blank";
     a.click();
+  }, []);
+
+  const deleteCreation = useCallback((item: StudioHistoryItem) => {
+    if (item.status === "generating") return;
+    setCreations((prev) => prev.filter((row) => row.id !== item.id));
+    void deleteCloudStudioHistory(item.id);
   }, []);
 
   if (!ready) {
@@ -166,6 +173,7 @@ export default function AccountPage() {
             items={creations}
             onSelect={openCreation}
             onDownload={downloadCreation}
+            onDelete={deleteCreation}
             emptyHint="Generate a video in the studio — it will show up here across devices."
           />
         )}

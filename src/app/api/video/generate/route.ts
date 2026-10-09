@@ -426,10 +426,12 @@ export async function POST(req: NextRequest) {
           characterImage: {
             buffer: characterBuffer,
             mimeType: characterFile.type || "image/jpeg",
+            filename: characterFile.name || "character.jpg",
           },
           motionVideo: {
             buffer: motionBuffer,
             mimeType: motionFile.type || "video/mp4",
+            filename: motionFile.name || "motion.mp4",
           },
           prompt,
           resolution: falResolution,
@@ -537,7 +539,19 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    const usage = await recordUsage(token ?? session.token, "generation");
+    // Never fail a successful render because Turso/usage bookkeeping broke.
+    let usage: Awaited<ReturnType<typeof recordUsage>> | null = null;
+    try {
+      usage = await recordUsage(token ?? session.token, "generation");
+    } catch (usageError) {
+      log("usage record failed", {
+        error:
+          usageError instanceof Error
+            ? usageError.message
+            : String(usageError),
+        jobId: cloudJobId,
+      });
+    }
     const totalMs = Date.now() - startedAt;
 
     log("done", {
@@ -578,8 +592,9 @@ export async function POST(req: NextRequest) {
       },
     );
 
-    if (sessionCreated || usage.created) {
-      res.cookies.set(SESSION_COOKIE, usage.session.token, {
+    const cookieToken = usage?.session.token ?? (sessionCreated ? session.token : null);
+    if (cookieToken && (sessionCreated || usage?.created)) {
+      res.cookies.set(SESSION_COOKIE, cookieToken, {
         httpOnly: true,
         secure: process.env.NODE_ENV === "production",
         sameSite: "lax",
