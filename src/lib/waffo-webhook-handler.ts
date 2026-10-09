@@ -38,7 +38,6 @@ export async function handleWaffoWebhookRequest(
       console.log("[waffo/webhook] processed", {
         route,
         deliveryId: event.id,
-        eventType: event.eventType,
         ...result,
       });
     } catch (error) {
