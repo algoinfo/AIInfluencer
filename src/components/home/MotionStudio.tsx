@@ -41,6 +41,7 @@ import {
   loadStudioHistory,
   mergeCloudStudioHistory,
   prependStudioHistory,
+  saveStudioHistory,
   updateStudioHistoryItem,
   type StudioHistoryItem,
 } from "@/lib/studio-history";
@@ -185,7 +186,10 @@ export function MotionStudio() {
   const modelMark = isObjectSwap ? "gj" : model.mark;
 
   useEffect(() => {
-    setHistory(loadStudioHistory());
+    // Drop legacy false "Interrupted" rows written by an older persist bug.
+    const local = loadStudioHistory();
+    setHistory(local);
+    saveStudioHistory(local);
   }, []);
 
   const refreshCloudHistory = useCallback(() => {
@@ -201,9 +205,9 @@ export function MotionStudio() {
   }, [refreshCloudHistory]);
 
   useEffect(() => {
-    if (panelMode !== "history" || !isLoggedIn) return;
+    if (panelMode !== "history") return;
     refreshCloudHistory();
-  }, [panelMode, isLoggedIn, refreshCloudHistory]);
+  }, [panelMode, refreshCloudHistory]);
 
   useEffect(() => {
     function onDoc(e: MouseEvent) {

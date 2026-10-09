@@ -20,27 +20,77 @@ export type StudioHistoryItem = {
 const STORAGE_KEY = "genjutsu:studio-history";
 const MAX_ITEMS = 24;
 
-function normalizeItem(raw: StudioHistoryItem): StudioHistoryItem | null {
+function normalizeItem(
+  raw: StudioHistoryItem,
+  options?: { dropGenerating?: boolean },
+): StudioHistoryItem | null {
   if (!raw || typeof raw !== "object" || !raw.id) return null;
   const status: StudioHistoryStatus =
-    raw.status === "generating" || raw.status === "failed" || raw.status === "done"
+    raw.status === "generating" ||
+    raw.status === "failed" ||
+    raw.status === "done"
       ? raw.status
       : raw.videoUrl
         ? "done"
         : "failed";
-  // Orphaned in-flight rows after reload cannot resume.
-  const resolvedStatus =
-    status === "generating" ? ("failed" as const) : status;
+
+  // In-flight rows are memory-only — never persist / never revive as Failed.
+  if (status === "generating") {
+    if (options?.dropGenerating) return null;
+    return {
+      id: String(raw.id),
+      title:
+        typeof raw.title === "string" && raw.title.trim()
+          ? raw.title
+          : "Generation",
+      createdAt:
+        typeof raw.createdAt === "string"
+          ? raw.createdAt
+          : new Date().toISOString(),
+      videoUrl: "",
+      durationSec:
+        typeof raw.durationSec === "number" && Number.isFinite(raw.durationSec)
+          ? raw.durationSec
+          : 0,
+      modelMark:
+        typeof raw.modelMark === "string" && raw.modelMark.trim()
+          ? raw.modelMark
+          : "—",
+      status: "generating",
+      resolution:
+        typeof raw.resolution === "string" ? raw.resolution : undefined,
+      elapsedSec:
+        typeof raw.elapsedSec === "number" && Number.isFinite(raw.elapsedSec)
+          ? raw.elapsedSec
+          : undefined,
+    };
+  }
+
   const videoUrl =
     typeof raw.videoUrl === "string" && !raw.videoUrl.startsWith("blob:")
       ? raw.videoUrl
       : "";
+
+  // Recover false "Interrupted" failures when a playable URL is present.
+  const interrupted =
+    status === "failed" &&
+    typeof raw.errorMessage === "string" &&
+    /interrupted/i.test(raw.errorMessage);
+  const resolvedStatus: StudioHistoryStatus =
+    videoUrl && (status === "done" || interrupted) ? "done" : status;
+
   if (resolvedStatus === "done" && !videoUrl) return null;
+
   return {
     id: String(raw.id),
-    title: typeof raw.title === "string" && raw.title.trim() ? raw.title : "Generation",
+    title:
+      typeof raw.title === "string" && raw.title.trim()
+        ? raw.title
+        : "Generation",
     createdAt:
-      typeof raw.createdAt === "string" ? raw.createdAt : new Date().toISOString(),
+      typeof raw.createdAt === "string"
+        ? raw.createdAt
+        : new Date().toISOString(),
     videoUrl,
     durationSec:
       typeof raw.durationSec === "number" && Number.isFinite(raw.durationSec)
@@ -53,10 +103,7 @@ function normalizeItem(raw: StudioHistoryItem): StudioHistoryItem | null {
     status: resolvedStatus,
     resolution: typeof raw.resolution === "string" ? raw.resolution : undefined,
     errorMessage:
-      resolvedStatus === "failed"
-        ? raw.errorMessage ||
-          (status === "generating" ? "Interrupted — try again." : undefined)
-        : undefined,
+      resolvedStatus === "failed" ? raw.errorMessage || undefined : undefined,
     elapsedSec:
       typeof raw.elapsedSec === "number" && Number.isFinite(raw.elapsedSec)
         ? raw.elapsedSec
@@ -72,8 +119,18 @@ export function loadStudioHistory(): StudioHistoryItem[] {
     const parsed = JSON.parse(raw) as StudioHistoryItem[];
     if (!Array.isArray(parsed)) return [];
     return parsed
-      .map(normalizeItem)
+      .map((item) => normalizeItem(item, { dropGenerating: true }))
       .filter((item): item is StudioHistoryItem => item != null)
+      // Drop legacy false failures from the old generating→failed persist bug.
+      .filter(
+        (item) =>
+          !(
+            item.status === "failed" &&
+            item.errorMessage &&
+            /interrupted/i.test(item.errorMessage) &&
+            !item.videoUrl
+          ),
+      )
       .slice(0, MAX_ITEMS);
   } catch {
     return [];
@@ -83,10 +140,17 @@ export function loadStudioHistory(): StudioHistoryItem[] {
 export function saveStudioHistory(items: StudioHistoryItem[]) {
   if (typeof window === "undefined") return;
   const persistable = items
-    .map(normalizeItem)
+    .map((item) => normalizeItem(item, { dropGenerating: true }))
     .filter((item): item is StudioHistoryItem => item != null)
-    // Don't persist in-flight rows — they become "failed" on reload anyway.
-    .filter((item) => item.status !== "generating")
+    .filter(
+      (item) =>
+        !(
+          item.status === "failed" &&
+          item.errorMessage &&
+          /interrupted/i.test(item.errorMessage) &&
+          !item.videoUrl
+        ),
+    )
     .slice(0, MAX_ITEMS);
   try {
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(persistable));
@@ -169,19 +233,31 @@ export function cloudCreationToHistoryItem(
 }
 
 /**
- * Merge cloud history with local optimistic rows.
- * Prefer cloud for shared ids; keep in-flight local generating rows.
+ * Merge cloud history with local rows.
+ * Cloud wins on the same id; local-only done/failed/generating are kept.
  */
 export function mergeCloudStudioHistory(
   local: StudioHistoryItem[],
   cloud: StudioHistoryItem[],
 ): StudioHistoryItem[] {
   const byId = new Map<string, StudioHistoryItem>();
-  for (const item of cloud) byId.set(item.id, item);
   for (const item of local) {
-    if (item.status === "generating" && !byId.has(item.id)) {
-      byId.set(item.id, item);
+    const normalized = normalizeItem(item);
+    if (normalized) byId.set(normalized.id, normalized);
+  }
+  for (const item of cloud) {
+    const normalized = normalizeItem(item);
+    if (!normalized) continue;
+    const existing = byId.get(normalized.id);
+    // Prefer cloud, but don't let an empty/failed cloud row erase a local Ready.
+    if (
+      existing?.status === "done" &&
+      existing.videoUrl &&
+      (normalized.status !== "done" || !normalized.videoUrl)
+    ) {
+      continue;
     }
+    byId.set(normalized.id, normalized);
   }
   const merged = Array.from(byId.values()).sort(
     (a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt),
