@@ -3,13 +3,13 @@ import { pageMetadata } from "@/lib/seo";
 export const metadata = pageMetadata({
   title: "Motion Transfer Examples | Genjutsu",
   description:
-    "Browse Genjutsu motion transfer and object swap looks—then open the studio to generate with your own image and reference video.",
+    "Browse Genjutsu motion transfer examples, then generate with your own image and reference video in the on-page studio. FAQ for Flip, Recast, and more.",
   path: "/examples",
   absoluteTitle: true,
   keywords: [
     "Genjutsu examples",
     "motion transfer examples",
-    "object swap examples",
+    "AI motion transfer examples",
     "AI video demos",
   ],
 });

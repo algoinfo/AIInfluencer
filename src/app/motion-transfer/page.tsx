@@ -1,14 +1,14 @@
 import Link from "next/link";
+import { MotionStudio } from "@/components/home/MotionStudio";
 import { FeatureCard } from "@/components/ui/FeatureCard";
-import { MotionTransferDemo } from "@/components/ui/MotionTransferDemo";
 import { PageHero } from "@/components/ui/PageHero";
-import { CTA } from "@/components/ui/CTA";
+import { WELCOME_CREDITS } from "@/lib/credit-limits";
 import { pageMetadata } from "@/lib/seo";
 
 export const metadata = pageMetadata({
   title: "AI Motion Transfer – Turn Images Into Videos | Genjutsu",
   description:
-    "Transform a character, product, or image using motion from a reference video with AI motion transfer. Create AI influencer videos, product videos, dance videos, and more.",
+    "AI motion transfer maps movement from a reference video onto a character or product image. Generate dance, influencer, and product clips in the Genjutsu studio.",
   path: "/motion-transfer",
   absoluteTitle: true,
   keywords: [
@@ -46,39 +46,107 @@ const concepts = [
   },
 ];
 
+const faq = [
+  {
+    q: "What is AI motion transfer?",
+    a: "AI motion transfer takes the pose, timing, and often camera energy from a reference video and applies that performance to another subject — usually a character or product still — so you get a new clip without inventing the choreography from text alone.",
+  },
+  {
+    q: "How do I use motion transfer on Genjutsu?",
+    a: "Upload a character or product image and a motion reference in the studio on this page, then generate after login. Credits scale with the length of the uploaded motion video.",
+  },
+  {
+    q: "Do I need to sign up?",
+    a: `Yes. Real generation needs an account. New accounts receive ${WELCOME_CREDITS} welcome credits to run the same studio pipeline used on the homepage.`,
+  },
+  {
+    q: "What inputs work best?",
+    a: "Use a clear still with a readable subject, and a short reference with stable framing and visible full-body or product motion. Match camera height between the still and the clip when you can.",
+  },
+  {
+    q: "Is motion transfer the same as Object Swap?",
+    a: "No. Motion Transfer rebuilds the performance around your still as the hero identity. Object Swap keeps a person or scene from the source video and mainly replaces a held item or garment.",
+  },
+  {
+    q: "Where else should I go for specific jobs?",
+    a: "Dance → /dance-video. UGC ads → /ugc-video-generator. Pet dance → /ai-pet-dance. Avatar clips → /avatar-video-generator. Influencer batches → /ai-influencer.",
+  },
+];
+
+const faqJsonLd = {
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  mainEntity: faq.map((item) => ({
+    "@type": "Question",
+    name: item.q,
+    acceptedAnswer: {
+      "@type": "Answer",
+      text: item.a,
+    },
+  })),
+};
+
 export default function MotionTransferPage() {
   return (
     <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }}
+      />
+
       <PageHero
         eyebrow="Genjutsu"
         title="AI Motion Transfer"
         subtitle="Bring any character to life with the movement of a reference video."
-        tags={["Character", "Reference Video", "AI Video"]}
-        ctas={[
-          { href: "/#studio", label: "Open studio" },
-          { href: "/examples", label: "See Examples", variant: "secondary" },
-        ]}
       />
 
-      <section className="section-pad">
+      <section className="border-b border-border bg-bg pb-10 pt-2 sm:pb-12">
         <div className="page-shell">
-          <div className="mb-8 max-w-2xl">
-            <h2 className="font-display text-3xl font-semibold tracking-tight">
-              Interactive demo
-            </h2>
-            <p className="mt-3 text-fg-muted">
-              This is a layout preview. Online generation needs login — open the{" "}
-              <Link href="/#studio" className="text-fg underline-offset-2 hover:underline">
-                homepage studio
-              </Link>{" "}
-              to run a real render with credits.
-            </p>
+          <div className="mx-auto flex h-[min(85vh,920px)] min-h-[560px] w-full max-w-6xl">
+            <MotionStudio />
           </div>
-          <MotionTransferDemo />
         </div>
       </section>
 
-      <section className="section-pad border-t border-border bg-bg-soft">
+      <section className="section-pad border-b border-border bg-bg-soft">
+        <div className="page-shell max-w-3xl space-y-6">
+          <h2 className="font-display text-3xl font-semibold tracking-tight">
+            How AI motion transfer works
+          </h2>
+          <p className="text-base leading-relaxed text-fg-muted">
+            You provide two inputs: a still of the subject you want on screen,
+            and a reference video that already contains the performance. The
+            model reads pose and timing from the clip, then maps that motion
+            onto your image. Genjutsu is built for this reference-driven path —
+            not for inventing choreography from a prompt alone.
+          </p>
+          <p className="text-base leading-relaxed text-fg-muted">
+            Use it for dance, walks, product demos, and influencer-style
+            performances when identity must stay locked while movement changes.
+            For job-specific landings see{" "}
+            <Link href="/dance-video" className="text-fg underline-offset-2 hover:underline">
+              free dance
+            </Link>
+            ,{" "}
+            <Link
+              href="/ugc-video-generator"
+              className="text-fg underline-offset-2 hover:underline"
+            >
+              UGC video
+            </Link>
+            , and{" "}
+            <Link
+              href="/ai-influencer"
+              className="text-fg underline-offset-2 hover:underline"
+            >
+              AI influencer
+            </Link>
+            .
+          </p>
+        </div>
+      </section>
+
+      <section className="section-pad">
         <div className="page-shell">
           <h2 className="font-display text-3xl font-semibold tracking-tight">
             The building blocks
@@ -96,14 +164,23 @@ export default function MotionTransferPage() {
         </div>
       </section>
 
-      <CTA
-        title="See what motion transfer can create"
-        body="Browse examples, or generate AI influencer and product clips in the studio."
-        primaryHref="/#studio"
-        primaryLabel="Open studio"
-        secondaryHref="/examples"
-        secondaryLabel="Open Examples"
-      />
+      <section className="section-pad border-t border-border bg-bg-soft">
+        <div className="page-shell max-w-3xl">
+          <h2 className="font-display text-3xl font-semibold tracking-tight">
+            FAQ
+          </h2>
+          <dl className="mt-8 space-y-6">
+            {faq.map((item) => (
+              <div key={item.q}>
+                <dt className="font-medium text-fg">{item.q}</dt>
+                <dd className="mt-2 text-base leading-relaxed text-fg-muted">
+                  {item.a}
+                </dd>
+              </div>
+            ))}
+          </dl>
+        </div>
+      </section>
     </>
   );
 }
