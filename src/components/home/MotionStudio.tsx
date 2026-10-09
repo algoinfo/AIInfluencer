@@ -781,17 +781,21 @@ export function MotionStudio() {
                     />
                   ) : (
                     <>
-                      <video
-                        key={DEMO_PREVIEW_VIDEO}
-                        src={DEMO_PREVIEW_VIDEO}
-                        autoPlay
-                        muted
-                        loop
-                        playsInline
-                        preload="metadata"
-                        className="absolute left-1/2 top-1/2 h-[80%] w-[80%] -translate-x-1/2 -translate-y-1/2 rounded-lg object-contain bg-black"
-                        aria-label="Sample motion transfer preview"
-                      />
+                      <div className="absolute inset-0 flex items-center justify-center p-3 sm:p-4">
+                        <div className="relative h-full max-h-full w-auto max-w-full aspect-[9/16] overflow-hidden rounded-lg bg-black shadow-[0_0_0_1px_rgba(255,255,255,0.08)]">
+                          <video
+                            key={DEMO_PREVIEW_VIDEO}
+                            src={DEMO_PREVIEW_VIDEO}
+                            autoPlay
+                            muted
+                            loop
+                            playsInline
+                            preload="metadata"
+                            className="absolute inset-0 h-full w-full object-cover"
+                            aria-label="Sample motion transfer preview"
+                          />
+                        </div>
+                      </div>
                       {status === "error" ? (
                         <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-black/65 px-6 text-center backdrop-blur-[2px]">
                           <p className="text-sm font-medium text-fg">
