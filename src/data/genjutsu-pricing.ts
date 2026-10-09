@@ -17,8 +17,14 @@ export const GENJUTSU_RESOLUTIONS: GenjutsuResolution[] = [
 
 export const GENJUTSU_DEFAULT_RESOLUTION: GenjutsuResolution = "720p";
 
-/** Source video must be at least 4s (HF Genjutsu Object Swap). */
+/** Source video must be at least 4s (HF Genjutsu Object Swap / Motion Transfer). */
 export const GENJUTSU_MIN_DURATION_SEC = 4;
+
+/** Object Swap: width × height ≥ 409,600 per frame (e.g. ~854×480). */
+export const OBJECT_SWAP_MIN_FRAME_PIXELS = 409_600;
+
+/** Object Swap / Motion Transfer: HF image_urls maxItems. */
+export const GENJUTSU_MAX_REFERENCE_IMAGES = 8;
 
 /** Sell credits/s = cost USD/s × (1 + PROFIT_RATE) / USD_PER_CREDIT */
 export function genjutsuCreditsPerSecond(

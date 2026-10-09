@@ -13,13 +13,15 @@ import { CREDITS_PER_SECOND, creditsForRun } from "@/data/credits";
 import {
   creditsForGenjutsuRun,
   GENJUTSU_DEFAULT_RESOLUTION,
+  GENJUTSU_MAX_REFERENCE_IMAGES,
   GENJUTSU_MIN_DURATION_SEC,
   GENJUTSU_RESOLUTIONS,
   genjutsuCreditsPerSecond,
+  OBJECT_SWAP_MIN_FRAME_PIXELS,
   type GenjutsuResolution,
 } from "@/data/genjutsu-pricing";
 import { resolveMotionPrompt } from "@/data/motion-prompt";
-import { probeVideoFileDurationSeconds } from "@/lib/probe-video-duration-client";
+import { probeVideoFileMeta } from "@/lib/probe-video-duration-client";
 import {
   billableSecondsFromDuration,
   MOTION_TRANSFER_MAX_DURATION_SEC,
@@ -29,6 +31,13 @@ import {
   prependStudioHistory,
   type StudioHistoryItem,
 } from "@/lib/studio-history";
+
+type ReferenceAsset = {
+  id: string;
+  file: File;
+  url: string;
+  name: string;
+};
 
 function formatElapsed(totalSeconds: number): string {
   const m = Math.floor(totalSeconds / 60);
@@ -104,9 +113,12 @@ export function MotionStudio() {
   const [imageName, setImageName] = useState<string | null>(null);
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [imageFile, setImageFile] = useState<File | null>(null);
+  /** Object Swap: up to 8 HF image_urls (first also mirrors imageFile for shared UI). */
+  const [referenceAssets, setReferenceAssets] = useState<ReferenceAsset[]>([]);
   const [videoName, setVideoName] = useState<string | null>(null);
   const [videoFile, setVideoFile] = useState<File | null>(null);
   const [videoDurationSec, setVideoDurationSec] = useState<number | null>(null);
+  const [videoFramePixels, setVideoFramePixels] = useState<number | null>(null);
   const [prompt, setPrompt] = useState("");
   const [promptOn, setPromptOn] = useState(false);
   const [status, setStatus] = useState<
@@ -151,9 +163,11 @@ export function MotionStudio() {
   useEffect(() => {
     return () => {
       if (imageUrl) URL.revokeObjectURL(imageUrl);
+      for (const asset of referenceAssets) URL.revokeObjectURL(asset.url);
       if (resultUrl?.startsWith("blob:")) URL.revokeObjectURL(resultUrl);
     };
-  }, [imageUrl, resultUrl]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- revoke only on unmount / replace via setters
+  }, []);
 
   useEffect(() => {
     if (status !== "generating") {
@@ -168,12 +182,52 @@ export function MotionStudio() {
     return () => window.clearInterval(id);
   }, [status]);
 
+  function syncPrimaryImage(file: File | null, preview: string | null) {
+    if (imageUrl && imageUrl !== preview) URL.revokeObjectURL(imageUrl);
+    setImageName(file?.name ?? null);
+    setImageFile(file);
+    setImageUrl(preview);
+  }
+
   function onImage(file: File | null) {
     if (!file) return;
-    if (imageUrl) URL.revokeObjectURL(imageUrl);
-    setImageName(file.name);
-    setImageFile(file);
-    setImageUrl(URL.createObjectURL(file));
+    if (isObjectSwap) {
+      if (referenceAssets.length >= GENJUTSU_MAX_REFERENCE_IMAGES) {
+        setStatus("error");
+        setErrorMessage(
+          `Object Swap supports up to ${GENJUTSU_MAX_REFERENCE_IMAGES} reference images.`,
+        );
+        return;
+      }
+      const url = URL.createObjectURL(file);
+      const asset: ReferenceAsset = {
+        id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+        file,
+        url,
+        name: file.name,
+      };
+      setReferenceAssets((prev) => {
+        const next = [...prev, asset].slice(0, GENJUTSU_MAX_REFERENCE_IMAGES);
+        const primary = next[0];
+        syncPrimaryImage(primary?.file ?? null, primary?.url ?? null);
+        return next;
+      });
+    } else {
+      syncPrimaryImage(file, URL.createObjectURL(file));
+    }
+    setStatus("idle");
+    setErrorMessage(null);
+  }
+
+  function removeReference(id: string) {
+    setReferenceAssets((prev) => {
+      const target = prev.find((a) => a.id === id);
+      if (target) URL.revokeObjectURL(target.url);
+      const next = prev.filter((a) => a.id !== id);
+      const primary = next[0];
+      syncPrimaryImage(primary?.file ?? null, primary?.url ?? null);
+      return next;
+    });
     setStatus("idle");
     setErrorMessage(null);
   }
@@ -183,22 +237,42 @@ export function MotionStudio() {
     setVideoName(file.name);
     setVideoFile(file);
     setVideoDurationSec(null);
+    setVideoFramePixels(null);
     setStatus("idle");
     setErrorMessage(null);
 
-    void probeVideoFileDurationSeconds(file).then((raw) => {
+    void probeVideoFileMeta(file).then((meta) => {
+      const raw = meta?.durationSec ?? null;
       if (raw != null && raw > MOTION_TRANSFER_MAX_DURATION_SEC + 0.05) {
         setVideoFile(null);
         setVideoName(null);
         setVideoDurationSec(null);
+        setVideoFramePixels(null);
         setStatus("error");
         setErrorMessage(
           `Motion video is too long (max ${MOTION_TRANSFER_MAX_DURATION_SEC}s).`,
         );
         return;
       }
+      if (
+        isObjectSwap &&
+        meta &&
+        meta.framePixels > 0 &&
+        meta.framePixels < OBJECT_SWAP_MIN_FRAME_PIXELS
+      ) {
+        setVideoFile(null);
+        setVideoName(null);
+        setVideoDurationSec(null);
+        setVideoFramePixels(null);
+        setStatus("error");
+        setErrorMessage(
+          "Source video resolution is too low for Object Swap (need about 854×480 or larger).",
+        );
+        return;
+      }
       const billable = billableSecondsFromDuration(raw ?? 0);
       setVideoDurationSec(billable);
+      setVideoFramePixels(meta?.framePixels ?? null);
       if (billable == null) {
         setStatus("error");
         setErrorMessage(
@@ -213,7 +287,9 @@ export function MotionStudio() {
       openAuthModal({ mode: "login", reason: "generation" });
       return;
     }
-    if (!imageFile || !videoFile) {
+    const swapRefs = isObjectSwap ? referenceAssets.map((a) => a.file) : [];
+    const primaryImage = isObjectSwap ? swapRefs[0] ?? null : imageFile;
+    if (!primaryImage || !videoFile) {
       setStatus("need");
       return;
     }
@@ -249,12 +325,21 @@ export function MotionStudio() {
       const form = new FormData();
       form.set("mode", studioMode);
       form.set("modelId", isObjectSwap ? "genjutsu" : model.id);
-      form.set("characterImage", imageFile);
+      if (isObjectSwap) {
+        for (const file of swapRefs) {
+          form.append("referenceImage", file);
+        }
+      } else {
+        form.set("characterImage", primaryImage);
+      }
       form.set("motionVideo", videoFile);
       form.set("prompt", resolved);
       form.set("durationSec", String(duration));
       form.set("modelMultiplier", String(model.multiplier));
       form.set("resolution", resolution);
+      if (videoFramePixels != null && videoFramePixels > 0) {
+        form.set("framePixels", String(videoFramePixels));
+      }
 
       const res = await fetch("/api/video/generate", {
         method: "POST",
@@ -295,7 +380,7 @@ export function MotionStudio() {
       const item: StudioHistoryItem = {
         id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
         title:
-          imageFile.name.replace(/\.[^.]+$/, "") ||
+          primaryImage.name.replace(/\.[^.]+$/, "") ||
           (isObjectSwap ? "Object swap" : "Motion transfer"),
         createdAt: new Date().toISOString(),
         // Prefer public R2 URL for reload-safe history; blob for this session.
@@ -339,7 +424,11 @@ export function MotionStudio() {
     a.click();
   }, []);
 
-  const ready = Boolean(imageFile && videoFile && duration != null);
+  const ready = Boolean(
+    (isObjectSwap ? referenceAssets.length > 0 : imageFile) &&
+      videoFile &&
+      duration != null,
+  );
   const busy = status === "generating";
 
   return (
@@ -376,6 +465,28 @@ export function MotionStudio() {
                         setModel(
                           models.find((m) => m.id === "genjutsu") ?? models[0],
                         );
+                        // Flatten multi-refs down to the primary character image.
+                        setReferenceAssets((prev) => {
+                          for (const asset of prev.slice(1)) {
+                            URL.revokeObjectURL(asset.url);
+                          }
+                          return prev[0] ? [prev[0]] : [];
+                        });
+                      } else if (
+                        tab.id === "object-swap" &&
+                        imageFile &&
+                        referenceAssets.length === 0
+                      ) {
+                        const url = imageUrl || URL.createObjectURL(imageFile);
+                        setReferenceAssets([
+                          {
+                            id: `seed-${Date.now()}`,
+                            file: imageFile,
+                            url,
+                            name: imageFile.name,
+                          },
+                        ]);
+                        if (!imageUrl) setImageUrl(url);
                       }
                     }}
                     className={[
@@ -541,36 +652,102 @@ export function MotionStudio() {
               </div>
             )}
 
-            {/* Uploads side by side */}
-            <div className="grid shrink-0 grid-cols-2 gap-2.5">
-              <UploadField
-                label={isObjectSwap ? "Reference" : "Character"}
-                required
-                hint="JPG / PNG"
-                button="Add image"
-                accept="image/*"
-                fileName={imageName}
-                previewUrl={imageUrl}
-                onPick={onImage}
-                icon="image"
-                compact
-              />
-              <UploadField
-                label={isObjectSwap ? "Source video" : "Motion"}
-                required
-                hint={
-                  duration != null
-                    ? `${duration}s · billable`
-                    : "MP4 / MOV"
-                }
-                button="Add video"
-                accept="video/*"
-                fileName={videoName}
-                onPick={onVideo}
-                icon="video"
-                compact
-              />
-            </div>
+            {/* Uploads — Object Swap: 1–8 refs + source video (HF image_urls / video_url) */}
+            {isObjectSwap ? (
+              <div className="shrink-0 space-y-2.5">
+                <div className="flex items-center justify-between gap-2">
+                  <p className="text-[0.65rem] uppercase tracking-[0.16em] text-fg-subtle">
+                    References
+                    <span className="ml-0.5 text-[#ff5c5c]">*</span>
+                  </p>
+                  <p className="text-[0.65rem] text-fg-subtle">
+                    {referenceAssets.length}/{GENJUTSU_MAX_REFERENCE_IMAGES}
+                  </p>
+                </div>
+                <div className="grid grid-cols-3 gap-2">
+                  {referenceAssets.map((asset) => (
+                    <div
+                      key={asset.id}
+                      className="relative overflow-hidden rounded-xl border border-accent/25 bg-[rgba(216,255,62,0.04)]"
+                    >
+                      <div className="relative aspect-square">
+                        <Image
+                          src={asset.url}
+                          alt=""
+                          fill
+                          unoptimized
+                          className="object-cover"
+                        />
+                      </div>
+                      <button
+                        type="button"
+                        aria-label={`Remove ${asset.name}`}
+                        onClick={() => removeReference(asset.id)}
+                        className="absolute right-1 top-1 flex h-6 w-6 items-center justify-center rounded-full bg-black/70 text-sm leading-none text-fg hover:bg-black"
+                      >
+                        ×
+                      </button>
+                    </div>
+                  ))}
+                  {referenceAssets.length < GENJUTSU_MAX_REFERENCE_IMAGES ? (
+                    <UploadField
+                      label="Add"
+                      hint="JPG / PNG"
+                      button="Image"
+                      accept="image/jpeg,image/png,image/webp"
+                      fileName={null}
+                      onPick={onImage}
+                      icon="image"
+                      compact
+                    />
+                  ) : null}
+                </div>
+                <UploadField
+                  label="Source video"
+                  required
+                  hint={
+                    duration != null
+                      ? `${duration}s · billable`
+                      : "MP4 / MOV · ≥4s"
+                  }
+                  button="Add video"
+                  accept="video/*"
+                  fileName={videoName}
+                  onPick={onVideo}
+                  icon="video"
+                />
+              </div>
+            ) : (
+              <div className="grid shrink-0 grid-cols-2 gap-2.5">
+                <UploadField
+                  label="Character"
+                  required
+                  hint="JPG / PNG"
+                  button="Add image"
+                  accept="image/*"
+                  fileName={imageName}
+                  previewUrl={imageUrl}
+                  onPick={onImage}
+                  icon="image"
+                  compact
+                />
+                <UploadField
+                  label="Motion"
+                  required
+                  hint={
+                    duration != null
+                      ? `${duration}s · billable`
+                      : "MP4 / MOV"
+                  }
+                  button="Add video"
+                  accept="video/*"
+                  fileName={videoName}
+                  onPick={onVideo}
+                  icon="video"
+                  compact
+                />
+              </div>
+            )}
 
             {/* Prompt — toggle like Genjutsu studio */}
             <div className="shrink-0">

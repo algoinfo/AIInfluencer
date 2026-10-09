@@ -8,7 +8,9 @@ import { requireCredits } from "@/lib/credit-charge";
 import { creditsForRun } from "@/data/credits";
 import {
   creditsForGenjutsuRun,
+  GENJUTSU_MAX_REFERENCE_IMAGES,
   GENJUTSU_MIN_DURATION_SEC,
+  OBJECT_SWAP_MIN_FRAME_PIXELS,
   parseGenjutsuResolution,
 } from "@/data/genjutsu-pricing";
 import { resolveMotionPrompt } from "@/data/motion-prompt";
@@ -49,18 +51,44 @@ function parseMode(value: string | null | undefined): StudioMode {
   return value === "object-swap" ? "object-swap" : "motion-transfer";
 }
 
-function validateImage(file: FormDataEntryValue | null): File {
+function validateImage(
+  file: FormDataEntryValue | null,
+  label = "Character image",
+): File {
   if (!(file instanceof File) || file.size === 0) {
-    throw new Error("Character image is required.");
+    throw new Error(`${label} is required.`);
   }
   if (file.size > MOTION_TRANSFER_MAX_IMAGE_BYTES) {
-    throw new Error("Character image is too large (max 10 MB).");
+    throw new Error(`${label} is too large (max 10 MB).`);
   }
   const type = file.type || "image/jpeg";
   if (!MOTION_TRANSFER_ALLOWED_IMAGE_TYPES.has(type)) {
-    throw new Error("Character must be PNG, JPG, or WEBP.");
+    throw new Error(`${label} must be PNG, JPG, or WEBP.`);
   }
   return file;
+}
+
+/** Object Swap: 1–8 reference images (HF image_urls). */
+function validateReferenceImages(form: FormData): File[] {
+  const entries = [
+    ...form.getAll("referenceImage"),
+    ...form.getAll("characterImage"),
+    ...form.getAll("character"),
+  ].filter((v): v is File => v instanceof File && v.size > 0);
+
+  const unique: File[] = [];
+  const seen = new Set<string>();
+  for (const file of entries) {
+    const key = `${file.name}:${file.size}:${file.lastModified}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    unique.push(validateImage(file, "Reference image"));
+    if (unique.length >= GENJUTSU_MAX_REFERENCE_IMAGES) break;
+  }
+  if (unique.length < 1) {
+    throw new Error("At least one reference image is required.");
+  }
+  return unique;
 }
 
 function validateVideo(file: FormDataEntryValue | null): File {
@@ -97,12 +125,19 @@ export async function POST(req: NextRequest) {
       mode === "motion-transfer" && modelId === "genjutsu";
     const useGenjutsuPricing = mode === "object-swap" || useGenjutsuMotion;
 
-    const characterFile = validateImage(
-      form.get("characterImage") ?? form.get("character"),
-    );
+    const referenceFiles =
+      mode === "object-swap"
+        ? validateReferenceImages(form)
+        : [
+            validateImage(
+              form.get("characterImage") ?? form.get("character"),
+            ),
+          ];
+    const characterFile = referenceFiles[0];
     const motionFile = validateVideo(
       form.get("motionVideo") ?? form.get("motion"),
     );
+    const clientFramePixels = Number(form.get("framePixels") ?? 0) || 0;
     const rawPrompt = form.get("prompt")?.toString() ?? "";
     const prompt = useGenjutsuPricing
       ? rawPrompt.trim()
@@ -146,6 +181,19 @@ export async function POST(req: NextRequest) {
       return NextResponse.json(
         {
           error: `Genjutsu needs a video at least ${GENJUTSU_MIN_DURATION_SEC}s long.`,
+        },
+        { status: 400 },
+      );
+    }
+    if (
+      mode === "object-swap" &&
+      clientFramePixels > 0 &&
+      clientFramePixels < OBJECT_SWAP_MIN_FRAME_PIXELS
+    ) {
+      return NextResponse.json(
+        {
+          error:
+            "Source video resolution is too low for Object Swap (need about 854×480 or larger).",
         },
         { status: 400 },
       );
@@ -221,12 +269,18 @@ export async function POST(req: NextRequest) {
 
     let buffer: Buffer;
     if (mode === "object-swap") {
+      const referenceImages = await Promise.all(
+        referenceFiles.map(async (file, index) => ({
+          buffer:
+            index === 0
+              ? characterBuffer
+              : Buffer.from(await file.arrayBuffer()),
+          mimeType: file.type || "image/jpeg",
+          filename: file.name || `reference-${index + 1}.jpg`,
+        })),
+      );
       buffer = await generateGenjutsuObjectSwap({
-        characterImage: {
-          buffer: characterBuffer,
-          mimeType: characterFile.type || "image/jpeg",
-          filename: characterFile.name || "character.jpg",
-        },
+        referenceImages,
         sourceVideo: {
           buffer: motionBuffer,
           mimeType: motionFile.type || "video/mp4",

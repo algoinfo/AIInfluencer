@@ -1,4 +1,5 @@
 import type { GenjutsuResolution } from "@/data/genjutsu-pricing";
+import { GENJUTSU_MAX_REFERENCE_IMAGES } from "@/data/genjutsu-pricing";
 import {
   subscribeGenjutsuObjectSwap,
   uploadToHiggsfield,
@@ -39,19 +40,39 @@ async function publicUrlForInput(params: {
   });
 }
 
+export type ObjectSwapImageInput = {
+  buffer: Buffer;
+  mimeType: string;
+  filename?: string;
+};
+
+/**
+ * Genjutsu Object Swap — `higgsfield/genjutsu/object-swap/v1.0`
+ * Same input shape as motion-transfer: video_url + image_urls (1–8) + optional prompt + resolution.
+ */
 export async function generateGenjutsuObjectSwap(params: {
-  characterImage: { buffer: Buffer; mimeType: string; filename?: string };
+  /** 1–8 reference images (characters / objects / styles). */
+  referenceImages: ObjectSwapImageInput[];
   sourceVideo: { buffer: Buffer; mimeType: string; filename?: string };
   prompt?: string;
   resolution?: GenjutsuResolution;
 }): Promise<Buffer> {
-  const [imageUrl, videoUrl] = await Promise.all([
-    publicUrlForInput({
-      category: "image",
-      buffer: params.characterImage.buffer,
-      filename: params.characterImage.filename || "reference.jpg",
-      mimeType: params.characterImage.mimeType || "image/jpeg",
-    }),
+  const refs = params.referenceImages.slice(0, GENJUTSU_MAX_REFERENCE_IMAGES);
+  if (refs.length < 1) {
+    throw new Error("At least one reference image is required.");
+  }
+
+  const [imageUrls, videoUrl] = await Promise.all([
+    Promise.all(
+      refs.map((image, index) =>
+        publicUrlForInput({
+          category: "image",
+          buffer: image.buffer,
+          filename: image.filename || `reference-${index + 1}.jpg`,
+          mimeType: image.mimeType || "image/jpeg",
+        }),
+      ),
+    ),
     publicUrlForInput({
       category: "motion",
       buffer: params.sourceVideo.buffer,
@@ -62,7 +83,7 @@ export async function generateGenjutsuObjectSwap(params: {
 
   return subscribeGenjutsuObjectSwap({
     videoUrl,
-    imageUrls: [imageUrl],
+    imageUrls,
     prompt: params.prompt,
     resolution: params.resolution,
   });

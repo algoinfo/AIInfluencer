@@ -124,19 +124,27 @@ export async function subscribeGenjutsuVideo(params: {
   ensureV2Configured(credentials);
 
   const resolution = params.resolution ?? "720p";
-  const prompt = params.prompt?.trim() ?? "";
+  // HF schema: prompt optional, maxLength 10000; default "".
+  const prompt = (params.prompt?.trim() ?? "").slice(0, 10_000);
+  const imageUrls = params.imageUrls.filter(Boolean).slice(0, 8); // HF maxItems: 8
+  if (!params.videoUrl?.trim()) {
+    throw new Error("Source video URL is required.");
+  }
+  if (imageUrls.length < 1) {
+    throw new Error("At least one reference image is required.");
+  }
 
   log("subscribe start", {
     endpoint: params.endpoint,
     resolution,
-    images: params.imageUrls.length,
+    images: imageUrls.length,
   });
 
   const result = await higgsfield.subscribe(params.endpoint, {
     input: {
       prompt,
       video_url: params.videoUrl,
-      image_urls: params.imageUrls,
+      image_urls: imageUrls,
       resolution,
     },
     withPolling: true,
@@ -148,10 +156,14 @@ export async function subscribeGenjutsuVideo(params: {
     throw new Error("This request was blocked by content safety.");
   }
   if (status !== "completed" || !result.video?.url) {
+    const apiErrorRaw = (result as unknown as { error?: unknown }).error;
+    const apiError =
+      typeof apiErrorRaw === "string" ? apiErrorRaw.trim() : "";
     throw new Error(
-      status === "failed" || status === "canceled"
-        ? "We could not create your video this time."
-        : "Video generation returned no file. Try again.",
+      apiError ||
+        (status === "failed" || status === "canceled"
+          ? "We could not create your video this time."
+          : "Video generation returned no file. Try again."),
     );
   }
 
