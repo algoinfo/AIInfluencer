@@ -180,7 +180,7 @@ export const homeFaqs = [
   },
   {
     q: "How much does Genjutsu cost?",
-    a: "Sign up includes 10 welcome credits. After that, buy one-time packs on Pricing: Basic $9.9 and Pro $19.9. Credits do not expire.",
+    a: "Sign up includes 50 welcome credits. After that, buy one-time packs on Pricing: Basic $9.9 and Pro $19.9. Credits do not expire.",
   },
   {
     q: "How are credits calculated?",

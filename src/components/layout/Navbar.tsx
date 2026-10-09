@@ -2,8 +2,8 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { useEffect, useState } from "react";
+import { usePathname, useRouter } from "next/navigation";
+import { useEffect, useState, type MouseEvent } from "react";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { UserAccountMenu } from "@/components/layout/UserAccountMenu";
 
@@ -13,9 +13,24 @@ const navItems = [
 
 export function Navbar() {
   const pathname = usePathname();
+  const router = useRouter();
   const [open, setOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const { isLoggedIn, user, openAuthModal } = useAuth();
+
+  function goHome(event: MouseEvent<HTMLAnchorElement>) {
+    event.preventDefault();
+    setOpen(false);
+    const onHome = pathname === "/";
+    if (onHome) {
+      if (window.location.hash) {
+        window.history.replaceState(null, "", "/");
+      }
+      window.scrollTo({ top: 0, behavior: "smooth" });
+      return;
+    }
+    router.push("/");
+  }
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 8);
@@ -40,14 +55,15 @@ export function Navbar() {
       <div className="page-shell flex h-[72px] items-center justify-between gap-4">
         <Link
           href="/"
-          className="inline-flex items-center gap-2.5 font-display text-[0.95rem] font-semibold tracking-[0.14em] text-fg sm:text-base"
+          onClick={goHome}
+          className="relative z-[60] inline-flex items-center gap-2.5 font-display text-[0.95rem] font-semibold tracking-[0.14em] text-fg sm:text-base"
         >
           <Image
             src="/genjutsu-icon.jpg"
             alt=""
             width={28}
             height={28}
-            className="h-7 w-7 rounded-lg object-cover"
+            className="pointer-events-none h-7 w-7 rounded-lg object-cover"
             priority
           />
           GENJUTSU
