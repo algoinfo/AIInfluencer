@@ -16,6 +16,21 @@ const TIER_PRODUCT_ENV: Record<string, { test: string; live: string }> = {
   pro: { test: "WAFFO_PRODUCT_PRO", live: "WAFFO_LIVE_PRODUCT_PRO" },
 };
 
+/** Built-in Genjutsu store SKUs — env vars override when set. */
+const DEFAULT_WAFFO_PRODUCTS: Record<
+  string,
+  { test: string; live: string }
+> = {
+  basic: {
+    test: "PROD_1wcYVpb77RV0zctF5IZ2wv",
+    live: "PROD_3fOQPTe2WXUN4PZATyonl3",
+  },
+  pro: {
+    test: "PROD_0Z1YfExeKuEaWTob4ljfBZ",
+    live: "PROD_63MQDIn6gAG8n5Fz2PVogG",
+  },
+};
+
 export type WaffoEnvironment = "test" | "prod";
 
 export function getWaffoEnvironment(): WaffoEnvironment {
@@ -58,25 +73,29 @@ function readProductId(envKey: string): string | null {
 
 /**
  * Resolve the Waffo product for the active API environment.
- * - prod → WAFFO_LIVE_PRODUCT_* , then WAFFO_PRODUCT_* (for single-var deploys)
- * - test → WAFFO_PRODUCT_* only (never use live SKUs against the test API)
+ * - prod → WAFFO_LIVE_PRODUCT_* → built-in live SKU (never use test SKUs)
+ * - test → WAFFO_PRODUCT_* → built-in test SKU (never use live SKUs)
  */
 export function getWaffoProductId(tierId: string): string | null {
   const keys = TIER_PRODUCT_ENV[tierId];
-  if (!keys) return null;
+  const defaults = DEFAULT_WAFFO_PRODUCTS[tierId];
+  if (!keys || !defaults) return null;
   if (getWaffoEnvironment() === "prod") {
-    return readProductId(keys.live) || readProductId(keys.test);
+    return readProductId(keys.live) || defaults.live;
   }
-  return readProductId(keys.test);
+  return readProductId(keys.test) || defaults.test;
 }
 
 export function getTierIdForWaffoProduct(productId: string): string | null {
   for (const tier of PRICING_TIERS) {
     const keys = TIER_PRODUCT_ENV[tier.id];
-    if (!keys) continue;
+    const defaults = DEFAULT_WAFFO_PRODUCTS[tier.id];
+    if (!keys || !defaults) continue;
     if (
       readProductId(keys.test) === productId ||
-      readProductId(keys.live) === productId
+      readProductId(keys.live) === productId ||
+      defaults.test === productId ||
+      defaults.live === productId
     ) {
       return tier.id;
     }
