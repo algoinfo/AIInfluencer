@@ -1,4 +1,8 @@
 import { createClient, type Client } from "@libsql/client";
+import {
+  ensureHttpsProxyDispatcher,
+  proxyFetch,
+} from "@/lib/https-proxy";
 
 /** Bump when adding tables/columns so hot reload re-runs migrations. */
 const SCHEMA_VERSION = 2;
@@ -19,7 +23,13 @@ export function getDb(): Client {
     );
   }
 
-  client = createClient({ url, authToken });
+  // Local networks often need HTTPS_PROXY to reach Turso reliably.
+  ensureHttpsProxyDispatcher();
+  client = createClient({
+    url,
+    authToken,
+    fetch: proxyFetch as unknown as typeof fetch,
+  });
   return client;
 }
 

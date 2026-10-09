@@ -58,8 +58,32 @@ export function proxyFetch(
     return fetch(input, init);
   }
 
+  // @libsql/client passes Request objects — rebuild url + init for undici.
+  if (typeof Request !== "undefined" && input instanceof Request) {
+    const headers = new Headers(input.headers);
+    if (init?.headers) {
+      new Headers(init.headers).forEach((value, key) => {
+        headers.set(key, value);
+      });
+    }
+    const method = init?.method ?? input.method;
+    const body = init?.body ?? input.body;
+    const opts: Record<string, unknown> = {
+      method,
+      headers,
+      redirect: init?.redirect ?? input.redirect,
+      signal: init?.signal ?? input.signal,
+      dispatcher: agent,
+    };
+    if (body != null) {
+      opts.body = body;
+      opts.duplex = "half";
+    }
+    return undiciFetch(input.url, opts as never) as unknown as Promise<Response>;
+  }
+
   return undiciFetch(input as string | URL, {
     ...(init as object),
     dispatcher: agent,
-  }) as unknown as Promise<Response>;
+  } as never) as unknown as Promise<Response>;
 }

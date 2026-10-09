@@ -40,6 +40,7 @@ import {
   fetchCloudStudioHistory,
   loadStudioHistory,
   mergeCloudStudioHistory,
+  persistCloudStudioHistory,
   prependStudioHistory,
   saveStudioHistory,
   updateStudioHistoryItem,
@@ -604,11 +605,12 @@ export function MotionStudio() {
       const data = (await res.json()) as {
         videoUrl?: string;
         r2Url?: string | null;
+        r2Key?: string | null;
         jobId?: string | null;
       };
       const sourceUrl = data.videoUrl?.trim() || "";
       const historyUrl = data.r2Url?.trim() || sourceUrl;
-      const cloudId = data.jobId?.trim() || historyId;
+      let cloudId = data.jobId?.trim() || historyId;
       if (!sourceUrl) {
         throw new Error("Generation returned no video URL.");
       }
@@ -620,6 +622,20 @@ export function MotionStudio() {
       setStatus("done");
       setPanelMode("preview");
       void clearStudioDraft();
+
+      // Always sync finished work into Turso (server + client fallback).
+      const saved = await persistCloudStudioHistory({
+        id: cloudId,
+        title: pendingItem.title,
+        videoUrl: historyUrl,
+        r2Key: data.r2Key ?? null,
+        durationSec: duration,
+        modelMark: modelMark,
+        resolution: outResolution,
+        product: studioMode,
+        status: "done",
+      });
+      if (saved?.id) cloudId = saved.id;
 
       setHistory((prev) => {
         const withoutLocal = prev.filter((item) => item.id !== historyId);
@@ -636,10 +652,7 @@ export function MotionStudio() {
         });
       });
       void refreshSession();
-      void fetchCloudStudioHistory(24).then((cloud) => {
-        if (cloud == null) return;
-        setHistory((prev) => mergeCloudStudioHistory(prev, cloud));
-      });
+      refreshCloudHistory();
     } catch (err) {
       const message =
         err instanceof Error ? err.message : "Generation failed.";
@@ -653,10 +666,16 @@ export function MotionStudio() {
       );
       setStatus("error");
       setErrorMessage(message);
-      void fetchCloudStudioHistory(24).then((cloud) => {
-        if (cloud == null) return;
-        setHistory((prev) => mergeCloudStudioHistory(prev, cloud));
-      });
+      void persistCloudStudioHistory({
+        id: historyId,
+        title: pendingItem.title,
+        durationSec: duration,
+        modelMark: modelMark,
+        resolution: outResolution,
+        product: studioMode,
+        status: "failed",
+        errorMessage: message,
+      }).then(() => refreshCloudHistory());
     }
   }
 

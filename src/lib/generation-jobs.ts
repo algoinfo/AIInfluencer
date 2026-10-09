@@ -139,6 +139,124 @@ export async function markGenerationJobFailed(id: string, error: string) {
   });
 }
 
+/**
+ * Persist a finished generation for a logged-in user.
+ * Safe to call even when the earlier "processing" insert failed.
+ */
+export async function saveCompletedGenerationJob(input: {
+  id?: string | null;
+  sessionId: string;
+  userEmail: string;
+  title: string;
+  product: GenerationJobProduct;
+  outputUrl: string;
+  outputR2Key?: string | null;
+  durationSec?: number | null;
+  modelMark?: string | null;
+  resolution?: string | null;
+}): Promise<GenerationJob> {
+  await ensureSchema();
+  const db = getDb();
+  const id = sanitizeClientJobId(input.id) ?? randomUUID();
+  const existing = await getGenerationJob(id);
+
+  if (existing) {
+    await db.execute({
+      sql: `UPDATE generation_jobs
+            SET status = 'completed',
+                output_r2_key = ?,
+                output_url = ?,
+                error = NULL,
+                title = ?,
+                product = ?,
+                duration_sec = ?,
+                model_mark = ?,
+                resolution = ?,
+                user_email = ?,
+                updated_at = datetime('now')
+            WHERE id = ?`,
+      args: [
+        input.outputR2Key ?? null,
+        input.outputUrl,
+        input.title.slice(0, 120),
+        input.product,
+        input.durationSec ?? null,
+        input.modelMark ?? null,
+        input.resolution ?? null,
+        input.userEmail,
+        id,
+      ],
+    });
+  } else {
+    await db.execute({
+      sql: `INSERT INTO generation_jobs
+              (id, session_id, user_email, status, type, product, title,
+               output_r2_key, output_url, duration_sec, model_mark, resolution)
+            VALUES (?, ?, ?, 'completed', 'video', ?, ?, ?, ?, ?, ?, ?)`,
+      args: [
+        id,
+        input.sessionId,
+        input.userEmail,
+        input.product,
+        input.title.slice(0, 120),
+        input.outputR2Key ?? null,
+        input.outputUrl,
+        input.durationSec ?? null,
+        input.modelMark ?? null,
+        input.resolution ?? null,
+      ],
+    });
+  }
+
+  const job = await getGenerationJob(id);
+  if (!job) throw new Error("Failed to save generation job");
+  return job;
+}
+
+export async function saveFailedGenerationJob(input: {
+  id?: string | null;
+  sessionId: string;
+  userEmail: string;
+  title: string;
+  product: GenerationJobProduct;
+  error: string;
+  durationSec?: number | null;
+  modelMark?: string | null;
+  resolution?: string | null;
+}): Promise<GenerationJob> {
+  await ensureSchema();
+  const db = getDb();
+  const id = sanitizeClientJobId(input.id) ?? randomUUID();
+  const existing = await getGenerationJob(id);
+  const error = input.error.slice(0, 500);
+
+  if (existing) {
+    await markGenerationJobFailed(id, error);
+  } else {
+    await db.execute({
+      sql: `INSERT INTO generation_jobs
+              (id, session_id, user_email, status, type, product, title,
+               error, duration_sec, model_mark, resolution)
+            VALUES (?, ?, ?, 'failed', 'video', ?, ?, ?, ?, ?, ?)`,
+      args: [
+        id,
+        input.sessionId,
+        input.userEmail,
+        input.product,
+        input.title.slice(0, 120),
+        error,
+        input.durationSec ?? null,
+        input.modelMark ?? null,
+        input.resolution ?? null,
+      ],
+    });
+  }
+
+  const job = await getGenerationJob(id);
+  if (!job) throw new Error("Failed to save failed generation job");
+  return job;
+}
+
 export async function listGenerationJobsByUserEmail(
   userEmail: string,
   limit = 24,

@@ -38,8 +38,8 @@ import {
 } from "@/lib/r2";
 import {
   createGenerationJob,
-  markGenerationJobCompleted,
-  markGenerationJobFailed,
+  saveCompletedGenerationJob,
+  saveFailedGenerationJob,
 } from "@/lib/generation-jobs";
 import { ensureHttpsProxyDispatcher } from "@/lib/https-proxy";
 import {
@@ -128,6 +128,18 @@ export async function POST(req: NextRequest) {
   ensureHttpsProxyDispatcher();
   const startedAt = Date.now();
   let cloudJobId: string | null = null;
+  let jobPersist:
+    | {
+        sessionId: string;
+        userEmail: string;
+        clientJobId: string | null;
+        title: string;
+        product: "motion-transfer" | "object-swap";
+        durationSec: number;
+        modelMark: string;
+        resolution: string;
+      }
+    | null = null;
   try {
     const { payload, session, token, created: sessionCreated } =
       await getRequestSessionFromReq(req);
@@ -278,10 +290,22 @@ export async function POST(req: NextRequest) {
       characterFile.name.replace(/\.[^.]+$/, "").trim() ||
       (mode === "object-swap" ? "Object swap" : "Motion transfer");
 
+    const clientJobId = form.get("clientJobId")?.toString() ?? null;
+
     if (payload.user?.email) {
+      jobPersist = {
+        sessionId: session.id,
+        userEmail: payload.user.email,
+        clientJobId,
+        title: jobTitle.slice(0, 120),
+        product: mode,
+        durationSec,
+        modelMark,
+        resolution: outResolution,
+      };
       try {
         const job = await createGenerationJob({
-          id: form.get("clientJobId")?.toString(),
+          id: clientJobId,
           sessionId: session.id,
           userEmail: payload.user.email,
           title: jobTitle.slice(0, 120),
@@ -291,10 +315,12 @@ export async function POST(req: NextRequest) {
           resolution: outResolution,
         });
         cloudJobId = job.id;
+        log("job created", { jobId: cloudJobId });
       } catch (jobError) {
-        log("job create failed", {
+        log("job create failed — will persist on complete", {
           error:
             jobError instanceof Error ? jobError.message : String(jobError),
+          clientJobId,
         });
       }
     }
@@ -403,11 +429,23 @@ export async function POST(req: NextRequest) {
         error: providerMessage,
         jobId: cloudJobId,
       });
-      if (cloudJobId) {
-        await markGenerationJobFailed(cloudJobId, providerMessage).catch(
-          () => undefined,
-        );
-        cloudJobId = null;
+      if (jobPersist) {
+        await saveFailedGenerationJob({
+          id: cloudJobId ?? jobPersist.clientJobId,
+          sessionId: jobPersist.sessionId,
+          userEmail: jobPersist.userEmail,
+          title: jobPersist.title,
+          product: jobPersist.product,
+          error: providerMessage,
+          durationSec: jobPersist.durationSec,
+          modelMark: jobPersist.modelMark,
+          resolution: jobPersist.resolution,
+        })
+          .then((job) => {
+            cloudJobId = job.id;
+            jobPersist = null;
+          })
+          .catch(() => undefined);
       }
       throw providerError;
     }
@@ -449,17 +487,35 @@ export async function POST(req: NextRequest) {
     }
 
     const historyUrl = r2Url || sourceUrl;
-    if (cloudJobId) {
-      await markGenerationJobCompleted(cloudJobId, {
-        outputR2Key: r2Key,
-        outputUrl: historyUrl,
-      }).catch((jobError) => {
-        log("job complete failed", {
+    // Always persist completed generations for logged-in users (Turso).
+    if (jobPersist) {
+      try {
+        const job = await saveCompletedGenerationJob({
+          id: cloudJobId ?? jobPersist.clientJobId,
+          sessionId: jobPersist.sessionId,
+          userEmail: jobPersist.userEmail,
+          title: jobPersist.title,
+          product: jobPersist.product,
+          outputUrl: historyUrl,
+          outputR2Key: r2Key,
+          durationSec: jobPersist.durationSec,
+          modelMark: jobPersist.modelMark,
+          resolution: jobPersist.resolution,
+        });
+        cloudJobId = job.id;
+        jobPersist = null;
+        log("job saved", {
           jobId: cloudJobId,
+          outputUrl: historyUrl.slice(0, 120),
+          r2Key,
+        });
+      } catch (jobError) {
+        log("job persist failed", {
+          jobId: cloudJobId ?? jobPersist?.clientJobId ?? null,
           error:
             jobError instanceof Error ? jobError.message : String(jobError),
         });
-      });
+      }
     }
 
     const usage = await recordUsage(token ?? session.token, "generation");
@@ -522,12 +578,19 @@ export async function POST(req: NextRequest) {
       error: errorMessage,
       jobId: cloudJobId,
     });
-    if (cloudJobId) {
-      await markGenerationJobFailed(cloudJobId, errorMessage).catch(
-        () => undefined,
-      );
+    if (jobPersist) {
+      await saveFailedGenerationJob({
+        id: cloudJobId ?? jobPersist.clientJobId,
+        sessionId: jobPersist.sessionId,
+        userEmail: jobPersist.userEmail,
+        title: jobPersist.title,
+        product: jobPersist.product,
+        error: errorMessage,
+        durationSec: jobPersist.durationSec,
+        modelMark: jobPersist.modelMark,
+        resolution: jobPersist.resolution,
+      }).catch(() => undefined);
     }
-
     if (error instanceof WaffoContentSafetyError) {
       const status =
         error.code === "prompt_blocked"

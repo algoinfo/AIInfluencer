@@ -283,3 +283,31 @@ export async function fetchCloudStudioHistory(
     return null;
   }
 }
+
+/** Ensure a finished local generation is written to Turso. */
+export async function persistCloudStudioHistory(input: {
+  id: string;
+  title: string;
+  videoUrl?: string;
+  r2Key?: string | null;
+  durationSec: number;
+  modelMark: string;
+  resolution?: string;
+  product: "motion-transfer" | "object-swap";
+  status: "done" | "failed";
+  errorMessage?: string;
+}): Promise<StudioHistoryItem | null> {
+  try {
+    const res = await fetch("/api/user/creations", {
+      method: "POST",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(input),
+    });
+    if (!res.ok) return null;
+    const data = (await res.json()) as { item?: CloudCreationItem };
+    return data.item ? cloudCreationToHistoryItem(data.item) : null;
+  } catch {
+    return null;
+  }
+}
