@@ -1,6 +1,7 @@
 import { configureFal, fal, getFalKeyFromEnv } from "@/lib/fal";
 import type { FalMotionResolution } from "@/data/fal-motion-resolution";
 import { DEFAULT_MOTION_PROMPT } from "@/data/motion-prompt";
+import { causeMessage, getHttpsProxyUrl } from "@/lib/https-proxy";
 
 const LOG_PREFIX = "[wan-motion-fal]";
 
@@ -35,20 +36,48 @@ export async function generateWanMotionVideo(params: {
   }
   configureFal(key);
 
-  const [imageUrl, videoUrl] = await Promise.all([
-    uploadToFal(
-      params.characterImage.buffer,
-      params.characterImage.mimeType || "image/jpeg",
-    ),
-    uploadToFal(
-      params.motionVideo.buffer,
-      params.motionVideo.mimeType || "video/mp4",
-    ),
-  ]);
+  const startedAt = Date.now();
+  let imageUrl: string;
+  let videoUrl: string;
+  try {
+    log("upload start", {
+      imageBytes: params.characterImage.buffer.byteLength,
+      videoBytes: params.motionVideo.buffer.byteLength,
+      proxy: getHttpsProxyUrl() ? "on" : "off",
+    });
+    [imageUrl, videoUrl] = await Promise.all([
+      uploadToFal(
+        params.characterImage.buffer,
+        params.characterImage.mimeType || "image/jpeg",
+      ),
+      uploadToFal(
+        params.motionVideo.buffer,
+        params.motionVideo.mimeType || "video/mp4",
+      ),
+    ]);
+    log("upload done", {
+      ms: Date.now() - startedAt,
+      imageUrl: imageUrl.slice(0, 80),
+      videoUrl: videoUrl.slice(0, 80),
+    });
+  } catch (error) {
+    const detail =
+      causeMessage(error) ||
+      (error instanceof Error ? error.message : String(error));
+    log("upload failed", {
+      ms: Date.now() - startedAt,
+      error: detail,
+      proxy: getHttpsProxyUrl() ? "on" : "off",
+    });
+    throw new Error(
+      detail.toLowerCase().includes("fetch failed") ||
+        /timeout|ENOTFOUND|ECONN/i.test(detail)
+        ? `Could not reach fal (${detail}). Set HTTPS_PROXY for local dev.`
+        : detail || "Could not upload assets to fal.",
+    );
+  }
 
-  const prompt =
-    params.prompt?.trim() ||
-    DEFAULT_MOTION_PROMPT;
+  const prompt = params.prompt?.trim() || DEFAULT_MOTION_PROMPT;
 
   const resolution = params.resolution ?? "720p";
   const input = {
@@ -61,7 +90,6 @@ export async function generateWanMotionVideo(params: {
     enable_safety_checker: true,
   };
 
-  const startedAt = Date.now();
   log("subscribe start", {
     endpoint: WAN_MOTION_FAL_ENDPOINT,
     resolution,
@@ -77,12 +105,20 @@ export async function generateWanMotionVideo(params: {
       logs: false,
     });
   } catch (error) {
+    const detail =
+      causeMessage(error) ||
+      (error instanceof Error ? error.message : String(error));
     log("fal error", {
       endpoint: WAN_MOTION_FAL_ENDPOINT,
       ms: Date.now() - startedAt,
-      error: error instanceof Error ? error.message : String(error),
+      error: detail,
     });
-    throw new Error("We could not create your video this time.");
+    throw new Error(
+      detail.toLowerCase().includes("fetch failed") ||
+        /timeout|ENOTFOUND|ECONN/i.test(detail)
+        ? `Could not reach fal (${detail}). Set HTTPS_PROXY for local dev.`
+        : "We could not create your video this time.",
+    );
   }
 
   const outputUrl = result.data?.video?.url;

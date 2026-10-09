@@ -1,5 +1,9 @@
 import { config as configureV2, higgsfield } from "@higgsfield/client/v2";
 import type { GenjutsuResolution } from "@/data/genjutsu-pricing";
+import {
+  ensureHttpsProxyDispatcher,
+  proxyFetch,
+} from "@/lib/https-proxy";
 
 const LOG_PREFIX = "[higgsfield]";
 const HF_API_BASE = "https://api.higgsfield.ai";
@@ -21,6 +25,7 @@ let v2Configured = false;
 
 function ensureV2Configured(credentials: string) {
   if (v2Configured) return;
+  ensureHttpsProxyDispatcher();
   configureV2({
     credentials,
     // Object Swap can run longer than the SDK default poll window.
@@ -65,7 +70,7 @@ export async function uploadToHiggsfield(params: {
     bytes: params.buffer.byteLength,
   });
 
-  const slotRes = await fetch(`${HF_API_BASE}/files/generate-upload-url`, {
+  const slotRes = await proxyFetch(`${HF_API_BASE}/files/generate-upload-url`, {
     method: "POST",
     headers: {
       Authorization: `Key ${credentials}`,
@@ -91,7 +96,7 @@ export async function uploadToHiggsfield(params: {
     putHeaders["Content-Type"] = slot.content_type || contentType;
   }
 
-  const putRes = await fetch(slot.upload_url, {
+  const putRes = await proxyFetch(slot.upload_url, {
     method: "PUT",
     headers: putHeaders,
     body: new Uint8Array(params.buffer),

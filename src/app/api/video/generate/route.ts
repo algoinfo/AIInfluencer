@@ -36,6 +36,7 @@ import {
   planR2Object,
   uploadToR2,
 } from "@/lib/r2";
+import { ensureHttpsProxyDispatcher } from "@/lib/https-proxy";
 import {
   screenWaffoPrompt,
   WaffoContentSafetyError,
@@ -119,6 +120,7 @@ function validateVideo(file: FormDataEntryValue | null): File {
  * Shared: session → Waffo scan-prompt → credits → optional R2 ges/.
  */
 export async function POST(req: NextRequest) {
+  ensureHttpsProxyDispatcher();
   const startedAt = Date.now();
   try {
     const { payload, session, token, created: sessionCreated } =
