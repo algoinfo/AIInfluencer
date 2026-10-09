@@ -519,6 +519,32 @@ export function MotionStudio() {
       return;
     }
 
+    const cost =
+      sellCredits ??
+      (usesGenjutsuPricing
+        ? creditsForGenjutsuRun(duration, genjutsuResolution)
+        : creditsForRun(duration, model.multiplier));
+    // Check balance before entering the generating UI.
+    try {
+      const creditsRes = await fetch("/api/user/credits", {
+        credentials: "include",
+      });
+      if (creditsRes.ok) {
+        const creditsData = (await creditsRes.json()) as { credits?: number };
+        const available = Number(creditsData.credits ?? 0);
+        if (available < cost) {
+          setStatus("error");
+          setErrorMessage(
+            `Not enough credits. This video needs ${cost.toLocaleString("en-US")} credits — you have ${available.toLocaleString("en-US")}.`,
+          );
+          setPanelMode("preview");
+          return;
+        }
+      }
+    } catch {
+      /* server still enforces balance */
+    }
+
     const resolved = usesGenjutsuPricing
       ? promptOn
         ? prompt.trim()

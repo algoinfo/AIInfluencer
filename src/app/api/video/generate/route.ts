@@ -4,7 +4,7 @@ import {
   requiresLoginForAnonymousGeneration,
 } from "@/lib/auth-limits";
 import { recordUsage } from "@/lib/auth-service";
-import { requireCredits } from "@/lib/credit-charge";
+import { checkCredits, requireCredits } from "@/lib/credit-charge";
 import { creditsForRun } from "@/data/credits";
 import {
   creditsForGenjutsuRun,
@@ -240,6 +240,25 @@ export async function POST(req: NextRequest) {
         { error: ANONYMOUS_LOGIN_REQUIRED_MESSAGE, needsLogin: true },
         { status: 403 },
       );
+    }
+
+    // Fail fast on balance before safety scan / provider work.
+    if (payload.user?.email && creditCost > 0) {
+      const enough = await checkCredits({
+        userEmail: payload.user.email,
+        amount: creditCost,
+      });
+      if (!enough.ok) {
+        return NextResponse.json(
+          {
+            error: `Not enough credits. This video needs ${creditCost.toLocaleString("en-US")} credits — you have ${enough.creditsAvailable.toLocaleString("en-US")}.`,
+            needsCredits: true,
+            creditsRequired: enough.creditsRequired,
+            creditsAvailable: enough.creditsAvailable,
+          },
+          { status: 402 },
+        );
+      }
     }
 
     // Content safety before charging or calling the model.
