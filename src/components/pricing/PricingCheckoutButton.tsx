@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useAuth } from "@/components/auth/AuthProvider";
+import { saveWaffoPendingCheckout } from "@/lib/waffo-checkout-client";
 
 export function PricingCheckoutButton({
   tierId,
@@ -33,10 +34,25 @@ export function PricingCheckoutButton({
       });
       const data = (await res.json()) as {
         checkoutUrl?: string;
+        provider?: "waffo";
+        sessionId?: string;
+        orderMerchantExternalId?: string;
         error?: string;
       };
       if (!res.ok || !data.checkoutUrl) {
         throw new Error(data.error || "Could not start checkout.");
+      }
+      if (
+        data.provider === "waffo" &&
+        data.sessionId &&
+        data.orderMerchantExternalId
+      ) {
+        saveWaffoPendingCheckout({
+          sessionId: data.sessionId,
+          orderMerchantExternalId: data.orderMerchantExternalId,
+          tierId,
+          createdAt: Date.now(),
+        });
       }
       window.open(data.checkoutUrl, "_blank", "noopener,noreferrer");
       setLoading(false);

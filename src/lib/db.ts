@@ -5,7 +5,7 @@ import {
 } from "@/lib/https-proxy";
 
 /** Bump when adding tables/columns so hot reload re-runs migrations. */
-const SCHEMA_VERSION = 2;
+const SCHEMA_VERSION = 3;
 
 let client: Client | null = null;
 let schemaReady: Promise<void> | null = null;
@@ -71,6 +71,19 @@ export async function ensureSchema() {
       )
     `);
     await db.execute(`
+      CREATE TABLE IF NOT EXISTS payments (
+        id TEXT PRIMARY KEY,
+        user_id TEXT NOT NULL REFERENCES users(id),
+        tier_id TEXT NOT NULL,
+        amount_cents INTEGER NOT NULL,
+        credits_granted INTEGER NOT NULL,
+        provider TEXT,
+        provider_ref TEXT UNIQUE,
+        status TEXT NOT NULL DEFAULT 'completed',
+        created_at TEXT NOT NULL DEFAULT (datetime('now'))
+      )
+    `);
+    await db.execute(`
       CREATE TABLE IF NOT EXISTS credit_transactions (
         id TEXT PRIMARY KEY,
         user_id TEXT NOT NULL REFERENCES users(id),
@@ -78,6 +91,7 @@ export async function ensureSchema() {
         amount INTEGER NOT NULL,
         balance_after INTEGER NOT NULL,
         description TEXT,
+        payment_id TEXT REFERENCES payments(id),
         created_at TEXT NOT NULL DEFAULT (datetime('now'))
       )
     `);
@@ -122,6 +136,9 @@ export async function ensureSchema() {
       ignoreDuplicate(`ALTER TABLE generation_jobs ADD COLUMN model_mark TEXT`),
       ignoreDuplicate(`ALTER TABLE generation_jobs ADD COLUMN resolution TEXT`),
       ignoreDuplicate(`ALTER TABLE generation_jobs ADD COLUMN product TEXT`),
+      ignoreDuplicate(
+        `ALTER TABLE credit_transactions ADD COLUMN payment_id TEXT`,
+      ),
     ]);
 
     await Promise.all([
@@ -138,6 +155,10 @@ export async function ensureSchema() {
       db.execute(
         `CREATE INDEX IF NOT EXISTS idx_generation_jobs_user_email
          ON generation_jobs(user_email, created_at DESC)`,
+      ),
+      db.execute(
+        `CREATE UNIQUE INDEX IF NOT EXISTS idx_payments_provider_ref
+         ON payments(provider_ref)`,
       ),
     ]);
 

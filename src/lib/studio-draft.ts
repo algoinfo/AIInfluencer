@@ -7,8 +7,14 @@ const DRAFT_ID = "current";
 const MAX_AGE_MS = 24 * 60 * 60 * 1000;
 
 export type StudioDraftMode = "motion-transfer" | "object-swap";
-/** Genjutsu: 480/720/1080 · fal wan-motion: 480/580/720 */
-export type StudioDraftResolution = "480p" | "580p" | "720p" | "1080p";
+/** Genjutsu: 480/720/1080 · fal wan-motion: 480/580/720 · PixVerse swap: 360/540/720 */
+export type StudioDraftResolution =
+  | "360p"
+  | "480p"
+  | "540p"
+  | "580p"
+  | "720p"
+  | "1080p";
 
 type StoredFile = { name: string; type: string; blob: Blob };
 

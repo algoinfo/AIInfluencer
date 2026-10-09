@@ -180,11 +180,11 @@ export const homeFaqs = [
   },
   {
     q: "How much does Genjutsu cost?",
-    a: "Sign up includes 10 welcome credits. After that, buy one-time packs on Pricing: Basic $9.9, Creator $19.9, and Pro $69. Credits do not expire.",
+    a: "Sign up includes 10 welcome credits. After that, buy one-time packs on Pricing: Basic $9.9 and Pro $19.9. Credits do not expire.",
   },
   {
     q: "How are credits calculated?",
-    a: "Credits follow motion length, not a flat fee per click. Kling-style motion transfer uses 100 credits per second times the model multiplier. Genjutsu Motion Transfer and Object Swap price by resolution (480p / 720p / 1080p). The Generate button shows seconds and credits before you run.",
+    a: "Credits follow motion length, not a flat fee per click. Kling-style motion transfer uses 100 credits per second times the model multiplier. Genjutsu Motion Transfer prices by resolution (480p / 720p / 1080p). Object Swap prices by resolution (360p / 540p / 720p). The Generate button shows seconds and credits before you run.",
   },
   {
     q: "Can I use Genjutsu videos commercially?",

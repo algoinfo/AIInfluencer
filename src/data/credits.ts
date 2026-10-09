@@ -49,24 +49,14 @@ export const creditPacks: CreditPack[] = [
     ],
   },
   {
-    id: "creator",
-    name: "Creator",
+    id: "pro",
+    name: "Pro",
     credits: 22885,
     featured: true,
     lines: [
       "22,885 credits",
       "$19.9 one-time",
       `≈ ${Math.floor(22885 / CREDITS_PER_SECOND)}s of video`,
-    ],
-  },
-  {
-    id: "pro",
-    name: "Pro",
-    credits: 86250,
-    lines: [
-      "86,250 credits",
-      "$69 one-time",
-      `≈ ${Math.floor(86250 / CREDITS_PER_SECOND)}s of video`,
     ],
   },
 ];

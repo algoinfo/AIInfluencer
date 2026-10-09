@@ -1,4 +1,3 @@
-import { WELCOME_CREDITS } from "@/lib/credit-limits";
 import { CREDITS_PER_SECOND } from "@/data/credits";
 
 /** $1 → 1,000 credits (1 credit = $0.001) */
@@ -8,18 +7,6 @@ export const PRICING_HERO = {
   headline: "Pay once. Credits for every video.",
   subhead:
     "One-time credit packs for Genjutsu motion transfer. Base credits match your payment — bonus on every pack. No subscription.",
-} as const;
-
-export const PRICING_FREE = {
-  title: "Free",
-  priceLabel: "$0",
-  tagline: "Sign up free, then generate with welcome credits.",
-  includes: [
-    `New accounts: ${WELCOME_CREDITS.toLocaleString()} welcome credits`,
-    "Login required to generate",
-    "Explore examples",
-    "Upload character + reference workflow",
-  ],
 } as const;
 
 export interface PricingTier {
@@ -62,8 +49,8 @@ export const PRICING_TIERS: PricingTier[] = [
     tagline: "Start generating — solid first pack",
   }),
   buildTier({
-    id: "creator",
-    name: "Creator",
+    id: "pro",
+    name: "Pro",
     price: 19.9,
     bonusPercent: 15,
     credits: 22885,
@@ -72,22 +59,13 @@ export const PRICING_TIERS: PricingTier[] = [
     highlight: true,
     badge: "Most popular",
   }),
-  buildTier({
-    id: "pro",
-    name: "Pro",
-    price: 69,
-    bonusPercent: 25,
-    credits: 86250,
-    usageExamples: secondsLabel(86250),
-    tagline: "Maximum credits for heavy production",
-  }),
 ];
 
 export const PRICING_INCLUDES = [
   "One-time payment — credits never expire",
   "Base credits match your payment; bonus on every pack",
   "No watermark on exports",
-  "Motion transfer at 100 credits / second",
+  "Motion transfer & Object Swap priced by length / resolution",
 ] as const;
 
 export function getPricingTier(tierId: string): PricingTier | undefined {

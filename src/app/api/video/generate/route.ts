@@ -8,15 +8,17 @@ import { checkCredits, requireCredits } from "@/lib/credit-charge";
 import { creditsForRun } from "@/data/credits";
 import {
   creditsForGenjutsuRun,
-  GENJUTSU_MAX_REFERENCE_IMAGES,
   GENJUTSU_MIN_DURATION_SEC,
-  OBJECT_SWAP_MIN_FRAME_PIXELS,
   parseGenjutsuResolution,
 } from "@/data/genjutsu-pricing";
 import { parseFalMotionResolution } from "@/data/fal-motion-resolution";
+import {
+  creditsForPixverseSwapRun,
+  parsePixverseSwapMode,
+  parsePixverseSwapResolution,
+} from "@/data/pixverse-swap";
 import { resolveMotionPrompt } from "@/data/motion-prompt";
 import { generateGenjutsuMotionTransfer } from "@/lib/genjutsu-motion-transfer";
-import { generateGenjutsuObjectSwap } from "@/lib/genjutsu-object-swap";
 import { getRequestSessionFromReq } from "@/lib/request-session";
 import { SESSION_COOKIE, SESSION_MAX_AGE_SECONDS } from "@/lib/session-cookie";
 import {
@@ -46,6 +48,7 @@ import {
   screenWaffoPrompt,
   WaffoContentSafetyError,
 } from "@/lib/waffo-content-safety";
+import { generatePixverseSwapVideo } from "@/lib/pixverse-swap-fal";
 import { generateWanMotionVideo } from "@/lib/wan-motion-fal";
 
 export const maxDuration = 300;
@@ -80,29 +83,6 @@ function validateImage(
   return file;
 }
 
-/** Object Swap: 1–8 reference images (HF image_urls). */
-function validateReferenceImages(form: FormData): File[] {
-  const entries = [
-    ...form.getAll("referenceImage"),
-    ...form.getAll("characterImage"),
-    ...form.getAll("character"),
-  ].filter((v): v is File => v instanceof File && v.size > 0);
-
-  const unique: File[] = [];
-  const seen = new Set<string>();
-  for (const file of entries) {
-    const key = `${file.name}:${file.size}:${file.lastModified}`;
-    if (seen.has(key)) continue;
-    seen.add(key);
-    unique.push(validateImage(file, "Reference image"));
-    if (unique.length >= GENJUTSU_MAX_REFERENCE_IMAGES) break;
-  }
-  if (unique.length < 1) {
-    throw new Error("At least one reference image is required.");
-  }
-  return unique;
-}
-
 function validateVideo(file: FormDataEntryValue | null): File {
   if (!(file instanceof File) || file.size === 0) {
     throw new Error("Motion video is required.");
@@ -121,7 +101,7 @@ function validateVideo(file: FormDataEntryValue | null): File {
  * Studio generation:
  * - motion-transfer + model genjutsu → Higgsfield motion-transfer
  * - motion-transfer + Kling → fal wan-motion
- * - object-swap → Higgsfield Genjutsu object-swap
+ * - object-swap → fal PixVerse Swap
  * Shared: session → Waffo scan-prompt → credits → optional R2 ges/.
  */
 export async function POST(req: NextRequest) {
@@ -149,21 +129,18 @@ export async function POST(req: NextRequest) {
     const modelId = (form.get("modelId")?.toString() || "").trim();
     const useGenjutsuMotion =
       mode === "motion-transfer" && modelId === "genjutsu";
-    const useGenjutsuPricing = mode === "object-swap" || useGenjutsuMotion;
+    const usePixverseSwap = mode === "object-swap";
+    const useGenjutsuPricing = useGenjutsuMotion;
 
-    const referenceFiles =
-      mode === "object-swap"
-        ? validateReferenceImages(form)
-        : [
-            validateImage(
-              form.get("characterImage") ?? form.get("character"),
-            ),
-          ];
-    const characterFile = referenceFiles[0];
+    const characterFile = validateImage(
+      form.get("characterImage") ??
+        form.get("character") ??
+        form.get("referenceImage"),
+      usePixverseSwap ? "Swap image" : "Character image",
+    );
     const motionFile = validateVideo(
       form.get("motionVideo") ?? form.get("motion"),
     );
-    const clientFramePixels = Number(form.get("framePixels") ?? 0) || 0;
     const rawPrompt = form.get("prompt")?.toString() ?? "";
     const prompt = useGenjutsuPricing
       ? rawPrompt.trim()
@@ -175,6 +152,8 @@ export async function POST(req: NextRequest) {
     const rawResolution = form.get("resolution")?.toString();
     const resolution = parseGenjutsuResolution(rawResolution);
     const falResolution = parseFalMotionResolution(rawResolution);
+    const pixverseResolution = parsePixverseSwapResolution(rawResolution);
+    const pixverseMode = parsePixverseSwapMode(form.get("swapMode")?.toString());
     const clientDurationHint = Number(form.get("durationSec") ?? 0) || 0;
 
     const characterBuffer = Buffer.from(await characterFile.arrayBuffer());
@@ -211,23 +190,12 @@ export async function POST(req: NextRequest) {
         { status: 400 },
       );
     }
-    if (
-      mode === "object-swap" &&
-      clientFramePixels > 0 &&
-      clientFramePixels < OBJECT_SWAP_MIN_FRAME_PIXELS
-    ) {
-      return NextResponse.json(
-        {
-          error:
-            "Source video resolution is too low for Object Swap (need about 854×480 or larger).",
-        },
-        { status: 400 },
-      );
-    }
 
-    const creditCost = useGenjutsuPricing
-      ? creditsForGenjutsuRun(durationSec, resolution)
-      : creditsForRun(durationSec, modelMultiplier);
+    const creditCost = usePixverseSwap
+      ? creditsForPixverseSwapRun(durationSec, pixverseResolution)
+      : useGenjutsuPricing
+        ? creditsForGenjutsuRun(durationSec, resolution)
+        : creditsForRun(durationSec, modelMultiplier);
 
     if (
       requiresLoginForAnonymousGeneration(
@@ -263,14 +231,18 @@ export async function POST(req: NextRequest) {
 
     // Content safety before charging or calling the model.
     await screenWaffoPrompt({
-      prompt: prompt || (mode === "object-swap" ? "object swap" : "motion transfer"),
+      prompt:
+        prompt ||
+        (usePixverseSwap ? "pixverse swap" : "motion transfer"),
       locale: "en",
       log: (message, data) => log(message, data),
     });
 
-    const chargeLabel = useGenjutsuPricing
-      ? `${mode === "object-swap" ? "Object swap" : "Motion transfer"} · genjutsu · ${resolution} · ${durationSec}s · ${creditCost} credits`
-      : `Motion transfer · ${durationSec}s · ${creditCost} credits`;
+    const chargeLabel = usePixverseSwap
+      ? `PixVerse Swap · ${pixverseMode} · ${pixverseResolution} · ${durationSec}s · ${creditCost} credits`
+      : useGenjutsuPricing
+        ? `Motion transfer · genjutsu · ${resolution} · ${durationSec}s · ${creditCost} credits`
+        : `Motion transfer · ${durationSec}s · ${creditCost} credits`;
 
     if (payload.user?.email && creditCost > 0) {
       const charged = await requireCredits({
@@ -291,23 +263,28 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    const provider =
-      mode === "object-swap"
-        ? "higgsfield/object-swap"
-        : useGenjutsuMotion
-          ? "higgsfield/motion-transfer"
-          : "fal/wan-motion";
-    const outResolution = useGenjutsuPricing ? resolution : falResolution;
+    const provider = usePixverseSwap
+      ? "fal/pixverse-swap"
+      : useGenjutsuMotion
+        ? "higgsfield/motion-transfer"
+        : "fal/wan-motion";
+    const outResolution = usePixverseSwap
+      ? pixverseResolution
+      : useGenjutsuPricing
+        ? resolution
+        : falResolution;
     const modelMark =
       form.get("modelMark")?.toString().trim() ||
-      (mode === "object-swap" || useGenjutsuMotion
-        ? "gj"
-        : modelId.toLowerCase().includes("kling")
-          ? "kl"
-          : "wan");
+      (usePixverseSwap
+        ? "pv"
+        : useGenjutsuMotion
+          ? "gj"
+          : modelId.toLowerCase().includes("kling")
+            ? "kl"
+            : "wan");
     const jobTitle =
       characterFile.name.replace(/\.[^.]+$/, "").trim() ||
-      (mode === "object-swap" ? "Object swap" : "Motion transfer");
+      (usePixverseSwap ? "PixVerse Swap" : "Motion transfer");
 
     const clientJobId = form.get("clientJobId")?.toString() ?? null;
 
@@ -351,21 +328,16 @@ export async function POST(req: NextRequest) {
       resolution: outResolution,
       durationSec,
       creditCost,
-      refs: referenceFiles.length,
       imageBytes: characterBuffer.byteLength,
       videoBytes: motionBuffer.byteLength,
       promptLen: prompt.length,
+      swapMode: usePixverseSwap ? pixverseMode : undefined,
       user: payload.user?.email ? "logged-in" : "anonymous",
       jobId: cloudJobId,
     });
 
-    // Persist inputs under ges/ when R2 is configured (Kling / fal path only;
-    // Genjutsu upload helpers may also write when using public R2 URLs).
-    if (
-      isR2Configured() &&
-      mode === "motion-transfer" &&
-      !useGenjutsuMotion
-    ) {
+    // Persist inputs under ges/ when R2 is configured (fal paths).
+    if (isR2Configured() && (usePixverseSwap || !useGenjutsuMotion)) {
       void uploadToR2({
         category: "image",
         body: characterBuffer,
@@ -385,26 +357,20 @@ export async function POST(req: NextRequest) {
 
     let sourceUrl: string;
     try {
-      if (mode === "object-swap") {
-        const referenceImages = await Promise.all(
-          referenceFiles.map(async (file, index) => ({
-            buffer:
-              index === 0
-                ? characterBuffer
-                : Buffer.from(await file.arrayBuffer()),
-            mimeType: file.type || "image/jpeg",
-            filename: file.name || `reference-${index + 1}.jpg`,
-          })),
-        );
-        sourceUrl = await generateGenjutsuObjectSwap({
-          referenceImages,
+      if (usePixverseSwap) {
+        sourceUrl = await generatePixverseSwapVideo({
+          swapImage: {
+            buffer: characterBuffer,
+            mimeType: characterFile.type || "image/jpeg",
+            filename: characterFile.name || "swap.jpg",
+          },
           sourceVideo: {
             buffer: motionBuffer,
             mimeType: motionFile.type || "video/mp4",
-            filename: motionFile.name || "motion.mp4",
+            filename: motionFile.name || "source.mp4",
           },
-          prompt,
-          resolution,
+          mode: pixverseMode,
+          resolution: pixverseResolution,
         });
       } else if (useGenjutsuMotion) {
         sourceUrl = await generateGenjutsuMotionTransfer({

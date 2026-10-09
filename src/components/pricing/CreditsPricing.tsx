@@ -1,11 +1,9 @@
-import Link from "next/link";
 import { PricingCheckoutButton } from "@/components/pricing/PricingCheckoutButton";
 import { CREDITS_PER_SECOND } from "@/data/credits";
 import {
   formatBonusLabel,
   formatTierCredits,
   formatTierPrice,
-  PRICING_FREE,
   PRICING_INCLUDES,
   PRICING_TIERS,
 } from "@/data/pricing";
@@ -15,9 +13,7 @@ type CreditsPricingProps = {
 };
 
 export function CreditsPricing({ compact = false }: CreditsPricingProps) {
-  const tiers = compact
-    ? PRICING_TIERS.filter((tier) => tier.id === "basic" || tier.id === "creator")
-    : PRICING_TIERS;
+  const tiers = PRICING_TIERS;
 
   return (
     <div>
@@ -31,45 +27,9 @@ export function CreditsPricing({ compact = false }: CreditsPricingProps) {
       <ul
         className={[
           "mt-8 grid gap-5",
-          compact
-            ? "mx-auto max-w-3xl sm:grid-cols-2"
-            : "sm:grid-cols-2 lg:grid-cols-4",
+          "mx-auto max-w-3xl sm:grid-cols-2",
         ].join(" ")}
       >
-        {!compact ? (
-          <li className="flex flex-col rounded-2xl border border-dashed border-white/15 bg-surface/40 p-6">
-            <h3 className="font-display text-xl font-semibold text-fg">
-              {PRICING_FREE.title}
-            </h3>
-            <p className="mt-1 text-sm text-fg-muted">{PRICING_FREE.tagline}</p>
-
-            <p className="mt-6 flex items-baseline gap-1">
-              <span className="font-display text-4xl font-semibold text-fg">
-                {PRICING_FREE.priceLabel}
-              </span>
-              <span className="text-sm text-fg-subtle">forever</span>
-            </p>
-
-            <ul className="mt-6 flex-1 space-y-2.5 border-t border-white/[0.08] pt-6 text-sm text-fg-muted">
-              {PRICING_FREE.includes.map((item) => (
-                <li key={item} className="flex gap-2">
-                  <span className="text-accent" aria-hidden="true">
-                    ✓
-                  </span>
-                  {item}
-                </li>
-              ))}
-            </ul>
-
-            <Link
-              href="/#studio"
-              className="mt-8 inline-flex h-11 w-full items-center justify-center rounded-full border border-white/12 text-sm font-semibold text-fg transition hover:bg-white/[0.04]"
-            >
-              Try free
-            </Link>
-          </li>
-        ) : null}
-
         {tiers.map((tier) => (
           <li
             key={tier.id}
@@ -155,7 +115,7 @@ export function CreditsPricing({ compact = false }: CreditsPricingProps) {
       {!compact ? (
         <p className="mx-auto mt-10 max-w-xl text-center text-xs leading-relaxed text-fg-subtle">
           Credits are deducted per second of generated video. Packs never expire.
-          Log in to purchase — checkout opens when payment is connected.
+          Log in to purchase — Waffo opens in a new tab.
         </p>
       ) : null}
     </div>

@@ -1,32 +1,81 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getPricingTier } from "@/data/pricing";
+import { getRequestOrigin } from "@/lib/request-origin";
 import { getRequestSessionFromReq } from "@/lib/request-session";
+import {
+  createWaffoCheckout,
+  getWaffoEnvironment,
+  getWaffoProductId,
+  isWaffoConfigured,
+} from "@/lib/waffo";
 
 export async function POST(req: NextRequest) {
   try {
-    const { payload } = await getRequestSessionFromReq(req);
-    if (!payload.user?.email) {
+    const { payload, session } = await getRequestSessionFromReq(req);
+    const email = payload.user?.email?.trim().toLowerCase();
+    if (!email || !session.user_id) {
       return NextResponse.json({ error: "Login required." }, { status: 401 });
     }
 
     const body = (await req.json()) as { tierId?: string };
-    const tierId = body.tierId;
+    const tierId = body.tierId?.trim();
     if (!tierId || !getPricingTier(tierId)) {
       return NextResponse.json({ error: "Invalid pack." }, { status: 400 });
     }
 
-    // Payment provider (Waffo/Creem) wiring comes next — same gate as tell.
+    if (!isWaffoConfigured()) {
+      console.error("[payments/checkout] waffo not configured", {
+        tierId,
+        environment: getWaffoEnvironment(),
+      });
+      return NextResponse.json(
+        { error: "Checkout is not configured yet." },
+        { status: 503 },
+      );
+    }
+
+    const productId = getWaffoProductId(tierId);
+    if (!productId) {
+      return NextResponse.json(
+        { error: "Checkout is not available for this pack yet." },
+        { status: 400 },
+      );
+    }
+
+    const origin = getRequestOrigin(req);
+    const successUrl = `${origin}/account?purchase=success`;
+
+    console.log("[waffo/checkout] creating session", {
+      tierId,
+      productId,
+      email,
+      userId: session.user_id,
+      origin,
+    });
+
+    const checkout = await createWaffoCheckout({
+      tierId,
+      productId,
+      userId: session.user_id,
+      email,
+      successUrl,
+    });
+
+    return NextResponse.json({
+      provider: "waffo",
+      sessionId: checkout.sessionId,
+      checkoutUrl: checkout.checkoutUrl,
+      orderMerchantExternalId: checkout.orderMerchantExternalId,
+    });
+  } catch (error) {
+    console.error("[payments/checkout] failed", {
+      message: error instanceof Error ? error.message : String(error),
+    });
     return NextResponse.json(
       {
         error:
-          "Checkout is not configured yet. Packs are ready — payment keys will unlock buy.",
+          error instanceof Error ? error.message : "Could not start checkout.",
       },
-      { status: 503 },
-    );
-  } catch (error) {
-    console.error("[payments/checkout]", error);
-    return NextResponse.json(
-      { error: "Could not start checkout." },
       { status: 500 },
     );
   }

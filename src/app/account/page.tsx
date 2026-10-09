@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Suspense, useCallback, useEffect, useRef, useState } from "react";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { StudioHistoryPanel } from "@/components/studio/StudioHistoryPanel";
 import { WELCOME_CREDITS } from "@/lib/credit-limits";
@@ -10,12 +11,36 @@ import {
   fetchCloudStudioHistory,
   type StudioHistoryItem,
 } from "@/lib/studio-history";
+import {
+  clearWaffoPendingCheckout,
+  isValidWaffoSessionId,
+  readWaffoPendingCheckout,
+} from "@/lib/waffo-checkout-client";
 
 export default function AccountPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="page-shell section-pad pt-28">
+          <p className="text-sm text-fg-muted">Loading…</p>
+        </div>
+      }
+    >
+      <AccountPageInner />
+    </Suspense>
+  );
+}
+
+function AccountPageInner() {
   const { ready, isLoggedIn, user, openAuthModal, logout } = useAuth();
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const [credits, setCredits] = useState<number | null>(null);
   const [creations, setCreations] = useState<StudioHistoryItem[]>([]);
   const [creationsReady, setCreationsReady] = useState(false);
+  const [purchaseMessage, setPurchaseMessage] = useState<string | null>(null);
+  const [purchaseError, setPurchaseError] = useState<string | null>(null);
+  const purchaseHandledRef = useRef(false);
 
   useEffect(() => {
     if (!isLoggedIn) {
@@ -47,6 +72,73 @@ export default function AccountPage() {
       cancelled = true;
     };
   }, [isLoggedIn]);
+
+  useEffect(() => {
+    if (!ready || !isLoggedIn || purchaseHandledRef.current) return;
+
+    const purchaseSuccess = searchParams.get("purchase") === "success";
+    const sessionIdParam = searchParams.get("session_id");
+    const sessionId = isValidWaffoSessionId(sessionIdParam)
+      ? sessionIdParam
+      : null;
+    const orderId = searchParams.get("order_id");
+    if (!purchaseSuccess && !sessionId && !orderId) return;
+
+    const pending = readWaffoPendingCheckout(sessionId);
+    const orderMerchantExternalId = pending?.orderMerchantExternalId ?? null;
+    const waffoSessionId = sessionId ?? pending?.sessionId ?? null;
+
+    if (!orderMerchantExternalId && !orderId) {
+      setPurchaseError(
+        "Payment received — refresh this page if credits do not appear yet.",
+      );
+      purchaseHandledRef.current = true;
+      return;
+    }
+
+    purchaseHandledRef.current = true;
+    setPurchaseError(null);
+    setPurchaseMessage(null);
+
+    void (async () => {
+      try {
+        const res = await fetch("/api/payments/complete", {
+          method: "POST",
+          credentials: "include",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            sessionId: waffoSessionId,
+            orderId,
+            orderMerchantExternalId,
+          }),
+        });
+        const data = (await res.json()) as {
+          ok?: boolean;
+          creditsGranted?: number;
+          balanceAfter?: number;
+          tierName?: string;
+          error?: string;
+        };
+        if (!res.ok || !data.ok) {
+          throw new Error(data.error || "Could not apply credits.");
+        }
+        clearWaffoPendingCheckout(waffoSessionId);
+        if (typeof data.balanceAfter === "number") {
+          setCredits(data.balanceAfter);
+        }
+        setPurchaseMessage(
+          data.creditsGranted
+            ? `Added ${data.creditsGranted.toLocaleString("en-US")} credits${data.tierName ? ` (${data.tierName})` : ""}.`
+            : "Payment complete.",
+        );
+        router.replace("/account");
+      } catch (error) {
+        setPurchaseError(
+          error instanceof Error ? error.message : "Could not apply credits.",
+        );
+      }
+    })();
+  }, [isLoggedIn, ready, router, searchParams]);
 
   const openCreation = useCallback((item: StudioHistoryItem) => {
     if (item.status !== "done" || !item.videoUrl) return;
@@ -114,6 +206,16 @@ export default function AccountPage() {
       <h1 className="font-display text-3xl font-semibold tracking-tight">
         Account
       </h1>
+      {purchaseMessage ? (
+        <p className="mt-4 rounded-xl border border-accent/30 bg-accent/10 px-4 py-3 text-sm text-accent">
+          {purchaseMessage}
+        </p>
+      ) : null}
+      {purchaseError ? (
+        <p className="mt-4 rounded-xl border border-red-400/30 bg-red-400/10 px-4 py-3 text-sm text-red-200">
+          {purchaseError}
+        </p>
+      ) : null}
       <div className="mt-8 space-y-3 rounded-2xl border border-white/[0.08] bg-surface/60 p-5">
         <div className="flex items-center justify-between gap-3 text-sm">
           <span className="text-fg-muted">Email</span>

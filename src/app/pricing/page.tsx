@@ -22,7 +22,7 @@ const faqs = [
   },
   {
     q: "How does duration affect credits?",
-    a: "Credits follow your uploaded video length. Motion Transfer uses 100 credits/s × model multiplier. Object Swap prices by resolution (480p / 720p / 1080p) with the studio markup applied.",
+    a: "Credits follow your uploaded video length. Motion Transfer uses 100 credits/s × model multiplier. Object Swap prices by resolution (360p / 540p / 720p) with the studio markup applied.",
   },
   {
     q: "Do credits expire?",
@@ -30,7 +30,7 @@ const faqs = [
   },
   {
     q: "Is checkout live?",
-    a: "Login is required to buy. Payment provider keys unlock checkout — until then the button explains the status.",
+    a: "Login is required to buy. Checkout opens Waffo in a new tab; credits land on your account after payment.",
   },
 ];
 

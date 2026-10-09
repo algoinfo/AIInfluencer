@@ -18,13 +18,21 @@ import {
 import {
   creditsForGenjutsuRun,
   GENJUTSU_DEFAULT_RESOLUTION,
-  GENJUTSU_MAX_REFERENCE_IMAGES,
   GENJUTSU_MIN_DURATION_SEC,
   GENJUTSU_RESOLUTIONS,
   genjutsuCreditsPerSecond,
-  OBJECT_SWAP_MIN_FRAME_PIXELS,
   type GenjutsuResolution,
 } from "@/data/genjutsu-pricing";
+import {
+  creditsForPixverseSwapRun,
+  PIXVERSE_SWAP_DEFAULT_MODE,
+  PIXVERSE_SWAP_DEFAULT_RESOLUTION,
+  PIXVERSE_SWAP_MODES,
+  PIXVERSE_SWAP_RESOLUTIONS,
+  pixverseSwapCreditsPerSecond,
+  type PixverseSwapMode,
+  type PixverseSwapResolution,
+} from "@/data/pixverse-swap";
 import { resolveMotionPrompt } from "@/data/motion-prompt";
 import { probeVideoFileMeta } from "@/lib/probe-video-duration-client";
 import {
@@ -50,13 +58,6 @@ import {
   type StudioHistoryItem,
 } from "@/lib/studio-history";
 
-type ReferenceAsset = {
-  id: string;
-  file: File;
-  url: string;
-  name: string;
-};
-
 function formatElapsedParts(totalSeconds: number): {
   mm: string;
   ss: string;
@@ -79,6 +80,8 @@ const MODE_TABS: { id: StudioMode; label: string }[] = [
   { id: "motion-transfer", label: "Motion Transfer" },
   { id: "object-swap", label: "Object Swap" },
 ];
+
+const OBJECT_SWAP_ETA = { etaLabel: "~2–5 min", typicalWaitSec: 180 };
 
 /** Idle preview sample shown before the user generates. */
 const DEMO_PREVIEW_VIDEO =
@@ -139,13 +142,11 @@ const models: StudioModel[] = [
   },
 ];
 
-const OBJECT_SWAP_ETA = { etaLabel: "~5–8 min", typicalWaitSec: 360 };
-
 export function MotionStudio() {
   const { isLoggedIn, openAuthModal, refreshSession } = useAuth();
   const [studioMode, setStudioMode] = useState<StudioMode>("motion-transfer");
   const [resolution, setResolution] = useState<
-    GenjutsuResolution | FalMotionResolution
+    GenjutsuResolution | FalMotionResolution | PixverseSwapResolution
   >(GENJUTSU_DEFAULT_RESOLUTION);
   const [model, setModel] = useState(
     () => models.find((m) => m.id === "genjutsu") ?? models[0],
@@ -154,8 +155,9 @@ export function MotionStudio() {
   const [imageName, setImageName] = useState<string | null>(null);
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [imageFile, setImageFile] = useState<File | null>(null);
-  /** Object Swap: up to 8 HF image_urls (first also mirrors imageFile for shared UI). */
-  const [referenceAssets, setReferenceAssets] = useState<ReferenceAsset[]>([]);
+  const [swapMode, setSwapMode] = useState<PixverseSwapMode>(
+    PIXVERSE_SWAP_DEFAULT_MODE,
+  );
   const [videoName, setVideoName] = useState<string | null>(null);
   const [videoFile, setVideoFile] = useState<File | null>(null);
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
@@ -183,10 +185,13 @@ export function MotionStudio() {
   const isObjectSwap = studioMode === "object-swap";
   const isGenjutsuMotion =
     !isObjectSwap && model.provider === "higgsfield";
-  const usesGenjutsuPricing = isObjectSwap || isGenjutsuMotion;
-  const motionResolutions = isGenjutsuMotion
-    ? GENJUTSU_RESOLUTIONS
-    : FAL_MOTION_RESOLUTIONS;
+  const usesGenjutsuPricing = isGenjutsuMotion;
+  const usesPixversePricing = isObjectSwap;
+  const motionResolutions = isObjectSwap
+    ? PIXVERSE_SWAP_RESOLUTIONS
+    : isGenjutsuMotion
+      ? GENJUTSU_RESOLUTIONS
+      : FAL_MOTION_RESOLUTIONS;
   const genjutsuResolution: GenjutsuResolution =
     resolution === "480p" || resolution === "720p" || resolution === "1080p"
       ? resolution
@@ -195,14 +200,20 @@ export function MotionStudio() {
     resolution === "480p" || resolution === "580p" || resolution === "720p"
       ? resolution
       : FAL_MOTION_DEFAULT_RESOLUTION;
+  const pixverseResolution: PixverseSwapResolution =
+    resolution === "360p" || resolution === "540p" || resolution === "720p"
+      ? resolution
+      : PIXVERSE_SWAP_DEFAULT_RESOLUTION;
   const sellCredits =
     duration == null
       ? null
-      : usesGenjutsuPricing
-        ? creditsForGenjutsuRun(duration, genjutsuResolution)
-        : creditsForRun(duration, model.multiplier);
+      : usesPixversePricing
+        ? creditsForPixverseSwapRun(duration, pixverseResolution)
+        : usesGenjutsuPricing
+          ? creditsForGenjutsuRun(duration, genjutsuResolution)
+          : creditsForRun(duration, model.multiplier);
   const usingDefaultPrompt = !promptOn || prompt.trim().length === 0;
-  const modelMark = isObjectSwap ? "gj" : model.mark;
+  const modelMark = isObjectSwap ? "pv" : model.mark;
 
   useEffect(() => {
     // Drop legacy false "Interrupted" rows written by an older persist bug.
@@ -237,24 +248,18 @@ export function MotionStudio() {
   }, []);
 
   const persistDraft = useCallback(async () => {
-    const imageFiles = isObjectSwap
-      ? referenceAssets.map((asset) => asset.file)
-      : imageFile
-        ? [imageFile]
-        : [];
     await saveStudioDraft({
       studioMode,
-      modelId: isObjectSwap ? "genjutsu" : model.id,
+      modelId: isObjectSwap ? "pixverse-swap" : model.id,
       resolution,
       prompt,
       promptOn,
       resumeGenerate: false,
-      imageFiles,
+      imageFiles: imageFile ? [imageFile] : [],
       videoFile,
     });
   }, [
     isObjectSwap,
-    referenceAssets,
     imageFile,
     studioMode,
     model.id,
@@ -284,7 +289,9 @@ export function MotionStudio() {
 
         setStudioMode(draft.studioMode);
         setResolution(
-          draft.resolution === "480p" ||
+          draft.resolution === "360p" ||
+            draft.resolution === "480p" ||
+            draft.resolution === "540p" ||
             draft.resolution === "580p" ||
             draft.resolution === "720p" ||
             draft.resolution === "1080p"
@@ -297,10 +304,6 @@ export function MotionStudio() {
           models.find((item) => item.id === draft.modelId) ?? models[0];
         setModel(matched);
 
-        setReferenceAssets((prev) => {
-          for (const asset of prev) URL.revokeObjectURL(asset.url);
-          return [];
-        });
         setVideoUrl((prev) => {
           if (prev) URL.revokeObjectURL(prev);
           return null;
@@ -310,21 +313,7 @@ export function MotionStudio() {
           return null;
         });
 
-        if (draft.studioMode === "object-swap") {
-          const assets = draft.imageFiles
-            .slice(0, GENJUTSU_MAX_REFERENCE_IMAGES)
-            .map((file, index) => ({
-              id: `draft-${index}-${file.name}`,
-              file,
-              url: URL.createObjectURL(file),
-              name: file.name,
-            }));
-          setReferenceAssets(assets);
-          const primary = assets[0];
-          setImageFile(primary?.file ?? null);
-          setImageName(primary?.name ?? null);
-          setImageUrl(primary?.url ?? null);
-        } else {
+        {
           const primary = draft.imageFiles[0] ?? null;
           if (primary) {
             const url = URL.createObjectURL(primary);
@@ -369,7 +358,6 @@ export function MotionStudio() {
     return () => {
       if (imageUrl) URL.revokeObjectURL(imageUrl);
       if (videoUrl) URL.revokeObjectURL(videoUrl);
-      for (const asset of referenceAssets) URL.revokeObjectURL(asset.url);
       if (resultUrl?.startsWith("blob:")) URL.revokeObjectURL(resultUrl);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps -- revoke only on unmount / replace via setters
@@ -397,43 +385,7 @@ export function MotionStudio() {
 
   function onImage(file: File | null) {
     if (!file) return;
-    if (isObjectSwap) {
-      if (referenceAssets.length >= GENJUTSU_MAX_REFERENCE_IMAGES) {
-        setStatus("error");
-        setErrorMessage(
-          `Object Swap supports up to ${GENJUTSU_MAX_REFERENCE_IMAGES} reference images.`,
-        );
-        return;
-      }
-      const url = URL.createObjectURL(file);
-      const asset: ReferenceAsset = {
-        id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
-        file,
-        url,
-        name: file.name,
-      };
-      setReferenceAssets((prev) => {
-        const next = [...prev, asset].slice(0, GENJUTSU_MAX_REFERENCE_IMAGES);
-        const primary = next[0];
-        syncPrimaryImage(primary?.file ?? null, primary?.url ?? null);
-        return next;
-      });
-    } else {
-      syncPrimaryImage(file, URL.createObjectURL(file));
-    }
-    setStatus("idle");
-    setErrorMessage(null);
-  }
-
-  function removeReference(id: string) {
-    setReferenceAssets((prev) => {
-      const target = prev.find((a) => a.id === id);
-      if (target) URL.revokeObjectURL(target.url);
-      const next = prev.filter((a) => a.id !== id);
-      const primary = next[0];
-      syncPrimaryImage(primary?.file ?? null, primary?.url ?? null);
-      return next;
-    });
+    syncPrimaryImage(file, URL.createObjectURL(file));
     setStatus("idle");
     setErrorMessage(null);
   }
@@ -473,19 +425,6 @@ export function MotionStudio() {
         );
         return;
       }
-      if (
-        isObjectSwap &&
-        meta &&
-        meta.framePixels > 0 &&
-        meta.framePixels < OBJECT_SWAP_MIN_FRAME_PIXELS
-      ) {
-        clearVideoPreview();
-        setStatus("error");
-        setErrorMessage(
-          "Source video resolution is too low for Object Swap (need about 854×480 or larger).",
-        );
-        return;
-      }
       const billable = billableSecondsFromDuration(raw ?? 0);
       setVideoDurationSec(billable);
       setVideoFramePixels(meta?.framePixels ?? null);
@@ -506,8 +445,7 @@ export function MotionStudio() {
       promptLoginForGenerate();
       return;
     }
-    const swapRefs = isObjectSwap ? referenceAssets.map((a) => a.file) : [];
-    const primaryImage = isObjectSwap ? swapRefs[0] ?? null : imageFile;
+    const primaryImage = imageFile;
     if (!primaryImage || !videoFile) {
       setStatus("need");
       return;
@@ -535,9 +473,11 @@ export function MotionStudio() {
 
     const cost =
       sellCredits ??
-      (usesGenjutsuPricing
-        ? creditsForGenjutsuRun(duration, genjutsuResolution)
-        : creditsForRun(duration, model.multiplier));
+      (usesPixversePricing
+        ? creditsForPixverseSwapRun(duration, pixverseResolution)
+        : usesGenjutsuPricing
+          ? creditsForGenjutsuRun(duration, genjutsuResolution)
+          : creditsForRun(duration, model.multiplier));
 
     try {
       // Balance check after UI is already locked; fail soft back to error.
@@ -561,7 +501,7 @@ export function MotionStudio() {
         /* server still enforces balance */
       }
 
-      const resolved = usesGenjutsuPricing
+      const resolved = usesGenjutsuPricing || usesPixversePricing
         ? promptOn
           ? prompt.trim()
           : ""
@@ -572,14 +512,16 @@ export function MotionStudio() {
       setResultUrl(null);
 
       const historyId = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-      const outResolution = usesGenjutsuPricing
-        ? genjutsuResolution
-        : falResolution;
+      const outResolution = usesPixversePricing
+        ? pixverseResolution
+        : usesGenjutsuPricing
+          ? genjutsuResolution
+          : falResolution;
       const pendingItem: StudioHistoryItem = {
         id: historyId,
         title:
           primaryImage.name.replace(/\.[^.]+$/, "") ||
-          (isObjectSwap ? "Object swap" : "Motion transfer"),
+          (isObjectSwap ? "PixVerse Swap" : "Motion transfer"),
         createdAt: new Date().toISOString(),
         videoUrl: "",
         durationSec: duration,
@@ -592,21 +534,16 @@ export function MotionStudio() {
       try {
         const form = new FormData();
         form.set("mode", studioMode);
-        form.set("modelId", isObjectSwap ? "genjutsu" : model.id);
+        form.set("modelId", isObjectSwap ? "pixverse-swap" : model.id);
         form.set("modelMark", modelMark);
         form.set("clientJobId", historyId);
-        if (isObjectSwap) {
-          for (const file of swapRefs) {
-            form.append("referenceImage", file);
-          }
-        } else {
-          form.set("characterImage", primaryImage);
-        }
+        form.set("characterImage", primaryImage);
         form.set("motionVideo", videoFile);
         form.set("prompt", resolved);
         form.set("durationSec", String(duration));
         form.set("modelMultiplier", String(model.multiplier));
         form.set("resolution", outResolution);
+        if (isObjectSwap) form.set("swapMode", swapMode);
         if (videoFramePixels != null && videoFramePixels > 0) {
           form.set("framePixels", String(videoFramePixels));
         }
@@ -783,11 +720,7 @@ export function MotionStudio() {
     [isLoggedIn, resultUrl],
   );
 
-  const ready = Boolean(
-    (isObjectSwap ? referenceAssets.length > 0 : imageFile) &&
-      videoFile &&
-      duration != null,
-  );
+  const ready = Boolean(imageFile && videoFile && duration != null);
   const busy = status === "generating";
   const elapsedParts = formatElapsedParts(elapsedSec);
   const eta = isObjectSwap
@@ -838,28 +771,14 @@ export function MotionStudio() {
                         setModel(
                           models.find((m) => m.id === "genjutsu") ?? models[0],
                         );
-                        // Flatten multi-refs down to the primary character image.
-                        setReferenceAssets((prev) => {
-                          for (const asset of prev.slice(1)) {
-                            URL.revokeObjectURL(asset.url);
-                          }
-                          return prev[0] ? [prev[0]] : [];
-                        });
-                      } else if (
-                        tab.id === "object-swap" &&
-                        imageFile &&
-                        referenceAssets.length === 0
-                      ) {
-                        const url = imageUrl || URL.createObjectURL(imageFile);
-                        setReferenceAssets([
-                          {
-                            id: `seed-${Date.now()}`,
-                            file: imageFile,
-                            url,
-                            name: imageFile.name,
-                          },
-                        ]);
-                        if (!imageUrl) setImageUrl(url);
+                        if (
+                          resolution === "360p" ||
+                          resolution === "540p"
+                        ) {
+                          setResolution(FAL_MOTION_DEFAULT_RESOLUTION);
+                        }
+                      } else {
+                        setResolution(PIXVERSE_SWAP_DEFAULT_RESOLUTION);
                       }
                     }}
                     className={[
@@ -875,7 +794,7 @@ export function MotionStudio() {
               })}
             </div>
 
-            {/* Object Swap: no model picker — fixed Genjutsu object-swap API */}
+            {/* Object Swap → fal-ai/pixverse/swap */}
             {isObjectSwap ? (
               <div className="shrink-0">
                 <div className="mb-1.5 flex items-center justify-between gap-2">
@@ -883,12 +802,14 @@ export function MotionStudio() {
                     Resolution
                   </p>
                   <p className="text-[0.68rem] font-medium tabular-nums text-fg-muted">
-                    {genjutsuCreditsPerSecond(genjutsuResolution).toLocaleString()}{" "}
+                    {pixverseSwapCreditsPerSecond(
+                      pixverseResolution,
+                    ).toLocaleString()}{" "}
                     credits/s
                   </p>
                 </div>
                 <div className="grid grid-cols-3 gap-1 rounded-xl border border-white/[0.08] bg-black/25 p-1">
-                  {GENJUTSU_RESOLUTIONS.map((option) => {
+                  {PIXVERSE_SWAP_RESOLUTIONS.map((option) => {
                     const active = option === resolution;
                     return (
                       <button
@@ -906,6 +827,31 @@ export function MotionStudio() {
                       </button>
                     );
                   })}
+                </div>
+                <div className="mt-2.5">
+                  <p className="mb-1.5 text-[0.68rem] font-medium uppercase tracking-[0.14em] text-fg-muted">
+                    Swap
+                  </p>
+                  <div className="grid grid-cols-3 gap-1 rounded-xl border border-white/[0.08] bg-black/25 p-1">
+                    {PIXVERSE_SWAP_MODES.map((option) => {
+                      const active = option === swapMode;
+                      return (
+                        <button
+                          key={option}
+                          type="button"
+                          onClick={() => setSwapMode(option)}
+                          className={[
+                            "rounded-lg px-1 py-2 text-center text-xs font-medium capitalize transition-colors",
+                            active
+                              ? "bg-accent text-[#0a0a0c]"
+                              : "text-fg-muted hover:bg-white/[0.05] hover:text-fg",
+                          ].join(" ")}
+                        >
+                          {option}
+                        </button>
+                      );
+                    })}
+                  </div>
                 </div>
               </div>
             ) : (
@@ -1046,107 +992,36 @@ export function MotionStudio() {
               </div>
             )}
 
-            {/* Uploads — Object Swap: 1–8 refs + source video (HF image_urls / video_url) */}
-            {isObjectSwap ? (
-              <div className="shrink-0 space-y-2.5">
-                <div className="flex items-center justify-between gap-2">
-                  <p className="text-[0.68rem] font-medium uppercase tracking-[0.14em] text-fg-muted">
-                    References
-                    <span className="ml-0.5 text-[#ff5c5c]">*</span>
-                  </p>
-                  <p className="text-[0.68rem] font-medium tabular-nums text-fg-muted">
-                    {referenceAssets.length}/{GENJUTSU_MAX_REFERENCE_IMAGES}
-                  </p>
-                </div>
-                <div className="grid grid-cols-3 gap-2">
-                  {referenceAssets.map((asset) => (
-                    <div
-                      key={asset.id}
-                      className="relative overflow-hidden rounded-xl border border-accent/25 bg-[rgba(216,255,62,0.04)]"
-                    >
-                      <div className="relative aspect-square">
-                        <Image
-                          src={asset.url}
-                          alt=""
-                          fill
-                          unoptimized
-                          className="object-cover"
-                        />
-                      </div>
-                      <button
-                        type="button"
-                        aria-label={`Remove ${asset.name}`}
-                        onClick={() => removeReference(asset.id)}
-                        className="absolute right-1 top-1 flex h-6 w-6 items-center justify-center rounded-full bg-black/70 text-sm leading-none text-fg hover:bg-black"
-                      >
-                        ×
-                      </button>
-                    </div>
-                  ))}
-                  {referenceAssets.length < GENJUTSU_MAX_REFERENCE_IMAGES ? (
-                    <UploadField
-                      label="Add"
-                      hint="JPG / PNG"
-                      button="Image"
-                      accept="image/jpeg,image/png,image/webp"
-                      fileName={null}
-                      onPick={onImage}
-                      icon="image"
-                      compact
-                    />
-                  ) : null}
-                </div>
-                <UploadField
-                  label="Source video"
-                  required
-                  hint={
-                    duration != null
-                      ? `${duration}s · billable`
-                      : "MP4 / MOV · ≥4s"
-                  }
-                  button="Add video"
-                  accept="video/*"
-                  fileName={videoName}
-                  previewUrl={videoUrl}
-                  previewKind="video"
-                  onPick={onVideo}
-                  icon="video"
-                />
-              </div>
-            ) : (
-              <div className="grid shrink-0 grid-cols-2 gap-2.5">
-                <UploadField
-                  label="Character"
-                  required
-                  hint="JPG / PNG"
-                  button="Add image"
-                  accept="image/*"
-                  fileName={imageName}
-                  previewUrl={imageUrl}
-                  previewKind="image"
-                  onPick={onImage}
-                  icon="image"
-                  compact
-                />
-                <UploadField
-                  label="Motion"
-                  required
-                  hint={
-                    duration != null
-                      ? `${duration}s · billable`
-                      : "MP4 / MOV"
-                  }
-                  button="Add video"
-                  accept="video/*"
-                  fileName={videoName}
-                  previewUrl={videoUrl}
-                  previewKind="video"
-                  onPick={onVideo}
-                  icon="video"
-                  compact
-                />
-              </div>
-            )}
+            <div className="grid shrink-0 grid-cols-2 gap-2.5">
+              <UploadField
+                label={isObjectSwap ? "Swap image" : "Character"}
+                required
+                hint="JPG / PNG"
+                button="Add image"
+                accept="image/*"
+                fileName={imageName}
+                previewUrl={imageUrl}
+                previewKind="image"
+                onPick={onImage}
+                icon="image"
+                compact
+              />
+              <UploadField
+                label={isObjectSwap ? "Source video" : "Motion"}
+                required
+                hint={
+                  duration != null ? `${duration}s · billable` : "MP4 / MOV"
+                }
+                button="Add video"
+                accept="video/*"
+                fileName={videoName}
+                previewUrl={videoUrl}
+                previewKind="video"
+                onPick={onVideo}
+                icon="video"
+                compact
+              />
+            </div>
 
             {/* Prompt — toggle like Genjutsu studio */}
             <div className="shrink-0">
@@ -1194,11 +1069,11 @@ export function MotionStudio() {
                   onChange={(e) => setPrompt(e.target.value)}
                   rows={3}
                   placeholder={
-                    usesGenjutsuPricing
-                      ? isObjectSwap
-                        ? "Describe what to swap or keep…"
-                        : "Optional style / character notes…"
-                      : "1. Look  2. Outfit  3. Scene  4. Keep the same  5. Final style"
+                    isObjectSwap
+                      ? "Optional notes (swap uses image + video)…"
+                      : usesGenjutsuPricing
+                        ? "Optional style / character notes…"
+                        : "1. Look  2. Outfit  3. Scene  4. Keep the same  5. Final style"
                   }
                   className="w-full resize-none rounded-xl border border-white/[0.1] bg-white/[0.04] px-3 py-2.5 text-[0.8rem] leading-relaxed text-fg outline-none transition placeholder:text-fg-muted/70 focus:border-accent/35 focus:bg-white/[0.06]"
                 />
@@ -1210,7 +1085,7 @@ export function MotionStudio() {
           <div className="shrink-0 border-t border-white/[0.07] p-3.5 sm:p-4">
             <p className="mb-2.5 text-center text-[0.72rem] leading-snug text-fg-muted">
               {isObjectSwap
-                ? "Tip: keep the subject a similar size and crop in the references and the source video."
+                ? "Tip: use a clear swap image that matches the subject size and angle in the source video."
                 : "Tip: keep the person a similar size and framing in the photo and the motion video."}
             </p>
             <button
@@ -1299,9 +1174,11 @@ export function MotionStudio() {
                     </>
                   ) : (
                     <span>
-                      {usesGenjutsuPricing
-                        ? `${genjutsuCreditsPerSecond(genjutsuResolution).toLocaleString()} credits/s · ${eta.etaLabel}`
-                        : `${CREDITS_PER_SECOND} credits/s · ${eta.etaLabel}`}
+                      {usesPixversePricing
+                        ? `${pixverseSwapCreditsPerSecond(pixverseResolution).toLocaleString()} credits/s · ${eta.etaLabel}`
+                        : usesGenjutsuPricing
+                          ? `${genjutsuCreditsPerSecond(genjutsuResolution).toLocaleString()} credits/s · ${eta.etaLabel}`
+                          : `${CREDITS_PER_SECOND} credits/s · ${eta.etaLabel}`}
                     </span>
                   )}
                 </span>
@@ -1317,7 +1194,7 @@ export function MotionStudio() {
             >
               {status === "need"
                 ? isObjectSwap
-                  ? "Add a reference image and source video first."
+                  ? "Add a swap image and source video first."
                   : "Add a character image and motion video first."
                 : status === "generating"
                   ? `${phaseHint} · ${elapsedParts.label} / ${eta.etaLabel}`
@@ -1326,11 +1203,13 @@ export function MotionStudio() {
                     : status === "done"
                       ? `Done in ${lastElapsedSec != null ? formatElapsedParts(lastElapsedSec).label : "—"} · ${duration ?? "?"}s clip · ${modelMark} · ${resolution}${lastPrompt ? (usingDefaultPrompt ? " · default prompt" : " · custom prompt") : ""}.`
                       : duration != null
-                        ? usesGenjutsuPricing
-                          ? `Credits follow video length · ${genjutsuCreditsPerSecond(genjutsuResolution).toLocaleString()} credits/s · usually ${eta.etaLabel}`
-                          : `Credits follow motion length · ${CREDITS_PER_SECOND} credits/s ×${model.multiplier} · usually ${eta.etaLabel}`
+                        ? usesPixversePricing
+                          ? `Credits follow video length · ${pixverseSwapCreditsPerSecond(pixverseResolution).toLocaleString()} credits/s · usually ${eta.etaLabel}`
+                          : usesGenjutsuPricing
+                            ? `Credits follow video length · ${genjutsuCreditsPerSecond(genjutsuResolution).toLocaleString()} credits/s · usually ${eta.etaLabel}`
+                            : `Credits follow motion length · ${CREDITS_PER_SECOND} credits/s ×${model.multiplier} · usually ${eta.etaLabel}`
                         : isObjectSwap
-                          ? `Reference + video → object swap · usually ${eta.etaLabel}`
+                          ? `Image + video → Object Swap · usually ${eta.etaLabel}`
                           : `Character + motion → AI video · usually ${eta.etaLabel}`}
             </p>
           </div>
