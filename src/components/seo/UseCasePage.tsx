@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 import { MotionStudio } from "@/components/home/MotionStudio";
 import { CTA } from "@/components/ui/CTA";
@@ -25,6 +26,13 @@ export type UseCaseTemplate = {
   description: string;
 };
 
+export type UseCaseExample = {
+  title: string;
+  description: string;
+  imageSrc: string;
+  imageAlt: string;
+};
+
 export type UseCasePageProps = {
   eyebrow: string;
   title: string;
@@ -33,6 +41,8 @@ export type UseCasePageProps = {
   primaryCta: CtaLink;
   secondaryCta?: CtaLink;
   features: { title: string; body: string }[];
+  examplesHeading?: string;
+  examples?: UseCaseExample[];
   templatesHeading?: string;
   templates?: UseCaseTemplate[];
   sections: UseCaseSection[];
@@ -50,6 +60,8 @@ export function UseCasePage({
   primaryCta,
   secondaryCta,
   features,
+  examplesHeading = "Examples",
+  examples,
   templatesHeading = "Templates",
   templates,
   sections,
@@ -115,6 +127,45 @@ export function UseCasePage({
           </div>
         </div>
       </section>
+
+      {examples?.length ? (
+        <section className="section-pad border-t border-border bg-bg-soft">
+          <div className="page-shell">
+            <h2 className="font-display text-2xl font-semibold tracking-tight sm:text-3xl">
+              {examplesHeading}
+            </h2>
+            <ul className="mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+              {examples.map((example) => (
+                <li
+                  key={example.title}
+                  className="overflow-hidden rounded-2xl border border-border bg-surface/70"
+                >
+                  <div className="relative aspect-[9/16] max-h-[420px] w-full bg-bg">
+                    <Image
+                      src={example.imageSrc}
+                      alt={example.imageAlt}
+                      fill
+                      className="object-cover object-top"
+                      sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                    />
+                  </div>
+                  <div className="px-4 py-4">
+                    <p className="text-xs uppercase tracking-[0.16em] text-fg-subtle">
+                      Case
+                    </p>
+                    <h3 className="mt-2 font-display text-xl font-semibold tracking-tight">
+                      {example.title}
+                    </h3>
+                    <p className="mt-2 text-sm leading-relaxed text-fg-muted">
+                      {example.description}
+                    </p>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </section>
+      ) : null}
 
       {templates?.length ? (
         <section className="section-pad border-t border-border">

@@ -33,6 +33,33 @@ export default function UgcVideoGeneratorPage() {
           body: "Same hook length, different stills — A/B costs stay comparable while you hunt ROAS.",
         },
       ]}
+      examplesHeading="Examples"
+      examples={[
+        {
+          title: "Product UGC Ad",
+          description:
+            "A virtual creator presents your product and explains its benefits — ideal for skincare, cosmetics, and ecommerce.",
+          imageSrc: "/images/use-cases/product-ugc-ad.png",
+          imageAlt:
+            "Product UGC ad example: creator holding a glow serum bottle while filming a phone-native vertical review",
+        },
+        {
+          title: "Talking Avatar Ad",
+          description:
+            "Enter your ad script and have a virtual creator speak to camera with voiceover and captions.",
+          imageSrc: "/images/use-cases/talking-avatar-ad.png",
+          imageAlt:
+            "Talking avatar ad example: virtual creator speaking to camera in a casual bedroom setting",
+        },
+        {
+          title: "Unboxing Video",
+          description:
+            "Generate scenes for unpacking, showcasing the product, and using it — ideal for unboxing and product experience clips.",
+          imageSrc: "/images/use-cases/unboxing-video.png",
+          imageAlt:
+            "Unboxing video example: creator filming an open package and skincare products on a desk with a ring light",
+        },
+      ]}
       sections={[
         {
           heading: "What this AI UGC video generator does",
