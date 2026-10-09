@@ -57,8 +57,8 @@ export function MotionTransferDemo() {
           Generate Video
         </Button>
         <p className="max-w-md text-sm leading-relaxed text-fg-muted">
-          Demo UI only — files stay in your browser. No video is generated yet.
-          This preview shows the Genjutsu workflow shape.
+          Layout preview only — files stay in your browser. Online demo needs
+          login; open the homepage studio to run a real generation with credits.
         </p>
         {status === "ready" ? (
           <p className="text-sm text-accent">
@@ -68,7 +68,7 @@ export function MotionTransferDemo() {
         {status === "demo" ? (
           <div className="w-full max-w-lg rounded-2xl border border-border bg-bg-soft p-5 text-left">
             <p className="text-xs uppercase tracking-[0.18em] text-fg-subtle">
-              Demo status
+              Next step
             </p>
             <p className="mt-2 text-sm text-fg-muted">
               Character: <span className="text-fg">{characterName}</span>
@@ -76,12 +76,16 @@ export function MotionTransferDemo() {
               Reference: <span className="text-fg">{referenceName}</span>
             </p>
             <p className="mt-3 text-sm text-fg-muted">
-              Generation is not connected. Explore Examples to see the kind of
-              results motion transfer can produce.
+              This page does not render video. Sign in and generate in the
+              homepage studio — same image + motion workflow, with credits and
+              history.
             </p>
-            <div className="mt-4">
-              <Button href="/examples" variant="secondary" size="md">
-                See Examples
+            <div className="mt-4 flex flex-wrap gap-3">
+              <Button href="/#studio" size="md">
+                Open studio
+              </Button>
+              <Button href="/login" variant="secondary" size="md">
+                Log in
               </Button>
             </div>
           </div>

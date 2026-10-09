@@ -27,6 +27,38 @@ const nextConfig: NextConfig = {
       { source: "/soul-id", destination: "/genjutsu-tutorial", permanent: false },
       { source: "/tools", destination: "/", permanent: true },
       { source: "/tools/:slug", destination: "/", permanent: true },
+      // Thin guide stubs → hub / product / comparison (avoid empty shells in index)
+      { source: "/guides/what-is-genjutsu", destination: "/genjutsu", permanent: true },
+      {
+        source: "/guides/what-is-ai-motion-transfer",
+        destination: "/motion-transfer",
+        permanent: true,
+      },
+      {
+        source: "/guides/how-does-genjutsu-work",
+        destination: "/guides/how-to-use-genjutsu",
+        permanent: true,
+      },
+      {
+        source: "/guides/genjutsu-vs-kling",
+        destination: "/genjutsu-alternatives",
+        permanent: true,
+      },
+      {
+        source: "/guides/genjutsu-vs-runway",
+        destination: "/genjutsu-alternatives",
+        permanent: true,
+      },
+      {
+        source: "/guides/genjutsu-alternatives",
+        destination: "/genjutsu-alternatives",
+        permanent: true,
+      },
+      {
+        source: "/guides/best-ai-motion-transfer-tools",
+        destination: "/genjutsu-alternatives",
+        permanent: true,
+      },
     ];
   },
   turbopack: {

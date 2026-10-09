@@ -17,16 +17,16 @@ export const homeUseCases: HomeUseCase[] = [
   {
     id: "photo-to-dance",
     title: "Turn a Still Image Into a Dance Video",
-    href: "/guides/how-to-create-ai-influencer-videos",
+    href: "/dance-video",
     paragraphs: [
       "Start with a clear still of a person or character, then add a short dance clip as the motion reference. AI motion transfer maps the footwork, arms, and rhythm onto that image so you can produce an AI dance video without reshooting the performance.",
-      "Results are strongest with a readable full-body reference and a front-facing still that matches the angle you want. Use this for social reels, music creatives, or quick tests before a live shoot. See the guide on creating AI influencer videos for prep tips.",
+      "Results are strongest with a readable full-body reference and a front-facing still that matches the angle you want. Use this for social reels, music creatives, or quick tests before a live shoot. See the dance video use-case page for the full workflow.",
     ],
   },
   {
     id: "product-in-motion",
     title: "AI Motion Transfer for Product Images",
-    href: "/examples",
+    href: "/product-video",
     paragraphs: [
       "A pack shot or hero product still is static. With motion transfer—or Object Swap when you mainly need the held item replaced—you can attach that product image to a reference of a turn, hand demo, or lifestyle move.",
       "Keep the product large and clear in both the still and the reference. This is useful for short product loops, landing-page heroes, and UGC-style demos. Browse Examples for look-and-feel inspiration, then generate in the studio with your own assets.",
@@ -62,7 +62,7 @@ export const homeUseCases: HomeUseCase[] = [
   {
     id: "ugc-ads",
     title: "Create UGC-Style AI Video Ads",
-    href: "/pricing",
+    href: "/ugc-ads",
     paragraphs: [
       "Performance ads burn through demo and walk-and-talk variants. Reuse a winning camera pattern from a reference clip, then recast it with a new face or product still to create UGC-style AI advertising video without another filming day.",
       "Generation is billed by motion length, so A/B tests stay predictable: same hook length, different images. Check Pricing for packs and welcome credits, then iterate in the studio preview.",
@@ -82,22 +82,22 @@ export const homeWhatYouCanCreate = {
     {
       title: "Dance Videos",
       body: "Map choreography from a reference onto a still character.",
-      href: "/guides/how-to-create-ai-influencer-videos",
+      href: "/dance-video",
     },
     {
       title: "Product Videos",
       body: "Turn a pack shot into a short motion loop or demo.",
-      href: "/examples",
+      href: "/product-video",
     },
     {
       title: "Fashion Videos",
       body: "Walks, turns, and fabric motion for lookbook-style clips.",
-      href: "/examples",
+      href: "/ai-influencer",
     },
     {
       title: "UGC Ads",
       body: "Recast a proven camera pattern with a new face or product.",
-      href: "/pricing",
+      href: "/ugc-ads",
     },
     {
       title: "Character Videos",

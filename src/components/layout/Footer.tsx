@@ -5,7 +5,10 @@ import { CONTACT_EMAIL } from "@/lib/seo";
 const product = [
   { href: "/#studio", label: "Studio" },
   { href: "/pricing", label: "Pricing" },
+  { href: "/dance-video", label: "Dance video" },
   { href: "/ai-influencer", label: "AI Influencer" },
+  { href: "/ugc-ads", label: "UGC ads" },
+  { href: "/product-video", label: "Product video" },
 ];
 
 const learn = [

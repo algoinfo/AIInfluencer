@@ -7,11 +7,11 @@ export function GuidesPreview() {
     <section className="section-pad border-y border-border bg-bg-soft">
       <div className="page-shell">
         <SectionHeading
-          title="Learn AI Influencer"
-          subtitle="Practical guides for creating, animating and growing."
+          title="Learn Genjutsu workflows"
+          subtitle="Deep how-tos for studio use, influencer batches, and identity locks."
         />
         <div className="mt-10 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {guides.slice(0, 6).map((guide) => (
+          {guides.map((guide) => (
             <Link
               key={guide.slug}
               href={`/guides/${guide.slug}`}
@@ -33,11 +33,11 @@ export function GuidesPreview() {
           <Link href="/guides" className="text-accent hover:text-accent-strong">
             All guides →
           </Link>
-          <Link href="/genjutsu" className="text-accent hover:text-accent-strong">
-            Genjutsu →
+          <Link href="/dance-video" className="text-accent hover:text-accent-strong">
+            Dance video →
           </Link>
-          <Link href="/soul-id" className="text-accent hover:text-accent-strong">
-            Soul ID →
+          <Link href="/ugc-ads" className="text-accent hover:text-accent-strong">
+            UGC ads →
           </Link>
         </div>
       </div>

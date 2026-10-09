@@ -26,13 +26,13 @@ const rows = [
     name: "Kling",
     focus: "Generative AI video",
     best: "Prompt / image to video motion",
-    href: "/guides/genjutsu-vs-kling",
+    href: "/genjutsu-alternatives",
   },
   {
     name: "Runway",
     focus: "Creative video suite",
     best: "Editorial generation + tools",
-    href: "/guides/genjutsu-vs-runway",
+    href: "/genjutsu-alternatives",
   },
   {
     name: "Veo",
@@ -59,14 +59,14 @@ const cards = [
     name: "Kling",
     description: "Strong generative motion when you do not have a strict reference.",
     category: "Video Generation",
-    href: "/guides/genjutsu-vs-kling",
+    href: "/dance-video",
     initial: "K",
   },
   {
     name: "Runway",
     description: "Broad creative toolkit beyond pure motion transfer.",
     category: "Video Generation",
-    href: "/guides/genjutsu-vs-runway",
+    href: "/motion-transfer",
     initial: "R",
   },
   {

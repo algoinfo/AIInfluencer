@@ -67,11 +67,11 @@ export default function MotionTransferPage() {
               Interactive demo
             </h2>
             <p className="mt-3 text-fg-muted">
-              Explore the upload layout here, then generate for real in the{" "}
+              This is a layout preview. Online generation needs login — open the{" "}
               <Link href="/#studio" className="text-fg underline-offset-2 hover:underline">
                 homepage studio
-              </Link>
-              .
+              </Link>{" "}
+              to run a real render with credits.
             </p>
           </div>
           <MotionTransferDemo />

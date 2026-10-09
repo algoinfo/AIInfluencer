@@ -46,11 +46,57 @@ export default async function GuideDetailPage({ params }: Props) {
         {guide.excerpt}
       </p>
 
-      <div className="mt-10 max-w-2xl space-y-5 text-base leading-relaxed text-fg-muted">
-        {guide.body.map((paragraph) => (
-          <p key={paragraph.slice(0, 48)}>{paragraph}</p>
+      <div className="mt-10 max-w-2xl space-y-10">
+        {guide.sections.map((section) => (
+          <section key={section.heading}>
+            <h2 className="font-display text-2xl font-semibold tracking-tight text-fg">
+              {section.heading}
+            </h2>
+            <div className="mt-4 space-y-4 text-base leading-relaxed text-fg-muted">
+              {section.paragraphs.map((paragraph) => (
+                <p key={paragraph.slice(0, 48)}>{paragraph}</p>
+              ))}
+            </div>
+          </section>
         ))}
       </div>
+
+      {guide.params?.length ? (
+        <section className="mt-12 max-w-2xl">
+          <h2 className="font-display text-2xl font-semibold tracking-tight">
+            Practical parameters
+          </h2>
+          <dl className="mt-5 divide-y divide-border rounded-2xl border border-border">
+            {guide.params.map((param) => (
+              <div
+                key={param.label}
+                className="grid gap-1 px-4 py-3 sm:grid-cols-[10rem_1fr] sm:gap-4"
+              >
+                <dt className="text-sm font-medium text-fg">{param.label}</dt>
+                <dd className="text-sm leading-relaxed text-fg-muted">
+                  {param.value}
+                </dd>
+              </div>
+            ))}
+          </dl>
+        </section>
+      ) : null}
+
+      <section className="mt-12 max-w-2xl">
+        <h2 className="font-display text-2xl font-semibold tracking-tight">
+          FAQ
+        </h2>
+        <dl className="mt-5 space-y-6">
+          {guide.faq.map((item) => (
+            <div key={item.q}>
+              <dt className="font-medium text-fg">{item.q}</dt>
+              <dd className="mt-2 text-base leading-relaxed text-fg-muted">
+                {item.a}
+              </dd>
+            </div>
+          ))}
+        </dl>
+      </section>
 
       {guide.related?.length ? (
         <div className="mt-8 flex flex-wrap gap-3 text-sm">
@@ -79,7 +125,7 @@ export default async function GuideDetailPage({ params }: Props) {
       ) : null}
 
       <div className="mt-10 flex flex-wrap gap-3">
-        <Button href="/motion-transfer">Try Genjutsu</Button>
+        <Button href="/#studio">Open studio</Button>
         <Button href="/examples" variant="secondary">
           See Examples
         </Button>
