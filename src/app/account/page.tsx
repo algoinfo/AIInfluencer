@@ -1,17 +1,26 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useAuth } from "@/components/auth/AuthProvider";
+import { StudioHistoryPanel } from "@/components/studio/StudioHistoryPanel";
 import { WELCOME_CREDITS } from "@/lib/credit-limits";
+import {
+  fetchCloudStudioHistory,
+  type StudioHistoryItem,
+} from "@/lib/studio-history";
 
 export default function AccountPage() {
   const { ready, isLoggedIn, user, openAuthModal, logout } = useAuth();
   const [credits, setCredits] = useState<number | null>(null);
+  const [creations, setCreations] = useState<StudioHistoryItem[]>([]);
+  const [creationsReady, setCreationsReady] = useState(false);
 
   useEffect(() => {
     if (!isLoggedIn) {
       setCredits(null);
+      setCreations([]);
+      setCreationsReady(false);
       return;
     }
     let cancelled = false;
@@ -26,10 +35,32 @@ export default function AccountPage() {
       .catch(() => {
         if (!cancelled) setCredits(null);
       });
+
+    void fetchCloudStudioHistory(24).then((items) => {
+      if (cancelled) return;
+      setCreations(items ?? []);
+      setCreationsReady(true);
+    });
+
     return () => {
       cancelled = true;
     };
   }, [isLoggedIn]);
+
+  const openCreation = useCallback((item: StudioHistoryItem) => {
+    if (item.status !== "done" || !item.videoUrl) return;
+    window.open(item.videoUrl, "_blank", "noopener,noreferrer");
+  }, []);
+
+  const downloadCreation = useCallback((item: StudioHistoryItem) => {
+    if (item.status !== "done" || !item.videoUrl) return;
+    const a = document.createElement("a");
+    a.href = item.videoUrl;
+    a.download = `genjutsu-${item.id}.mp4`;
+    a.rel = "noopener";
+    a.target = "_blank";
+    a.click();
+  }, []);
 
   if (!ready) {
     return (
@@ -72,7 +103,7 @@ export default function AccountPage() {
   }
 
   return (
-    <div className="page-shell section-pad mx-auto max-w-lg pt-28">
+    <div className="page-shell section-pad mx-auto max-w-2xl pt-28">
       <h1 className="font-display text-3xl font-semibold tracking-tight">
         Account
       </h1>
@@ -109,6 +140,36 @@ export default function AccountPage() {
           Log out
         </button>
       </div>
+
+      <section className="mt-10">
+        <div className="mb-3 flex items-end justify-between gap-3">
+          <div>
+            <h2 className="text-lg font-semibold tracking-tight text-fg">
+              Creations
+            </h2>
+            <p className="mt-1 text-[0.75rem] text-fg-subtle">
+              Cloud history for this account — Ready, Generating, and Failed.
+            </p>
+          </div>
+          {creationsReady ? (
+            <span className="text-[0.7rem] tabular-nums text-fg-subtle">
+              {creations.length}
+            </span>
+          ) : null}
+        </div>
+        {!creationsReady ? (
+          <p className="rounded-xl border border-white/[0.08] bg-black/30 px-4 py-8 text-center text-sm text-fg-muted">
+            Loading creations…
+          </p>
+        ) : (
+          <StudioHistoryPanel
+            items={creations}
+            onSelect={openCreation}
+            onDownload={downloadCreation}
+            emptyHint="Generate a video in the studio — it will show up here across devices."
+          />
+        )}
+      </section>
     </div>
   );
 }

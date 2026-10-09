@@ -188,17 +188,22 @@ export function MotionStudio() {
     setHistory(loadStudioHistory());
   }, []);
 
-  useEffect(() => {
+  const refreshCloudHistory = useCallback(() => {
     if (!isLoggedIn) return;
-    let cancelled = false;
     void fetchCloudStudioHistory(24).then((cloud) => {
-      if (cancelled || cloud == null) return;
+      if (cloud == null) return;
       setHistory((prev) => mergeCloudStudioHistory(prev, cloud));
     });
-    return () => {
-      cancelled = true;
-    };
   }, [isLoggedIn]);
+
+  useEffect(() => {
+    refreshCloudHistory();
+  }, [refreshCloudHistory]);
+
+  useEffect(() => {
+    if (panelMode !== "history" || !isLoggedIn) return;
+    refreshCloudHistory();
+  }, [panelMode, isLoggedIn, refreshCloudHistory]);
 
   useEffect(() => {
     function onDoc(e: MouseEvent) {
