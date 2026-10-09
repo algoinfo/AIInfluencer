@@ -17,13 +17,8 @@ export default function DanceVideoPage() {
       title="Free AI Dance Video Generator"
       subtitle={`Start free with ${WELCOME_CREDITS} welcome credits — upload a photo, add a dance reference, and generate a real motion-transfer clip in the studio.`}
       tags={["Free to start", "Photo → dance", "Welcome credits"]}
-      primaryCta={{ href: "/login", label: "Start free" }}
-      secondaryCta={{ href: "/#studio", label: "Open studio" }}
-      demos={[
-        { label: "Your photo", tone: "character" },
-        { label: "Dance reference", tone: "reference" },
-        { label: "Dance video", tone: "output" },
-      ]}
+      primaryCta={{ href: "#studio", label: "Generate free dance" }}
+      secondaryCta={{ href: "/login", label: "Start free" }}
       features={[
         {
           title: `${WELCOME_CREDITS} free credits on signup`,

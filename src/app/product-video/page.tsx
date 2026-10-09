@@ -22,13 +22,8 @@ export default function ProductVideoPage() {
       title="AI Product Video Generator"
       subtitle="Attach a pack shot or hero still to a turn, hand demo, or lifestyle move — short AI product video without a full reshoot."
       tags={["Pack shot", "Object swap", "Motion transfer"]}
-      primaryCta={{ href: "/#studio", label: "Generate product video" }}
+      primaryCta={{ href: "#studio", label: "Generate product video" }}
       secondaryCta={{ href: "/examples", label: "See Examples" }}
-      demos={[
-        { label: "Product still", tone: "character" },
-        { label: "Demo reference", tone: "reference" },
-        { label: "Product clip", tone: "output" },
-      ]}
       features={[
         {
           title: "Still stays the hero",

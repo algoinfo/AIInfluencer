@@ -18,13 +18,8 @@ export default function AvatarVideoGeneratorPage() {
       title="AI Avatar Video Generator"
       subtitle="Generate avatar videos from a locked character still plus a performance reference — consistent face and body across takes."
       tags={["Avatar still", "Motion transfer", "Consistent identity"]}
-      primaryCta={{ href: "/#studio", label: "Generate avatar video" }}
+      primaryCta={{ href: "#studio", label: "Generate avatar video" }}
       secondaryCta={{ href: "/ai-influencer", label: "AI influencer flow" }}
-      demos={[
-        { label: "Avatar still", tone: "character" },
-        { label: "Performance", tone: "reference" },
-        { label: "Avatar video", tone: "output" },
-      ]}
       features={[
         {
           title: "One avatar, many performances",

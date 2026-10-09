@@ -22,17 +22,12 @@ export default function AIInfluencerPage() {
       title="AI Influencer Video Generator"
       subtitle="Lock a consistent AI character, then bring it to life with motion transfer — walks, dance, and UGC-style performances from one identity."
       tags={["Identity first", "Motion transfer", "Batch content"]}
-      primaryCta={{ href: "/#studio", label: "Open Genjutsu studio" }}
+      primaryCta={{ href: "#studio", label: "Open Genjutsu studio" }}
       secondaryCta={{
         href: "https://aiinfluencer.world",
         label: "Create character",
         external: true,
       }}
-      demos={[
-        { label: "Character", tone: "character" },
-        { label: "Reference", tone: "reference" },
-        { label: "Influencer video", tone: "output" },
-      ]}
       features={[
         {
           title: "Identity first",

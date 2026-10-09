@@ -19,13 +19,8 @@ export default function AiPetDancePage() {
       title="AI Pet Dance Generator"
       subtitle="Upload a clear pet photo, pick one of 12 dance templates, and generate a shareable AI pet dance video — niche motion transfer, not a generic people tool."
       tags={["Dogs & cats", "12 templates", "Motion transfer"]}
-      primaryCta={{ href: "/#studio", label: "Make pet dance" }}
+      primaryCta={{ href: "#studio", label: "Make pet dance" }}
       secondaryCta={{ href: "/login", label: "Start free" }}
-      demos={[
-        { label: "Pet photo", tone: "character" },
-        { label: "Dance template", tone: "reference" },
-        { label: "Pet dance video", tone: "output" },
-      ]}
       features={[
         {
           title: "12+ named dance templates",
@@ -85,7 +80,7 @@ export default function AiPetDancePage() {
       ]}
       related={[
         { href: "/dance-video", label: "Free dance (people)" },
-        { href: "/#studio", label: "Studio" },
+        { href: "#studio", label: "Studio" },
         { href: "/login", label: "Start free" },
         { href: "/examples", label: "Examples" },
       ]}

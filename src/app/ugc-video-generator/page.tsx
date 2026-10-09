@@ -17,13 +17,8 @@ export default function UgcVideoGeneratorPage() {
       title="AI UGC Video Generator"
       subtitle="Make creator-style UGC ads from a still + a real phone-native performance. Keep the hook timing; swap the face or product."
       tags={["One keyword focus", "Motion transfer", "Ad variants"]}
-      primaryCta={{ href: "/#studio", label: "Generate UGC video" }}
+      primaryCta={{ href: "#studio", label: "Generate UGC video" }}
       secondaryCta={{ href: "/pricing", label: "Credits & pricing" }}
-      demos={[
-        { label: "Talent / product still", tone: "character" },
-        { label: "UGC performance", tone: "reference" },
-        { label: "UGC ad output", tone: "output" },
-      ]}
       features={[
         {
           title: "Performance you already trust",
@@ -80,7 +75,7 @@ export default function UgcVideoGeneratorPage() {
         },
       ]}
       related={[
-        { href: "/#studio", label: "Studio" },
+        { href: "#studio", label: "Studio" },
         { href: "/pricing", label: "Pricing" },
         { href: "/dance-video", label: "Free dance video" },
         { href: "/avatar-video-generator", label: "Avatar video" },

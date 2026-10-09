@@ -1,8 +1,8 @@
 import Link from "next/link";
+import { MotionStudio } from "@/components/home/MotionStudio";
 import { CTA } from "@/components/ui/CTA";
 import { FeatureCard } from "@/components/ui/FeatureCard";
 import { PageHero } from "@/components/ui/PageHero";
-import { VideoDemo } from "@/components/ui/VideoDemo";
 
 export type UseCaseSection = {
   heading: string;
@@ -32,7 +32,6 @@ export type UseCasePageProps = {
   tags?: string[];
   primaryCta: CtaLink;
   secondaryCta?: CtaLink;
-  demos?: { label: string; tone: "character" | "reference" | "output" }[];
   features: { title: string; body: string }[];
   templatesHeading?: string;
   templates?: UseCaseTemplate[];
@@ -50,11 +49,6 @@ export function UseCasePage({
   tags,
   primaryCta,
   secondaryCta,
-  demos = [
-    { label: "Character", tone: "character" },
-    { label: "Reference", tone: "reference" },
-    { label: "Output", tone: "output" },
-  ],
   features,
   templatesHeading = "Templates",
   templates,
@@ -90,14 +84,26 @@ export function UseCasePage({
         ]}
       />
 
+      <section className="border-b border-border bg-bg pb-10 pt-2 sm:pb-12">
+        <div className="page-shell">
+          <div className="mb-4 max-w-2xl">
+            <h2 className="font-display text-2xl font-semibold tracking-tight sm:text-3xl">
+              Generate in the studio
+            </h2>
+            <p className="mt-2 text-base leading-relaxed text-fg-muted">
+              Same tool as the homepage — upload your image and motion
+              reference, then generate with credits after login.
+            </p>
+          </div>
+          <div className="mx-auto flex h-[min(85vh,920px)] min-h-[560px] w-full max-w-6xl">
+            <MotionStudio />
+          </div>
+        </div>
+      </section>
+
       <section className="section-pad">
         <div className="page-shell">
           <div className="grid gap-4 md:grid-cols-3">
-            {demos.map((demo) => (
-              <VideoDemo key={demo.label} label={demo.label} tone={demo.tone} />
-            ))}
-          </div>
-          <div className="mt-14 grid gap-4 md:grid-cols-3">
             {features.map((item, index) => (
               <FeatureCard
                 key={item.title}
