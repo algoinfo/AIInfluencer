@@ -88,6 +88,9 @@ type StudioModel = {
   mark: string;
   multiplier: number;
   provider: "higgsfield" | "fal";
+  /** Typical wall-clock wait for a short clip (shown on Generate + busy UI). */
+  etaLabel: string;
+  typicalWaitSec: number;
 };
 
 const models: StudioModel[] = [
@@ -98,6 +101,8 @@ const models: StudioModel[] = [
     mark: "gj",
     multiplier: 1,
     provider: "higgsfield",
+    etaLabel: "~2–4 min",
+    typicalWaitSec: 180,
   },
   {
     id: "kling-v3-pro",
@@ -106,6 +111,8 @@ const models: StudioModel[] = [
     mark: "K3",
     multiplier: 1.5,
     provider: "fal",
+    etaLabel: "~2–4 min",
+    typicalWaitSec: 180,
   },
   {
     id: "kling-v3-standard",
@@ -114,6 +121,8 @@ const models: StudioModel[] = [
     mark: "V3",
     multiplier: 1.2,
     provider: "fal",
+    etaLabel: "~2–3 min",
+    typicalWaitSec: 150,
   },
   {
     id: "kling-v26-standard",
@@ -122,8 +131,12 @@ const models: StudioModel[] = [
     mark: "2.6",
     multiplier: 1,
     provider: "fal",
+    etaLabel: "~1–3 min",
+    typicalWaitSec: 120,
   },
 ];
+
+const OBJECT_SWAP_ETA = { etaLabel: "~2–4 min", typicalWaitSec: 180 };
 
 export function MotionStudio() {
   const { isLoggedIn, openAuthModal, refreshSession } = useAuth();
@@ -711,14 +724,17 @@ export function MotionStudio() {
   );
   const busy = status === "generating";
   const elapsedParts = formatElapsedParts(elapsedSec);
-  const typicalWaitSec = 150;
+  const eta = isObjectSwap
+    ? OBJECT_SWAP_ETA
+    : { etaLabel: model.etaLabel, typicalWaitSec: model.typicalWaitSec };
+  const typicalWaitSec = eta.typicalWaitSec;
   const progressPct = Math.min(96, (elapsedSec / typicalWaitSec) * 100);
   const phaseHint =
     elapsedSec < 15
       ? "Uploading assets…"
-      : elapsedSec < 45
+      : elapsedSec < Math.min(45, typicalWaitSec * 0.3)
         ? "Starting the model…"
-        : elapsedSec < 120
+        : elapsedSec < typicalWaitSec * 0.85
           ? "Rendering frames…"
           : "Almost there…";
 
@@ -850,8 +866,8 @@ export function MotionStudio() {
                         </span>
                         <span className="mt-0.5 block text-[0.72rem] font-medium text-fg-muted">
                           {isGenjutsuMotion
-                            ? `${genjutsuCreditsPerSecond(genjutsuResolution).toLocaleString()} credits/s · ${resolution}`
-                            : `${model.meta} · ${resolution}`}
+                            ? `${genjutsuCreditsPerSecond(genjutsuResolution).toLocaleString()} credits/s · ${resolution} · ${model.etaLabel}`
+                            : `${model.meta} · ${resolution} · ${model.etaLabel}`}
                         </span>
                       </span>
                     </span>
@@ -925,6 +941,7 @@ export function MotionStudio() {
                                   {duration != null
                                     ? ` · ${itemCredits.toLocaleString()} credits / ${duration}s`
                                     : ` · ${itemCredits.toLocaleString()} credits/s`}
+                                  {` · ${item.etaLabel}`}
                                 </span>
                               </span>
                             </button>
@@ -1167,12 +1184,16 @@ export function MotionStudio() {
               </span>
               {busy ? (
                 <span
-                  className="relative flex shrink-0 items-baseline gap-0.5 rounded-full bg-accent-ink/10 px-2.5 py-1 font-mono text-[0.8rem] font-semibold tabular-nums text-accent-ink"
+                  className="relative flex shrink-0 items-center gap-1.5 rounded-full bg-accent-ink/10 px-2.5 py-1 text-[0.7rem] font-semibold tabular-nums text-accent-ink"
                   aria-live="polite"
                 >
-                  <span>{elapsedParts.mm}</span>
-                  <span className="animate-pulse opacity-70">:</span>
-                  <span>{elapsedParts.ss}</span>
+                  <span className="font-mono text-[0.8rem]">
+                    {elapsedParts.mm}
+                    <span className="animate-pulse opacity-70">:</span>
+                    {elapsedParts.ss}
+                  </span>
+                  <span className="opacity-45">/</span>
+                  <span>{eta.etaLabel}</span>
                 </span>
               ) : (
                 <span
@@ -1194,12 +1215,20 @@ export function MotionStudio() {
                         ·
                       </span>
                       <span>{sellCredits.toLocaleString()} credits</span>
+                      <span
+                        className={
+                          ready ? "text-accent-ink/40" : "text-fg-muted/60"
+                        }
+                      >
+                        ·
+                      </span>
+                      <span>{eta.etaLabel}</span>
                     </>
                   ) : (
                     <span>
                       {usesGenjutsuPricing
-                        ? `${genjutsuCreditsPerSecond(genjutsuResolution).toLocaleString()} credits/s · ${resolution}`
-                        : `${CREDITS_PER_SECOND} credits/s · ×${model.multiplier} · ${resolution}`}
+                        ? `${genjutsuCreditsPerSecond(genjutsuResolution).toLocaleString()} credits/s · ${eta.etaLabel}`
+                        : `${CREDITS_PER_SECOND} credits/s · ${eta.etaLabel}`}
                     </span>
                   )}
                 </span>
@@ -1218,18 +1247,18 @@ export function MotionStudio() {
                   ? "Add a reference image and source video first."
                   : "Add a character image and motion video first."
                 : status === "generating"
-                  ? `${phaseHint} · ${elapsedParts.label}`
+                  ? `${phaseHint} · ${elapsedParts.label} / ${eta.etaLabel}`
                   : status === "error"
                     ? errorMessage || "Generation failed."
                     : status === "done"
                       ? `Done in ${lastElapsedSec != null ? formatElapsedParts(lastElapsedSec).label : "—"} · ${duration ?? "?"}s clip · ${modelMark} · ${resolution}${lastPrompt ? (usingDefaultPrompt ? " · default prompt" : " · custom prompt") : ""}.`
                       : duration != null
                         ? usesGenjutsuPricing
-                          ? `Credits follow video length · ${genjutsuCreditsPerSecond(genjutsuResolution).toLocaleString()} credits/s · ${resolution}`
-                          : `Credits follow motion length · ${CREDITS_PER_SECOND} credits/s ×${model.multiplier} · ${resolution}`
+                          ? `Credits follow video length · ${genjutsuCreditsPerSecond(genjutsuResolution).toLocaleString()} credits/s · usually ${eta.etaLabel}`
+                          : `Credits follow motion length · ${CREDITS_PER_SECOND} credits/s ×${model.multiplier} · usually ${eta.etaLabel}`
                         : isObjectSwap
-                          ? "Reference + video → object swap"
-                          : "Character + motion → AI video"}
+                          ? `Reference + video → object swap · usually ${eta.etaLabel}`
+                          : `Character + motion → AI video · usually ${eta.etaLabel}`}
             </p>
           </div>
         </div>
@@ -1340,6 +1369,9 @@ export function MotionStudio() {
                       <p className="mt-3 text-sm font-medium text-fg">
                         {phaseHint}
                       </p>
+                      <p className="mt-1 text-[0.75rem] text-fg-subtle">
+                        {modelMark} · usually {eta.etaLabel}
+                      </p>
                       <div className="mt-4 h-1 w-44 overflow-hidden rounded-full bg-white/[0.08]">
                         <div
                           className="h-full rounded-full bg-accent transition-[width] duration-300 ease-out"
@@ -1347,7 +1379,8 @@ export function MotionStudio() {
                         />
                       </div>
                       <p className="mt-3 text-center text-[11px] text-fg-subtle">
-                        Usually 1–3 min · keep this tab open
+                        {elapsedParts.label} / {eta.etaLabel} · keep this tab
+                        open
                       </p>
                     </div>
                   ) : null}
