@@ -309,3 +309,35 @@ export async function deleteGenerationJobForUser(
   });
   return (result.rowsAffected ?? 0) > 0;
 }
+
+/** True when this user owns a completed job that points at the R2 key. */
+export async function userOwnsGenerationR2Key(
+  userEmail: string,
+  r2Key: string,
+): Promise<boolean> {
+  await ensureSchema();
+  const db = getDb();
+  const result = await db.execute({
+    sql: `SELECT id FROM generation_jobs
+          WHERE user_email = ? AND output_r2_key = ?
+          LIMIT 1`,
+    args: [userEmail, r2Key],
+  });
+  return result.rows.length > 0;
+}
+
+export async function updateGenerationJobOutputUrl(
+  id: string,
+  input: { outputUrl: string; outputR2Key?: string | null },
+): Promise<void> {
+  await ensureSchema();
+  const db = getDb();
+  await db.execute({
+    sql: `UPDATE generation_jobs
+          SET output_url = ?,
+              output_r2_key = COALESCE(?, output_r2_key),
+              updated_at = datetime('now')
+          WHERE id = ?`,
+    args: [input.outputUrl, input.outputR2Key ?? null, id],
+  });
+}

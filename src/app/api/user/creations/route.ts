@@ -7,16 +7,25 @@ import {
   type GenerationJobProduct,
 } from "@/lib/generation-jobs";
 import { ensureHttpsProxyDispatcher } from "@/lib/https-proxy";
+import { durableR2Url } from "@/lib/r2";
+import { preferHistoryVideoUrl } from "@/lib/r2-url";
 import { getRequestSessionFromReq } from "@/lib/request-session";
 
 function toItem(
   job: Awaited<ReturnType<typeof listGenerationJobsByUserEmail>>[number],
 ) {
+  const videoUrl = preferHistoryVideoUrl({
+    r2Url: durableR2Url(job.outputR2Key),
+    r2Key: job.outputR2Key,
+    fallbackUrl: job.outputUrl,
+  });
+
   return {
     id: job.id,
     title: job.title,
     createdAt: job.createdAt,
-    videoUrl: job.outputUrl || "",
+    videoUrl,
+    r2Key: job.outputR2Key,
     durationSec: job.durationSec ?? 0,
     modelMark: job.modelMark || "—",
     resolution: job.resolution || undefined,
@@ -101,10 +110,15 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const videoUrl = body.videoUrl?.trim() || "";
-    if (!videoUrl) {
+    const r2Key = body.r2Key?.trim() || null;
+    const videoUrl = preferHistoryVideoUrl({
+      r2Url: durableR2Url(r2Key),
+      r2Key,
+      fallbackUrl: body.videoUrl,
+    });
+    if (!videoUrl && !r2Key) {
       return NextResponse.json(
-        { error: "videoUrl is required for completed creations." },
+        { error: "videoUrl or r2Key is required for completed creations." },
         { status: 400 },
       );
     }
@@ -115,8 +129,8 @@ export async function POST(req: NextRequest) {
       userEmail: email,
       title,
       product,
-      outputUrl: videoUrl,
-      outputR2Key: body.r2Key ?? null,
+      outputUrl: videoUrl || durableR2Url(r2Key) || "",
+      outputR2Key: r2Key,
       durationSec: body.durationSec ?? null,
       modelMark: body.modelMark ?? null,
       resolution: body.resolution ?? null,

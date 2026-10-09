@@ -3,6 +3,13 @@
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { useAuth } from "@/components/auth/AuthProvider";
+import {
+  CREDITS_UPDATED_EVENT,
+  type CreditsUpdatedDetail,
+  fetchUserCredits,
+  getCachedCredits,
+  publishCreditsUpdated,
+} from "@/lib/credits-client";
 
 function displayNameFromEmail(email: string) {
   const local = email.split("@")[0] ?? email;
@@ -12,8 +19,6 @@ function displayNameFromEmail(email: string) {
 function formatCredits(credits: number) {
   return credits.toLocaleString("en-US");
 }
-
-let cachedNavCredits: { email: string; credits: number } | null = null;
 
 export function UserAccountMenu({
   email,
@@ -25,36 +30,44 @@ export function UserAccountMenu({
   const { logout } = useAuth();
   const rootRef = useRef<HTMLDivElement>(null);
   const [open, setOpen] = useState(false);
-  const [credits, setCredits] = useState<number | null>(null);
+  const [credits, setCredits] = useState<number | null>(() =>
+    getCachedCredits(email),
+  );
 
   const name = displayNameFromEmail(email);
   const compactLabel =
     credits == null ? name : `${formatCredits(credits)} · ${name}`;
 
   useEffect(() => {
-    if (cachedNavCredits?.email === email) {
-      setCredits(cachedNavCredits.credits);
-    }
-  }, [email]);
+    const cached = getCachedCredits(email);
+    if (cached != null) setCredits(cached);
 
-  useEffect(() => {
     let cancelled = false;
-    fetch("/api/user/credits", { credentials: "include" })
-      .then(async (res) => {
-        if (!res.ok) throw new Error("credits");
-        return (await res.json()) as { credits: number };
-      })
-      .then((data) => {
-        if (!cancelled) {
-          cachedNavCredits = { email, credits: data.credits };
-          setCredits(data.credits);
-        }
+    void fetchUserCredits()
+      .then((value) => {
+        if (cancelled) return;
+        setCredits(value);
+        publishCreditsUpdated(value, email);
       })
       .catch(() => {
         if (!cancelled) setCredits(null);
       });
+
     return () => {
       cancelled = true;
+    };
+  }, [email]);
+
+  useEffect(() => {
+    const onCreditsUpdated = (event: Event) => {
+      const detail = (event as CustomEvent<CreditsUpdatedDetail>).detail;
+      if (!detail || typeof detail.credits !== "number") return;
+      if (detail.email && detail.email !== email) return;
+      setCredits(detail.credits);
+    };
+    window.addEventListener(CREDITS_UPDATED_EVENT, onCreditsUpdated);
+    return () => {
+      window.removeEventListener(CREDITS_UPDATED_EVENT, onCreditsUpdated);
     };
   }, [email]);
 

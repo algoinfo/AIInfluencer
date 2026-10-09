@@ -6,11 +6,11 @@ type Size = "md" | "lg";
 
 const variants: Record<Variant, string> = {
   primary:
-    "bg-accent text-accent-ink hover:bg-accent-strong shadow-[0_8px_28px_rgba(216,255,62,0.22)] ring-1 ring-inset ring-black/10",
+    "bg-accent !text-[#0a0a0c] hover:bg-accent-strong shadow-[0_8px_28px_rgba(216,255,62,0.28)] ring-1 ring-inset ring-black/20",
   secondary:
-    "border border-white/20 bg-white/[0.08] text-fg hover:border-white/35 hover:bg-white/[0.12]",
+    "border border-white/30 bg-white/[0.12] !text-fg hover:border-white/45 hover:bg-white/[0.18]",
   ghost:
-    "bg-white/[0.06] text-fg ring-1 ring-inset ring-white/[0.1] hover:bg-white/[0.1]",
+    "bg-white/[0.07] !text-fg ring-1 ring-inset ring-white/[0.16] hover:bg-white/[0.14]",
 };
 
 const sizes: Record<Size, string> = {

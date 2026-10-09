@@ -3,6 +3,8 @@ import type { NextConfig } from "next";
 const nextConfig: NextConfig = {
   cacheComponents: true,
   partialPrefetching: true,
+  // Keep POST /api/paid/callback/ from becoming a 308 that breaks webhooks.
+  skipTrailingSlashRedirect: true,
   images: {
     remotePatterns: [
       {

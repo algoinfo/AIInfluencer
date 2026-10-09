@@ -33,15 +33,18 @@ import {
   probeVideoDurationSeconds,
 } from "@/lib/probe-video-duration";
 import {
+  durableR2Url,
   isR2Configured,
   mirrorRemoteUrlToR2Key,
   planR2Object,
   uploadToR2,
 } from "@/lib/r2";
+import { preferHistoryVideoUrl } from "@/lib/r2-url";
 import {
   createGenerationJob,
   saveCompletedGenerationJob,
   saveFailedGenerationJob,
+  updateGenerationJobOutputUrl,
 } from "@/lib/generation-jobs";
 import { ensureHttpsProxyDispatcher } from "@/lib/https-proxy";
 import {
@@ -444,37 +447,22 @@ export async function POST(req: NextRequest) {
       sourceUrl: sourceUrl.slice(0, 120),
     });
 
-    // Plan R2 key up front, return provider URL immediately for fast playback,
-    // and mirror the file to R2 in the background for durable history.
+    // Plan R2 key up front, return fal URL for instant preview playback,
+    // and mirror to R2 for durable history (never keep fal in history when R2 works).
     const planned = planR2Object({
       category: "res-video",
       filename: `${mode}-${Date.now()}.mp4`,
       contentType: "video/mp4",
     });
     const r2Key = planned?.key ?? null;
-    const r2Url = planned?.url ?? null;
+    const r2Url = planned?.url ?? durableR2Url(r2Key);
+    const historyUrl = preferHistoryVideoUrl({
+      r2Url,
+      r2Key,
+      fallbackUrl: sourceUrl,
+    });
 
-    if (planned) {
-      log("r2 mirror scheduled", { r2Key, r2Url });
-      after(async () => {
-        const mirrorStartedAt = Date.now();
-        const ok = await mirrorRemoteUrlToR2Key({
-          sourceUrl,
-          key: planned.key,
-          contentType: "video/mp4",
-        });
-        log("r2 mirror finished", {
-          r2Key: planned.key,
-          ok,
-          mirrorMs: Date.now() - mirrorStartedAt,
-        });
-      });
-    } else {
-      log("r2 mirror skipped — not configured");
-    }
-
-    const historyUrl = r2Url || sourceUrl;
-    // Always persist completed generations for logged-in users (Turso).
+    // Persist history row with R2 URL/key before background mirror finishes.
     if (jobPersist) {
       try {
         const job = await saveCompletedGenerationJob({
@@ -503,6 +491,40 @@ export async function POST(req: NextRequest) {
             jobError instanceof Error ? jobError.message : String(jobError),
         });
       }
+    }
+
+    if (planned) {
+      const jobIdForMirror = cloudJobId;
+      log("r2 mirror scheduled", { r2Key, r2Url });
+      after(async () => {
+        const mirrorStartedAt = Date.now();
+        const ok = await mirrorRemoteUrlToR2Key({
+          sourceUrl,
+          key: planned.key,
+          contentType: "video/mp4",
+        });
+        log("r2 mirror finished", {
+          r2Key: planned.key,
+          ok,
+          mirrorMs: Date.now() - mirrorStartedAt,
+        });
+        if (ok && jobIdForMirror) {
+          const durable = durableR2Url(planned.key) ?? historyUrl;
+          try {
+            await updateGenerationJobOutputUrl(jobIdForMirror, {
+              outputUrl: durable,
+              outputR2Key: planned.key,
+            });
+          } catch (error) {
+            log("r2 url update failed", {
+              jobId: jobIdForMirror,
+              error: error instanceof Error ? error.message : String(error),
+            });
+          }
+        }
+      });
+    } else {
+      log("r2 mirror skipped — not configured");
     }
 
     // Never fail a successful render because Turso/usage bookkeeping broke.

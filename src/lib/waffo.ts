@@ -9,6 +9,7 @@ import { getPricingTier, PRICING_TIERS } from "@/data/pricing";
 import {
   completeTierPurchase,
   completeTierPurchaseByEmail,
+  refundTierPurchaseByProviderRef,
 } from "@/lib/user-credits";
 
 const TIER_PRODUCT_ENV: Record<string, { test: string; live: string }> = {
@@ -169,12 +170,15 @@ export async function createWaffoCheckout(input: {
 }): Promise<WaffoCheckoutSession> {
   const orderMerchantExternalId = `genjutsu:${input.userId}:${input.tierId}:${Date.now()}`;
 
+  const successUrl = new URL(input.successUrl);
+  successUrl.searchParams.set("order_ref", orderMerchantExternalId);
+
   const result = await getWaffoClient().checkout.authenticated.create({
     productId: input.productId,
     currency: "USD",
     buyerIdentity: input.userId,
     buyerEmail: input.email,
-    successUrl: input.successUrl,
+    successUrl: successUrl.toString(),
     metadata: {
       tierId: input.tierId,
       userId: input.userId,
@@ -194,49 +198,109 @@ interface WaffoOrderLookup {
   status: string;
   productId?: string | null;
   orderMerchantExternalId?: string | null;
-  metadata?: Record<string, string> | null;
+  merchantProvidedBuyerIdentity?: string | null;
+  metadata?: Record<string, string> | string | null;
+  onetimeProduct?: { id?: string | null; name?: string | null } | null;
+}
+
+function getWaffoStoreId(): string {
+  const storeId = process.env.WAFFO_STORE_ID?.trim();
+  if (!storeId) {
+    throw new Error("WAFFO_STORE_ID is not configured.");
+  }
+  return storeId;
+}
+
+function parseOrderMetadata(
+  raw: WaffoOrderLookup["metadata"],
+): Record<string, string> {
+  if (!raw) return {};
+  if (typeof raw === "object") {
+    const out: Record<string, string> = {};
+    for (const [key, value] of Object.entries(raw)) {
+      if (typeof value === "string") out[key] = value;
+    }
+    return out;
+  }
+  try {
+    const parsed = JSON.parse(raw) as Record<string, unknown>;
+    const out: Record<string, string> = {};
+    for (const [key, value] of Object.entries(parsed)) {
+      if (typeof value === "string") out[key] = value;
+    }
+    return out;
+  } catch {
+    return {};
+  }
+}
+
+/** Parse `genjutsu:{userId}:{tierId}:{timestamp}` merchant external ids. */
+export function parseGenjutsuOrderRef(externalId: string | null | undefined): {
+  userId: string;
+  tierId: string;
+} | null {
+  if (!externalId) return null;
+  const match = externalId
+    .trim()
+    .match(/^genjutsu:([a-f0-9-]{36}):([a-z0-9_-]+):(\d+)$/i);
+  if (!match) return null;
+  return { userId: match[1], tierId: match[2] };
 }
 
 async function queryWaffoOrderByExternalId(
   externalId: string,
 ): Promise<WaffoOrderLookup | null> {
   const result = await getWaffoClient().graphql.query<{
-    orders?: WaffoOrderLookup[];
+    onetimeOrders?: WaffoOrderLookup[];
   }>({
-    query: `query ($ref: String!) {
-      orders(filter: { orderMerchantExternalId: { eq: $ref } }) {
+    query: `query ($storeId: String!, $ref: String!) {
+      onetimeOrders(
+        storeId: $storeId
+        filter: { orderMerchantExternalId: { eq: $ref } }
+        limit: 5
+      ) {
         id
         status
-        productId
         orderMerchantExternalId
+        merchantProvidedBuyerIdentity
         metadata
+        onetimeProduct { id name }
       }
     }`,
-    variables: { ref: externalId },
+    variables: { storeId: getWaffoStoreId(), ref: externalId },
   });
 
-  return result.data?.orders?.[0] ?? null;
+  if (result.errors?.length) {
+    console.error("[waffo/complete] external lookup errors", result.errors);
+  }
+
+  return result.data?.onetimeOrders?.[0] ?? null;
 }
 
 async function queryWaffoOrderById(
   orderId: string,
 ): Promise<WaffoOrderLookup | null> {
   const result = await getWaffoClient().graphql.query<{
-    order?: WaffoOrderLookup | null;
+    onetimeOrder?: WaffoOrderLookup | null;
   }>({
     query: `query ($id: String!) {
-      order(id: $id) {
+      onetimeOrder(id: $id) {
         id
         status
-        productId
         orderMerchantExternalId
+        merchantProvidedBuyerIdentity
         metadata
+        onetimeProduct { id name }
       }
     }`,
     variables: { id: orderId },
   });
 
-  return result.data?.order ?? null;
+  if (result.errors?.length) {
+    console.error("[waffo/complete] id lookup errors", result.errors);
+  }
+
+  return result.data?.onetimeOrder ?? null;
 }
 
 function isWaffoOrderPaid(status: string | undefined): boolean {
@@ -246,6 +310,18 @@ function isWaffoOrderPaid(status: string | undefined): boolean {
     normalized === "paid" ||
     normalized === "succeeded"
   );
+}
+
+function resolveTierIdFromOrder(order: WaffoOrderLookup): string | null {
+  const metadata = parseOrderMetadata(order.metadata);
+  if (metadata.tierId?.trim()) return metadata.tierId.trim();
+
+  const fromRef = parseGenjutsuOrderRef(order.orderMerchantExternalId);
+  if (fromRef?.tierId) return fromRef.tierId;
+
+  const productId = order.onetimeProduct?.id ?? order.productId ?? null;
+  if (productId) return getTierIdForWaffoProduct(productId);
+  return null;
 }
 
 export async function resolveWaffoPurchase(input: {
@@ -284,15 +360,17 @@ export async function resolveWaffoPurchase(input: {
     throw new Error("Payment is not completed yet. Please refresh in a moment.");
   }
 
-  const metadata = order.metadata ?? {};
-  const metadataUserId = metadata.userId?.trim();
+  const metadata = parseOrderMetadata(order.metadata);
+  const metadataUserId =
+    metadata.userId?.trim() ||
+    order.merchantProvidedBuyerIdentity?.trim() ||
+    parseGenjutsuOrderRef(order.orderMerchantExternalId)?.userId ||
+    null;
   if (metadataUserId && metadataUserId !== input.expectedUserId) {
     throw new Error("This payment belongs to a different account.");
   }
 
-  const tierId =
-    metadata.tierId?.trim() ||
-    (order.productId ? getTierIdForWaffoProduct(order.productId) : null);
+  const tierId = resolveTierIdFromOrder(order);
   if (!tierId) {
     throw new Error("Unknown product for this payment.");
   }
@@ -309,6 +387,22 @@ export function verifyWaffoWebhook(
   });
 }
 
+function isOrderCompletedEvent(eventType: string): boolean {
+  const normalized = eventType.trim().toLowerCase();
+  return (
+    normalized === WebhookEventType.OrderCompleted ||
+    normalized === "order.completed"
+  );
+}
+
+function tierIdFromProductName(name: string | null | undefined): string | null {
+  const normalized = name?.trim().toLowerCase();
+  if (!normalized) return null;
+  if (normalized === "basic" || normalized.includes("basic")) return "basic";
+  if (normalized === "pro" || normalized.includes("pro")) return "pro";
+  return null;
+}
+
 export function parseWaffoOrderCompleted(
   event: WebhookEvent,
 ): {
@@ -317,22 +411,61 @@ export function parseWaffoOrderCompleted(
   userId: string | null;
   userEmail: string | null;
 } | null {
-  if (event.eventType !== WebhookEventType.OrderCompleted) return null;
+  if (!isOrderCompletedEvent(String(event.eventType ?? ""))) {
+    console.log("[waffo/webhook] skip non-order-completed", {
+      eventType: event.eventType,
+    });
+    return null;
+  }
 
-  const data = event.data as WebhookEventData;
-  const metadata = data.orderMetadata ?? {};
+  const data = event.data as WebhookEventData & {
+    orderMetadata?: Record<string, string> | string | null;
+    productId?: string | null;
+  };
+
+  const metadata = parseOrderMetadata(data.orderMetadata ?? null);
+  const fromRef = parseGenjutsuOrderRef(data.orderMerchantExternalId);
+
   const resolvedTierId =
-    (typeof metadata.tierId === "string" && metadata.tierId) ||
+    metadata.tierId?.trim() ||
+    fromRef?.tierId ||
     (typeof metadata.productId === "string"
       ? getTierIdForWaffoProduct(metadata.productId)
-      : null);
+      : null) ||
+    (data.productId ? getTierIdForWaffoProduct(data.productId) : null) ||
+    tierIdFromProductName(data.productName);
 
   const userId =
-    (typeof metadata.userId === "string" && metadata.userId) ||
+    metadata.userId?.trim() ||
     data.merchantProvidedBuyerIdentity?.trim() ||
+    fromRef?.userId ||
     null;
   const userEmail = data.buyerEmail?.trim().toLowerCase() || null;
   const providerRef = data.orderId?.trim();
+
+  const isWaffoDashboardTest =
+    /\[TEST\]/i.test(String(data.productName ?? "")) ||
+    /\[TEST\]/i.test(String(data.orderMerchantExternalId ?? "")) ||
+    userEmail === "test-webhook@waffo.com";
+
+  console.log("[waffo/webhook] parse fields", {
+    eventType: event.eventType,
+    providerRef,
+    resolvedTierId,
+    userId,
+    userEmail,
+    orderMerchantExternalId: data.orderMerchantExternalId,
+    productName: data.productName,
+    metadataKeys: Object.keys(metadata),
+    isWaffoDashboardTest,
+  });
+
+  if (isWaffoDashboardTest) {
+    console.log(
+      "[waffo/webhook] Waffo dashboard verification ping — no credits (not a real purchase)",
+    );
+    return null;
+  }
 
   if (!providerRef || !resolvedTierId) return null;
   if (!userId && !userEmail) return null;
@@ -345,32 +478,195 @@ export function parseWaffoOrderCompleted(
   };
 }
 
-export async function processWaffoWebhookEvent(
+export type WaffoWebhookProcessResult = {
+  action:
+    | "ignored"
+    | "unknown_tier"
+    | "granted"
+    | "already_granted"
+    | "refunded"
+    | "already_refunded"
+    | "refund_payment_missing";
+  eventType: string;
+  tierId?: string;
+  tierName?: string;
+  providerRef?: string;
+  userId?: string | null;
+  userEmail?: string | null;
+  creditsGranted?: number;
+  creditsRevoked?: number;
+  balanceAfter?: number;
+};
+
+function isRefundSucceededEvent(eventType: string): boolean {
+  const normalized = eventType.trim().toLowerCase();
+  return (
+    normalized === WebhookEventType.RefundSucceeded ||
+    normalized === "refund.succeeded"
+  );
+}
+
+async function processOrderCompletedEvent(
   event: WebhookEvent,
-): Promise<void> {
+): Promise<WaffoWebhookProcessResult> {
   const parsed = parseWaffoOrderCompleted(event);
-  if (!parsed) return;
+  if (!parsed) {
+    console.log("[waffo/webhook] ignored (order.completed missing fields)", {
+      deliveryId: event.id,
+      eventType: event.eventType,
+    });
+    return { action: "ignored", eventType: event.eventType };
+  }
+
+  console.log("[waffo/webhook] parsed order", {
+    deliveryId: event.id,
+    tierId: parsed.tierId,
+    providerRef: parsed.providerRef,
+    userId: parsed.userId,
+    userEmail: parsed.userEmail,
+  });
 
   const tier = getPricingTier(parsed.tierId);
   if (!tier) {
-    console.warn("[waffo/webhook] unknown tier", { tierId: parsed.tierId });
-    return;
-  }
-
-  if (parsed.userId) {
-    await completeTierPurchase({
-      userId: parsed.userId,
+    console.warn("[waffo/webhook] unknown tier", {
+      deliveryId: event.id,
       tierId: parsed.tierId,
-      provider: "waffo",
-      providerRef: parsed.providerRef,
     });
-    return;
+    return {
+      action: "unknown_tier",
+      eventType: event.eventType,
+      tierId: parsed.tierId,
+      providerRef: parsed.providerRef,
+    };
   }
 
-  await completeTierPurchaseByEmail({
-    email: parsed.userEmail!,
-    tierId: parsed.tierId,
-    provider: "waffo",
+  const result = parsed.userId
+    ? await completeTierPurchase({
+        userId: parsed.userId,
+        tierId: parsed.tierId,
+        provider: "waffo",
+        providerRef: parsed.providerRef,
+      })
+    : await completeTierPurchaseByEmail({
+        email: parsed.userEmail!,
+        tierId: parsed.tierId,
+        provider: "waffo",
+        providerRef: parsed.providerRef,
+      });
+
+  const action = result.alreadyGranted ? "already_granted" : "granted";
+  console.log("[waffo/webhook] credit result", {
+    deliveryId: event.id,
+    action,
+    tierId: tier.id,
+    tierName: tier.name,
     providerRef: parsed.providerRef,
+    creditsGranted: result.creditsGranted,
+    balanceAfter: result.balanceAfter,
+    userId: parsed.userId,
+    userEmail: parsed.userEmail,
   });
+
+  return {
+    action,
+    eventType: event.eventType,
+    tierId: tier.id,
+    tierName: tier.name,
+    providerRef: parsed.providerRef,
+    userId: parsed.userId,
+    userEmail: parsed.userEmail,
+    creditsGranted: result.creditsGranted,
+    balanceAfter: result.balanceAfter,
+  };
+}
+
+async function processRefundSucceededEvent(
+  event: WebhookEvent,
+): Promise<WaffoWebhookProcessResult> {
+  const data = event.data as WebhookEventData;
+  const providerRef = data.orderId?.trim();
+  const refundRef =
+    data.paymentId?.trim() ||
+    data.refundTicketMerchantExternalId?.trim() ||
+    event.eventId?.trim() ||
+    null;
+
+  console.log("[waffo/webhook] parsed refund", {
+    deliveryId: event.id,
+    providerRef,
+    refundRef,
+    buyerEmail: data.buyerEmail,
+    amount: data.amount,
+    refundStatus: data.refundStatus,
+  });
+
+  if (!providerRef) {
+    console.warn("[waffo/webhook] refund missing orderId", {
+      deliveryId: event.id,
+    });
+    return { action: "ignored", eventType: event.eventType };
+  }
+
+  try {
+    const result = await refundTierPurchaseByProviderRef({
+      providerRef,
+      refundRef,
+    });
+    const action = result.alreadyRefunded ? "already_refunded" : "refunded";
+    console.log("[waffo/webhook] refund result", {
+      deliveryId: event.id,
+      action,
+      providerRef,
+      creditsRevoked: result.creditsRevoked,
+      balanceAfter: result.balanceAfter,
+      paymentId: result.paymentId,
+    });
+    return {
+      action,
+      eventType: event.eventType,
+      providerRef,
+      creditsRevoked: result.creditsRevoked,
+      balanceAfter: result.balanceAfter,
+    };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    if (/payment not found/i.test(message)) {
+      console.warn("[waffo/webhook] refund payment missing", {
+        deliveryId: event.id,
+        providerRef,
+        message,
+      });
+      return {
+        action: "refund_payment_missing",
+        eventType: event.eventType,
+        providerRef,
+      };
+    }
+    throw error;
+  }
+}
+
+export async function processWaffoWebhookEvent(
+  event: WebhookEvent,
+): Promise<WaffoWebhookProcessResult> {
+  console.log("[waffo/webhook] process start", {
+    deliveryId: event.id,
+    eventType: event.eventType,
+  });
+
+  const eventType = String(event.eventType ?? "");
+
+  if (isOrderCompletedEvent(eventType)) {
+    return processOrderCompletedEvent(event);
+  }
+
+  if (isRefundSucceededEvent(eventType)) {
+    return processRefundSucceededEvent(event);
+  }
+
+  console.log("[waffo/webhook] ignored (unsupported event)", {
+    deliveryId: event.id,
+    eventType: event.eventType,
+  });
+  return { action: "ignored", eventType: event.eventType };
 }

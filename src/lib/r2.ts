@@ -1,6 +1,7 @@
 import { GetObjectCommand, PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
 import { randomUUID } from "crypto";
 import { R2_PREFIX, type R2Category } from "@/lib/r2-paths";
+import { mediaProxyPathForR2Key } from "@/lib/r2-url";
 
 const LOG_PREFIX = "[r2]";
 
@@ -138,6 +139,56 @@ export function publicR2Url(key: string): string | null {
   return `${base}/${key}`;
 }
 
+/**
+ * Durable URL for history: public CDN when configured, otherwise same-origin
+ * `/api/media/r2/...` proxy (works with private buckets).
+ */
+export function durableR2Url(key: string | null | undefined): string | null {
+  if (!key?.trim()) return null;
+  return publicR2Url(key) ?? mediaProxyPathForR2Key(key);
+}
+
+export async function streamFromR2(key: string): Promise<{
+  body: ReadableStream<Uint8Array> | Blob | null;
+  contentType: string;
+  contentLength: number | undefined;
+} | null> {
+  if (!isR2Configured()) return null;
+  const bucket = process.env.R2_BUCKET || "vocalove";
+  try {
+    const res = await getR2Client().send(
+      new GetObjectCommand({ Bucket: bucket, Key: key }),
+    );
+    if (!res.Body) return null;
+    const body = res.Body.transformToWebStream
+      ? res.Body.transformToWebStream()
+      : null;
+    if (!body) return null;
+    return {
+      body,
+      contentType: res.ContentType || guessContentType(key),
+      contentLength:
+        typeof res.ContentLength === "number" ? res.ContentLength : undefined,
+    };
+  } catch (error) {
+    log("stream failed", {
+      key,
+      error: error instanceof Error ? error.message : String(error),
+    });
+    return null;
+  }
+}
+
+function guessContentType(key: string): string {
+  const lower = key.toLowerCase();
+  if (lower.endsWith(".webm")) return "video/webm";
+  if (lower.endsWith(".mov")) return "video/quicktime";
+  if (lower.endsWith(".png")) return "image/png";
+  if (lower.endsWith(".jpg") || lower.endsWith(".jpeg")) return "image/jpeg";
+  if (lower.endsWith(".webp")) return "image/webp";
+  return "video/mp4";
+}
+
 /** Build a stable key (+ public URL) before uploading, for fire-and-forget mirrors. */
 export function planR2Object(input: {
   category: R2Category;
@@ -152,7 +203,7 @@ export function planR2Object(input: {
     ? safeName.slice(0, safeName.lastIndexOf("."))
     : safeName;
   const key = `${prefix}${Date.now()}-${randomUUID().slice(0, 8)}-${base}${ext || ".mp4"}`;
-  return { key, url: publicR2Url(key) };
+  return { key, url: durableR2Url(key) };
 }
 
 export async function uploadToR2Key(input: {

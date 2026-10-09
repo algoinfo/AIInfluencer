@@ -54,8 +54,9 @@ export function PricingCheckoutButton({
           createdAt: Date.now(),
         });
       }
-      window.open(data.checkoutUrl, "_blank", "noopener,noreferrer");
-      setLoading(false);
+      // Same-tab redirect so return URL can finish crediting without
+      // depending on a different tab's storage.
+      window.location.assign(data.checkoutUrl);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not start checkout.");
       setLoading(false);

@@ -115,7 +115,7 @@ export function CreditsPricing({ compact = false }: CreditsPricingProps) {
       {!compact ? (
         <p className="mx-auto mt-10 max-w-xl text-center text-xs leading-relaxed text-fg-subtle">
           Credits are deducted per second of generated video. Packs never expire.
-          Log in to purchase — Waffo opens in a new tab.
+          Log in to purchase — checkout continues on Waffo, then returns here.
         </p>
       ) : null}
     </div>

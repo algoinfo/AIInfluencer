@@ -133,6 +133,8 @@ export interface PurchaseResult {
   paymentId: string;
   creditsGranted: number;
   balanceAfter: number;
+  /** True when provider_ref was already recorded (idempotent no-op). */
+  alreadyGranted?: boolean;
 }
 
 async function getPaymentByProviderRef(
@@ -165,9 +167,26 @@ export async function completeTierPurchase(input: {
 }): Promise<PurchaseResult> {
   await ensureSchema();
 
+  console.log("[credits] purchase start", {
+    userId: input.userId,
+    tierId: input.tierId,
+    provider: input.provider,
+    providerRef: input.providerRef,
+  });
+
   if (input.providerRef) {
     const existing = await getPaymentByProviderRef(input.providerRef);
-    if (existing) return existing;
+    if (existing) {
+      console.log("[credits] purchase skipped (already granted)", {
+        userId: input.userId,
+        tierId: input.tierId,
+        providerRef: input.providerRef,
+        creditsGranted: existing.creditsGranted,
+        balanceAfter: existing.balanceAfter,
+        paymentId: existing.paymentId,
+      });
+      return { ...existing, alreadyGranted: true };
+    }
   }
 
   const tier = getPricingTier(input.tierId);
@@ -208,7 +227,15 @@ export async function completeTierPurchase(input: {
   } catch (error) {
     if (input.providerRef) {
       const existing = await getPaymentByProviderRef(input.providerRef);
-      if (existing) return existing;
+      if (existing) {
+        console.log("[credits] purchase raced — using existing payment", {
+          userId: input.userId,
+          providerRef: input.providerRef,
+          creditsGranted: existing.creditsGranted,
+          balanceAfter: existing.balanceAfter,
+        });
+        return { ...existing, alreadyGranted: true };
+      }
     }
     throw error;
   }
@@ -228,16 +255,19 @@ export async function completeTierPurchase(input: {
   console.log("[credits] purchase granted", {
     userId: input.userId,
     tierId: tier.id,
+    tierName: tier.name,
     creditsGranted: tier.credits,
     balanceAfter,
     provider: input.provider,
     providerRef: input.providerRef,
+    paymentId,
   });
 
   return {
     paymentId,
     creditsGranted: tier.credits,
     balanceAfter,
+    alreadyGranted: false,
   };
 }
 
@@ -257,4 +287,141 @@ export async function completeTierPurchaseByEmail(input: {
     provider: input.provider,
     providerRef: input.providerRef,
   });
+}
+
+export interface RefundResult {
+  paymentId: string;
+  creditsRevoked: number;
+  balanceAfter: number;
+  alreadyRefunded?: boolean;
+}
+
+async function getPaymentRowByProviderRef(providerRef: string): Promise<{
+  paymentId: string;
+  userId: string;
+  tierId: string;
+  creditsGranted: number;
+  status: string;
+} | null> {
+  await ensureSchema();
+  const db = getDb();
+  const result = await db.execute({
+    sql: `SELECT id, user_id, tier_id, credits_granted, status
+          FROM payments
+          WHERE provider_ref = ?
+          LIMIT 1`,
+    args: [providerRef],
+  });
+  const row = result.rows[0];
+  if (!row) return null;
+  return {
+    paymentId: String(row.id),
+    userId: String(row.user_id),
+    tierId: String(row.tier_id),
+    creditsGranted: Number(row.credits_granted),
+    status: String(row.status ?? "completed"),
+  };
+}
+
+/**
+ * Claw back credits for a refunded Waffo order (idempotent on payment status).
+ * Floors balance at 0 if the user already spent some credits.
+ */
+export async function refundTierPurchaseByProviderRef(input: {
+  providerRef: string;
+  refundRef?: string | null;
+}): Promise<RefundResult> {
+  await ensureSchema();
+  const payment = await getPaymentRowByProviderRef(input.providerRef);
+  if (!payment) {
+    throw new Error("Payment not found for refund.");
+  }
+
+  const db = getDb();
+
+  if (payment.status === "refunded") {
+    const balance = await getUserCreditBalance(payment.userId);
+    console.log("[credits] refund skipped (already refunded)", {
+      paymentId: payment.paymentId,
+      providerRef: input.providerRef,
+      balanceAfter: balance.credits,
+    });
+    return {
+      paymentId: payment.paymentId,
+      creditsRevoked: payment.creditsGranted,
+      balanceAfter: balance.credits,
+      alreadyRefunded: true,
+    };
+  }
+
+  // Also idempotent if a refund tx already exists for this payment.
+  const existingTx = await db.execute({
+    sql: `SELECT 1 FROM credit_transactions
+          WHERE payment_id = ? AND type = 'refund'
+          LIMIT 1`,
+    args: [payment.paymentId],
+  });
+  if (existingTx.rows.length > 0) {
+    await db.execute({
+      sql: `UPDATE payments SET status = 'refunded' WHERE id = ?`,
+      args: [payment.paymentId],
+    });
+    const balance = await getUserCreditBalance(payment.userId);
+    return {
+      paymentId: payment.paymentId,
+      creditsRevoked: payment.creditsGranted,
+      balanceAfter: balance.credits,
+      alreadyRefunded: true,
+    };
+  }
+
+  const before = await getUserCreditBalance(payment.userId);
+  const revoke = Math.min(payment.creditsGranted, Math.max(0, before.credits));
+  const balanceAfter = Math.max(0, before.credits - payment.creditsGranted);
+
+  await db.execute({
+    sql: `UPDATE users SET credits_balance = ? WHERE id = ?`,
+    args: [balanceAfter, payment.userId],
+  });
+
+  const description = input.refundRef
+    ? `Refund · ${payment.creditsGranted.toLocaleString("en-US")} credits (order ${input.providerRef}, refund ${input.refundRef})`
+    : `Refund · ${payment.creditsGranted.toLocaleString("en-US")} credits (order ${input.providerRef})`;
+
+  await db.execute({
+    sql: `INSERT INTO credit_transactions (
+            id, user_id, type, amount, balance_after, description, payment_id
+          ) VALUES (?, ?, 'refund', ?, ?, ?, ?)`,
+    args: [
+      randomUUID(),
+      payment.userId,
+      -revoke,
+      balanceAfter,
+      description,
+      payment.paymentId,
+    ],
+  });
+
+  await db.execute({
+    sql: `UPDATE payments SET status = 'refunded' WHERE id = ?`,
+    args: [payment.paymentId],
+  });
+
+  console.log("[credits] refund applied", {
+    paymentId: payment.paymentId,
+    userId: payment.userId,
+    providerRef: input.providerRef,
+    refundRef: input.refundRef,
+    creditsGranted: payment.creditsGranted,
+    creditsRevoked: revoke,
+    balanceBefore: before.credits,
+    balanceAfter,
+  });
+
+  return {
+    paymentId: payment.paymentId,
+    creditsRevoked: revoke,
+    balanceAfter,
+    alreadyRefunded: false,
+  };
 }

@@ -30,7 +30,7 @@ const faqs = [
   },
   {
     q: "Is checkout live?",
-    a: "Login is required to buy. Checkout opens Waffo in a new tab; credits land on your account after payment.",
+    a: "Login is required to buy. Checkout continues on Waffo, then returns to your account and credits update automatically.",
   },
 ];
 

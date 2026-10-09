@@ -1,5 +1,7 @@
 /** Client-side generation history (like tell's inline creations list). */
 
+import { preferHistoryVideoUrl } from "@/lib/r2-url";
+
 export type StudioHistoryStatus = "generating" | "done" | "failed";
 
 export type StudioHistoryItem = {
@@ -232,6 +234,7 @@ export type CloudCreationItem = {
   title: string;
   createdAt: string;
   videoUrl: string;
+  r2Key?: string | null;
   durationSec: number;
   modelMark: string;
   resolution?: string;
@@ -246,7 +249,10 @@ export function cloudCreationToHistoryItem(
     id: item.id,
     title: item.title,
     createdAt: item.createdAt,
-    videoUrl: item.videoUrl,
+    videoUrl: preferHistoryVideoUrl({
+      r2Key: item.r2Key,
+      fallbackUrl: item.videoUrl,
+    }),
     durationSec: item.durationSec,
     modelMark: item.modelMark,
     resolution: item.resolution,

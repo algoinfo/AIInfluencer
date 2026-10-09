@@ -44,6 +44,7 @@ import {
   loadStudioDraft,
   saveStudioDraft,
 } from "@/lib/studio-draft";
+import { preferHistoryVideoUrl } from "@/lib/r2-url";
 import {
   fetchCloudStudioHistory,
   loadStudioHistory,
@@ -604,14 +605,19 @@ export function MotionStudio() {
           jobId?: string | null;
         };
         const sourceUrl = data.videoUrl?.trim() || "";
-        const historyUrl = data.r2Url?.trim() || sourceUrl;
+        // Preview can use fal CDN; history must prefer R2 (public or /api/media/r2).
+        const historyUrl = preferHistoryVideoUrl({
+          r2Url: data.r2Url,
+          r2Key: data.r2Key,
+          fallbackUrl: sourceUrl,
+        });
         let cloudId = data.jobId?.trim() || historyId;
         if (!sourceUrl) {
           throw new Error("Generation returned no video URL.");
         }
 
         if (resultUrl?.startsWith("blob:")) URL.revokeObjectURL(resultUrl);
-        // Play the provider CDN URL immediately — no blob proxy through our API.
+        // Play the provider CDN URL immediately — history uses R2 separately.
         setResultUrl(sourceUrl);
         setLastElapsedSec(elapsedRef.current);
         setStatus("done");
