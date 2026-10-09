@@ -27,6 +27,11 @@ import {
   MOTION_TRANSFER_MAX_DURATION_SEC,
 } from "@/lib/probe-video-duration";
 import {
+  clearStudioDraft,
+  loadStudioDraft,
+  saveStudioDraft,
+} from "@/lib/studio-draft";
+import {
   loadStudioHistory,
   prependStudioHistory,
   type StudioHistoryItem,
@@ -134,7 +139,6 @@ export function MotionStudio() {
   const menuRef = useRef<HTMLDivElement>(null);
   const listId = useId();
   const promptId = useId();
-
   const duration = videoDurationSec;
   const isObjectSwap = studioMode === "object-swap";
   const isGenjutsuMotion =
@@ -159,6 +163,128 @@ export function MotionStudio() {
     }
     document.addEventListener("mousedown", onDoc);
     return () => document.removeEventListener("mousedown", onDoc);
+  }, []);
+
+  const persistDraft = useCallback(async () => {
+    const imageFiles = isObjectSwap
+      ? referenceAssets.map((asset) => asset.file)
+      : imageFile
+        ? [imageFile]
+        : [];
+    await saveStudioDraft({
+      studioMode,
+      modelId: isObjectSwap ? "genjutsu" : model.id,
+      resolution,
+      prompt,
+      promptOn,
+      resumeGenerate: false,
+      imageFiles,
+      videoFile,
+    });
+  }, [
+    isObjectSwap,
+    referenceAssets,
+    imageFile,
+    studioMode,
+    model.id,
+    resolution,
+    prompt,
+    promptOn,
+    videoFile,
+  ]);
+
+  const promptLoginForGenerate = useCallback(() => {
+    void persistDraft();
+    openAuthModal({
+      mode: "login",
+      reason: "generation",
+      beforeOAuth: () => persistDraft(),
+    });
+  }, [openAuthModal, persistDraft]);
+
+  // Restore selections after OAuth redirect (IndexedDB keeps File blobs).
+  // Does not auto-start generation — user clicks Generate again.
+  useEffect(() => {
+    let cancelled = false;
+    void loadStudioDraft()
+      .then(async (draft) => {
+        if (cancelled) return;
+        if (!draft) return;
+
+        setStudioMode(draft.studioMode);
+        setResolution(draft.resolution);
+        setPrompt(draft.prompt);
+        setPromptOn(draft.promptOn);
+        const matched =
+          models.find((item) => item.id === draft.modelId) ?? models[0];
+        setModel(matched);
+
+        setReferenceAssets((prev) => {
+          for (const asset of prev) URL.revokeObjectURL(asset.url);
+          return [];
+        });
+        setVideoUrl((prev) => {
+          if (prev) URL.revokeObjectURL(prev);
+          return null;
+        });
+        setImageUrl((prev) => {
+          if (prev) URL.revokeObjectURL(prev);
+          return null;
+        });
+
+        if (draft.studioMode === "object-swap") {
+          const assets = draft.imageFiles
+            .slice(0, GENJUTSU_MAX_REFERENCE_IMAGES)
+            .map((file, index) => ({
+              id: `draft-${index}-${file.name}`,
+              file,
+              url: URL.createObjectURL(file),
+              name: file.name,
+            }));
+          setReferenceAssets(assets);
+          const primary = assets[0];
+          setImageFile(primary?.file ?? null);
+          setImageName(primary?.name ?? null);
+          setImageUrl(primary?.url ?? null);
+        } else {
+          const primary = draft.imageFiles[0] ?? null;
+          if (primary) {
+            const url = URL.createObjectURL(primary);
+            setImageFile(primary);
+            setImageName(primary.name);
+            setImageUrl(url);
+          } else {
+            setImageFile(null);
+            setImageName(null);
+          }
+        }
+
+        if (draft.videoFile) {
+          const url = URL.createObjectURL(draft.videoFile);
+          setVideoFile(draft.videoFile);
+          setVideoName(draft.videoFile.name);
+          setVideoUrl(url);
+          setVideoDurationSec(null);
+          setVideoFramePixels(null);
+          void probeVideoFileMeta(draft.videoFile).then((meta) => {
+            if (cancelled) return;
+            const billable = billableSecondsFromDuration(
+              meta?.durationSec ?? 0,
+            );
+            setVideoDurationSec(billable);
+            setVideoFramePixels(meta?.framePixels ?? null);
+          });
+        } else {
+          setVideoFile(null);
+          setVideoName(null);
+        }
+
+        await clearStudioDraft();
+      })
+      .catch(() => undefined);
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   useEffect(() => {
@@ -296,7 +422,7 @@ export function MotionStudio() {
 
   async function onGenerate() {
     if (!isLoggedIn) {
-      openAuthModal({ mode: "login", reason: "generation" });
+      promptLoginForGenerate();
       return;
     }
     const swapRefs = isObjectSwap ? referenceAssets.map((a) => a.file) : [];
@@ -366,8 +492,8 @@ export function MotionStudio() {
           needsCredits?: boolean;
         } | null;
         if (res.status === 403 && data?.needsLogin) {
-          openAuthModal({ mode: "register", reason: "generation" });
           setStatus("idle");
+          promptLoginForGenerate();
           return;
         }
         if (res.status === 402 && data?.needsCredits) {
@@ -396,6 +522,7 @@ export function MotionStudio() {
       setResultUrl(sourceUrl);
       setStatus("done");
       setPanelMode("preview");
+      void clearStudioDraft();
 
       const item: StudioHistoryItem = {
         id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
@@ -1063,20 +1190,6 @@ export function MotionStudio() {
                       <p className="text-center text-[11px] text-fg-subtle">
                         Keep this tab open
                       </p>
-                    </div>
-                  ) : null}
-
-                  {imageUrl && !busy ? (
-                    <div className="absolute bottom-3 left-3 overflow-hidden rounded-lg border border-white/20 shadow-lg">
-                      <div className="relative h-14 w-11">
-                        <Image
-                          src={imageUrl}
-                          alt="Character"
-                          fill
-                          unoptimized
-                          className="object-cover"
-                        />
-                      </div>
                     </div>
                   ) : null}
                 </div>
