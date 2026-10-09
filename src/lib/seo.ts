@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 export const SITE_URL = "https://genjutsu.online";
 export const SITE_NAME = "GENJUTSU";
 export const SITE_TAGLINE = "AI Video Motion Transfer";
-export const CONTACT_EMAIL = "6546272@qq.com";
+export const CONTACT_EMAIL = "algoinf@gmail.com";
 
 /** Default site-wide keywords (TDK · K) */
 export const DEFAULT_KEYWORDS = [

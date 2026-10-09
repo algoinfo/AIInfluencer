@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { handleWaffoWebhookRequest } from "@/lib/waffo-webhook-handler";
 
-/** Test webhook endpoint (e.g. ngrok → /api/paid/callback). */
+/** Waffo webhook — test (ngrok) and production (`https://genjutsu.online/api/paid/callback`). */
 export async function POST(req: NextRequest) {
   console.log("[paid/callback] POST hit", {
     hasSignature: !!req.headers.get("x-waffo-signature"),
