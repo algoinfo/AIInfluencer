@@ -43,7 +43,7 @@ export async function generateGenjutsuMotionTransfer(params: {
   motionVideo: { buffer: Buffer; mimeType: string; filename?: string };
   prompt?: string;
   resolution?: GenjutsuResolution;
-}): Promise<Buffer> {
+}): Promise<string> {
   const [imageUrl, videoUrl] = await Promise.all([
     publicUrlForInput({
       category: "image",

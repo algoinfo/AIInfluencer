@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+import { after, NextRequest, NextResponse } from "next/server";
 import {
   ANONYMOUS_LOGIN_REQUIRED_MESSAGE,
   requiresLoginForAnonymousGeneration,
@@ -29,7 +29,12 @@ import {
   MOTION_TRANSFER_MAX_DURATION_SEC,
   probeVideoDurationSeconds,
 } from "@/lib/probe-video-duration";
-import { isR2Configured, publicR2Url, uploadToR2 } from "@/lib/r2";
+import {
+  isR2Configured,
+  mirrorRemoteUrlToR2Key,
+  planR2Object,
+  uploadToR2,
+} from "@/lib/r2";
 import {
   screenWaffoPrompt,
   WaffoContentSafetyError,
@@ -267,7 +272,7 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    let buffer: Buffer;
+    let sourceUrl: string;
     if (mode === "object-swap") {
       const referenceImages = await Promise.all(
         referenceFiles.map(async (file, index) => ({
@@ -279,7 +284,7 @@ export async function POST(req: NextRequest) {
           filename: file.name || `reference-${index + 1}.jpg`,
         })),
       );
-      buffer = await generateGenjutsuObjectSwap({
+      sourceUrl = await generateGenjutsuObjectSwap({
         referenceImages,
         sourceVideo: {
           buffer: motionBuffer,
@@ -290,7 +295,7 @@ export async function POST(req: NextRequest) {
         resolution,
       });
     } else if (useGenjutsuMotion) {
-      buffer = await generateGenjutsuMotionTransfer({
+      sourceUrl = await generateGenjutsuMotionTransfer({
         characterImage: {
           buffer: characterBuffer,
           mimeType: characterFile.type || "image/jpeg",
@@ -305,7 +310,7 @@ export async function POST(req: NextRequest) {
         resolution,
       });
     } else {
-      buffer = await generateWanMotionVideo({
+      sourceUrl = await generateWanMotionVideo({
         characterImage: {
           buffer: characterBuffer,
           mimeType: characterFile.type || "image/jpeg",
@@ -318,39 +323,53 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    let r2Key: string | null = null;
-    let videoUrl: string | null = null;
-    if (isR2Configured()) {
-      const uploaded = await uploadToR2({
-        category: "res-video",
-        body: buffer,
-        filename: `${mode}-${Date.now()}.mp4`,
-        contentType: "video/mp4",
+    // Plan R2 key up front, return provider URL immediately for fast playback,
+    // and mirror the file to R2 in the background for durable history.
+    const planned = planR2Object({
+      category: "res-video",
+      filename: `${mode}-${Date.now()}.mp4`,
+      contentType: "video/mp4",
+    });
+    const r2Key = planned?.key ?? null;
+    const r2Url = planned?.url ?? null;
+
+    if (planned) {
+      after(async () => {
+        await mirrorRemoteUrlToR2Key({
+          sourceUrl,
+          key: planned.key,
+          contentType: "video/mp4",
+        });
       });
-      r2Key = uploaded?.key ?? null;
-      videoUrl = r2Key ? publicR2Url(r2Key) : null;
     }
 
     const usage = await recordUsage(token ?? session.token, "generation");
 
     log("done", {
       mode,
-      bytes: buffer.length,
       ms: Date.now() - startedAt,
+      sourceUrl: sourceUrl.slice(0, 80),
       r2Key,
       creditCost,
     });
 
-    const headers: Record<string, string> = {
-      "Content-Type": "video/mp4",
-      "Content-Length": String(buffer.length),
-      "Cache-Control": "private, no-store",
-      "X-Credits-Charged": String(payload.user ? creditCost : 0),
-    };
-    if (r2Key) headers["X-R2-Key"] = r2Key;
-    if (videoUrl) headers["X-Video-Url"] = videoUrl;
-
-    const res = new NextResponse(new Uint8Array(buffer), { headers });
+    const res = NextResponse.json(
+      {
+        videoUrl: sourceUrl,
+        r2Url,
+        r2Key,
+        creditsCharged: payload.user ? creditCost : 0,
+      },
+      {
+        headers: {
+          "Cache-Control": "private, no-store",
+          "X-Credits-Charged": String(payload.user ? creditCost : 0),
+          ...(r2Key ? { "X-R2-Key": r2Key } : {}),
+          ...(r2Url ? { "X-Video-Url": r2Url } : { "X-Video-Url": sourceUrl }),
+          "X-Source-Video-Url": sourceUrl,
+        },
+      },
+    );
 
     if (sessionCreated || usage.created) {
       res.cookies.set(SESSION_COOKIE, usage.session.token, {

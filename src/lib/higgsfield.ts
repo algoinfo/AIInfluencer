@@ -114,7 +114,7 @@ export async function subscribeGenjutsuVideo(params: {
   imageUrls: string[];
   prompt?: string;
   resolution?: GenjutsuResolution;
-}): Promise<Buffer> {
+}): Promise<string> {
   const credentials = getHiggsfieldCredentialsFromEnv();
   if (!credentials) {
     throw new Error(
@@ -167,12 +167,9 @@ export async function subscribeGenjutsuVideo(params: {
     );
   }
 
-  const videoRes = await fetch(result.video.url);
-  if (!videoRes.ok) {
-    throw new Error("Could not download the generated video.");
-  }
-  const arrayBuffer = await videoRes.arrayBuffer();
-  return Buffer.from(arrayBuffer);
+  log("subscribe completed", { url: result.video.url.slice(0, 80) });
+  // Return the provider CDN URL — caller mirrors to R2 and/or streams to the client.
+  return result.video.url;
 }
 
 export function subscribeGenjutsuObjectSwap(params: {
@@ -180,7 +177,7 @@ export function subscribeGenjutsuObjectSwap(params: {
   imageUrls: string[];
   prompt?: string;
   resolution?: GenjutsuResolution;
-}): Promise<Buffer> {
+}): Promise<string> {
   return subscribeGenjutsuVideo({
     endpoint: "higgsfield/genjutsu/object-swap/v1.0",
     ...params,
@@ -192,7 +189,7 @@ export function subscribeGenjutsuMotionTransfer(params: {
   imageUrls: string[];
   prompt?: string;
   resolution?: GenjutsuResolution;
-}): Promise<Buffer> {
+}): Promise<string> {
   return subscribeGenjutsuVideo({
     endpoint: "higgsfield/genjutsu/motion-transfer/v1.0",
     ...params,

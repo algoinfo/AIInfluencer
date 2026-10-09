@@ -381,11 +381,19 @@ export function MotionStudio() {
         throw new Error(data?.error || "Generation failed.");
       }
 
-      const publicUrl = res.headers.get("X-Video-Url");
-      const blob = await res.blob();
-      const blobUrl = URL.createObjectURL(blob);
+      const data = (await res.json()) as {
+        videoUrl?: string;
+        r2Url?: string | null;
+      };
+      const sourceUrl = data.videoUrl?.trim() || "";
+      const historyUrl = data.r2Url?.trim() || sourceUrl;
+      if (!sourceUrl) {
+        throw new Error("Generation returned no video URL.");
+      }
 
-      setResultUrl(blobUrl);
+      if (resultUrl?.startsWith("blob:")) URL.revokeObjectURL(resultUrl);
+      // Play the provider CDN URL immediately — no blob proxy through our API.
+      setResultUrl(sourceUrl);
       setStatus("done");
       setPanelMode("preview");
 
@@ -395,17 +403,12 @@ export function MotionStudio() {
           primaryImage.name.replace(/\.[^.]+$/, "") ||
           (isObjectSwap ? "Object swap" : "Motion transfer"),
         createdAt: new Date().toISOString(),
-        // Prefer public R2 URL for reload-safe history; blob for this session.
-        videoUrl: publicUrl || blobUrl,
+        // History prefers durable R2 URL (mirrored in the background).
+        videoUrl: historyUrl,
         durationSec: duration,
         modelMark: modelMark,
       };
-      setHistory((prev) => {
-        const next = prependStudioHistory(prev, item);
-        // Keep blob entry visible this session even if not persisted.
-        if (!publicUrl) return [item, ...prev.filter((h) => h.id !== item.id)].slice(0, 24);
-        return next;
-      });
+      setHistory((prev) => prependStudioHistory(prev, item));
       void refreshSession();
     } catch (err) {
       setStatus("error");
@@ -420,6 +423,8 @@ export function MotionStudio() {
     const a = document.createElement("a");
     a.href = resultUrl;
     a.download = "genjutsu-motion.mp4";
+    a.rel = "noopener";
+    a.target = "_blank";
     a.click();
   }, [resultUrl]);
 

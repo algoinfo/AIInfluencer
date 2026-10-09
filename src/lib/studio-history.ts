@@ -4,7 +4,7 @@ export type StudioHistoryItem = {
   id: string;
   title: string;
   createdAt: string;
-  /** Public R2 URL when available; otherwise a session blob URL. */
+  /** Prefer durable R2 URL; may briefly be a provider CDN URL. */
   videoUrl: string;
   durationSec: number;
   modelMark: string;

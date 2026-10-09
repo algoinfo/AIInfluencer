@@ -56,7 +56,7 @@ export async function generateGenjutsuObjectSwap(params: {
   sourceVideo: { buffer: Buffer; mimeType: string; filename?: string };
   prompt?: string;
   resolution?: GenjutsuResolution;
-}): Promise<Buffer> {
+}): Promise<string> {
   const refs = params.referenceImages.slice(0, GENJUTSU_MAX_REFERENCE_IMAGES);
   if (refs.length < 1) {
     throw new Error("At least one reference image is required.");

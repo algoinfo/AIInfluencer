@@ -24,7 +24,7 @@ export async function generateWanMotionVideo(params: {
   characterImage: { buffer: Buffer; mimeType: string };
   motionVideo: { buffer: Buffer; mimeType: string };
   prompt?: string;
-}): Promise<Buffer> {
+}): Promise<string> {
   const key = getFalKeyFromEnv();
   if (!key) {
     throw new Error(
@@ -77,10 +77,6 @@ export async function generateWanMotionVideo(params: {
     throw new Error("Video generation returned no file. Try again.");
   }
 
-  const videoRes = await fetch(outputUrl);
-  if (!videoRes.ok) throw new Error("Could not download the generated video.");
-  const buffer = Buffer.from(await videoRes.arrayBuffer());
-
-  log("success", { bytes: buffer.length });
-  return buffer;
+  log("success", { url: outputUrl.slice(0, 80) });
+  return outputUrl;
 }

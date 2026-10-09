@@ -137,3 +137,80 @@ export function publicR2Url(key: string): string | null {
   if (!base || !key) return null;
   return `${base}/${key}`;
 }
+
+/** Build a stable key (+ public URL) before uploading, for fire-and-forget mirrors. */
+export function planR2Object(input: {
+  category: R2Category;
+  filename?: string;
+  contentType?: string;
+}): { key: string; url: string | null } | null {
+  if (!isR2Configured()) return null;
+  const prefix = R2_PREFIX[input.category];
+  const safeName = (input.filename || "file").replace(/[^\w.\-()+ ]/g, "_");
+  const ext = extensionFrom(safeName, input.contentType || "video/mp4");
+  const base = safeName.includes(".")
+    ? safeName.slice(0, safeName.lastIndexOf("."))
+    : safeName;
+  const key = `${prefix}${Date.now()}-${randomUUID().slice(0, 8)}-${base}${ext || ".mp4"}`;
+  return { key, url: publicR2Url(key) };
+}
+
+export async function uploadToR2Key(input: {
+  key: string;
+  body: Buffer | Uint8Array;
+  contentType?: string;
+}): Promise<boolean> {
+  if (!isR2Configured()) return false;
+  const bucket = process.env.R2_BUCKET || "vocalove";
+  const contentType = input.contentType || "application/octet-stream";
+  try {
+    await getR2Client().send(
+      new PutObjectCommand({
+        Bucket: bucket,
+        Key: input.key,
+        Body: input.body,
+        ContentType: contentType,
+      }),
+    );
+    log("upload ok", { key: input.key, bytes: input.body.byteLength });
+    return true;
+  } catch (error) {
+    log("upload failed", {
+      key: input.key,
+      error: error instanceof Error ? error.message : String(error),
+    });
+    return false;
+  }
+}
+
+/** Fetch a remote video and store it under a planned R2 key (for history). */
+export async function mirrorRemoteUrlToR2Key(params: {
+  sourceUrl: string;
+  key: string;
+  contentType?: string;
+}): Promise<boolean> {
+  log("mirror start", { key: params.key, source: params.sourceUrl.slice(0, 80) });
+  try {
+    const res = await fetch(params.sourceUrl);
+    if (!res.ok) {
+      log("mirror fetch failed", { status: res.status, key: params.key });
+      return false;
+    }
+    const buffer = Buffer.from(await res.arrayBuffer());
+    const contentType =
+      params.contentType ||
+      res.headers.get("content-type") ||
+      "video/mp4";
+    return uploadToR2Key({
+      key: params.key,
+      body: buffer,
+      contentType,
+    });
+  } catch (error) {
+    log("mirror failed", {
+      key: params.key,
+      error: error instanceof Error ? error.message : String(error),
+    });
+    return false;
+  }
+}
