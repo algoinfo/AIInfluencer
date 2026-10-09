@@ -505,7 +505,7 @@ export function MotionStudio() {
                       "rounded-lg px-2 py-2 text-center text-[0.72rem] font-semibold tracking-tight transition-colors",
                       active
                         ? "bg-accent text-accent-ink"
-                        : "text-fg-subtle hover:bg-white/[0.05] hover:text-fg",
+                        : "text-fg-muted hover:bg-white/[0.05] hover:text-fg",
                     ].join(" ")}
                   >
                     {tab.label}
@@ -518,10 +518,10 @@ export function MotionStudio() {
             {isObjectSwap ? (
               <div className="shrink-0">
                 <div className="mb-1.5 flex items-center justify-between gap-2">
-                  <p className="text-[0.65rem] uppercase tracking-[0.16em] text-fg-subtle">
+                  <p className="text-[0.68rem] font-medium uppercase tracking-[0.14em] text-fg-muted">
                     Resolution
                   </p>
-                  <p className="text-[0.65rem] text-fg-subtle">
+                  <p className="text-[0.68rem] font-medium tabular-nums text-fg-muted">
                     {genjutsuCreditsPerSecond(resolution).toLocaleString()}{" "}
                     credits/s
                   </p>
@@ -550,7 +550,7 @@ export function MotionStudio() {
             ) : (
               <div className="shrink-0 space-y-2.5">
                 <div ref={menuRef} className="relative">
-                  <p className="mb-1.5 text-[0.65rem] uppercase tracking-[0.16em] text-fg-subtle">
+                  <p className="mb-1.5 text-[0.68rem] font-medium uppercase tracking-[0.14em] text-fg-muted">
                     Model
                   </p>
                   <button
@@ -569,7 +569,7 @@ export function MotionStudio() {
                         <span className="block truncate text-[0.8rem] font-medium text-fg">
                           {model.name}
                         </span>
-                        <span className="block text-[0.7rem] text-fg-subtle">
+                        <span className="mt-0.5 block text-[0.72rem] font-medium text-fg-muted">
                           {isGenjutsuMotion
                             ? `${genjutsuCreditsPerSecond(resolution).toLocaleString()} credits/s · ${resolution}`
                             : model.meta}
@@ -620,7 +620,7 @@ export function MotionStudio() {
                                 <span className="block truncate text-sm text-fg">
                                   {item.name}
                                 </span>
-                                <span className="block text-xs text-fg-subtle">
+                                <span className="mt-0.5 block text-xs font-medium text-fg-muted">
                                   {item.meta}
                                   {duration != null
                                     ? ` · ${itemCredits.toLocaleString()} credits / ${duration}s`
@@ -637,7 +637,7 @@ export function MotionStudio() {
 
                 {isGenjutsuMotion ? (
                   <div>
-                    <p className="mb-1.5 text-[0.65rem] uppercase tracking-[0.16em] text-fg-subtle">
+                    <p className="mb-1.5 text-[0.68rem] font-medium uppercase tracking-[0.14em] text-fg-muted">
                       Resolution
                     </p>
                     <div className="grid grid-cols-3 gap-1 rounded-xl border border-white/[0.08] bg-black/25 p-1">
@@ -669,11 +669,11 @@ export function MotionStudio() {
             {isObjectSwap ? (
               <div className="shrink-0 space-y-2.5">
                 <div className="flex items-center justify-between gap-2">
-                  <p className="text-[0.65rem] uppercase tracking-[0.16em] text-fg-subtle">
+                  <p className="text-[0.68rem] font-medium uppercase tracking-[0.14em] text-fg-muted">
                     References
                     <span className="ml-0.5 text-[#ff5c5c]">*</span>
                   </p>
-                  <p className="text-[0.65rem] text-fg-subtle">
+                  <p className="text-[0.68rem] font-medium tabular-nums text-fg-muted">
                     {referenceAssets.length}/{GENJUTSU_MAX_REFERENCE_IMAGES}
                   </p>
                 </div>
@@ -772,10 +772,10 @@ export function MotionStudio() {
               <div className="mb-1.5 flex items-center justify-between gap-2">
                 <label
                   htmlFor={promptId}
-                  className="flex items-center gap-2 text-[0.65rem] uppercase tracking-[0.16em] text-fg-subtle"
+                  className="flex items-center gap-2 text-[0.68rem] font-medium uppercase tracking-[0.14em] text-fg-muted"
                 >
                   Prompt
-                  <span className="normal-case tracking-normal text-fg-subtle/80">
+                  <span className="normal-case tracking-normal text-fg-muted/90">
                     {promptOn
                       ? "custom"
                       : usesGenjutsuPricing
@@ -819,7 +819,7 @@ export function MotionStudio() {
                         : "Optional style / character notes…"
                       : "1. Look  2. Outfit  3. Scene  4. Keep the same  5. Final style"
                   }
-                  className="w-full resize-none rounded-xl border border-white/[0.1] bg-white/[0.04] px-3 py-2.5 text-[0.8rem] leading-relaxed text-fg outline-none transition placeholder:text-fg-subtle/65 focus:border-accent/35 focus:bg-white/[0.06]"
+                  className="w-full resize-none rounded-xl border border-white/[0.1] bg-white/[0.04] px-3 py-2.5 text-[0.8rem] leading-relaxed text-fg outline-none transition placeholder:text-fg-muted/70 focus:border-accent/35 focus:bg-white/[0.06]"
                 />
               ) : null}
             </div>
@@ -873,7 +873,7 @@ export function MotionStudio() {
                     "relative flex shrink-0 items-center gap-1.5 rounded-full px-2.5 py-1 text-[0.7rem] font-medium tabular-nums",
                     ready
                       ? "bg-accent-ink/10 text-accent-ink/85"
-                      : "bg-black/25 text-fg-subtle",
+                      : "bg-black/25 text-fg-muted",
                   ].join(" ")}
                 >
                   {duration != null && sellCredits != null ? (
@@ -881,7 +881,7 @@ export function MotionStudio() {
                       <span>{duration}s</span>
                       <span
                         className={
-                          ready ? "text-accent-ink/40" : "text-fg-subtle/50"
+                          ready ? "text-accent-ink/40" : "text-fg-muted/60"
                         }
                       >
                         ·
@@ -900,10 +900,10 @@ export function MotionStudio() {
             </button>
             <p
               className={[
-                "mt-2 text-center text-[0.7rem] leading-tight",
+                "mt-2 text-center text-[0.72rem] leading-tight",
                 status === "need" || status === "error"
                   ? "text-accent"
-                  : "text-fg-subtle",
+                  : "text-fg-muted",
               ].join(" ")}
             >
               {status === "need"
@@ -1179,14 +1179,14 @@ function UploadField({
           )}
         </div>
         <div className="min-w-0">
-          <p className="text-[0.6rem] uppercase tracking-[0.14em] text-fg-subtle">
+          <p className="text-[0.65rem] font-medium uppercase tracking-[0.12em] text-fg-muted">
             {label}
             {required ? <span className="ml-0.5 text-[#ff5c5c]">*</span> : null}
           </p>
           <p className="mt-0.5 truncate text-[0.75rem] font-medium text-fg">
             {fileName ? "Ready" : button}
           </p>
-          <p className="truncate text-[0.6rem] text-fg-subtle">
+          <p className="truncate text-[0.65rem] font-medium text-fg-muted">
             {fileName ? "Replace" : hint}
           </p>
         </div>
@@ -1225,14 +1225,14 @@ function UploadField({
           )}
         </div>
         <div className="min-w-0 flex-1">
-          <p className="text-[0.6rem] uppercase tracking-[0.16em] text-fg-subtle">
+          <p className="text-[0.65rem] font-medium uppercase tracking-[0.12em] text-fg-muted">
             {label}
             {required ? <span className="ml-1 text-[#ff5c5c]">*</span> : null}
           </p>
           <p className="truncate text-[0.8rem] font-medium text-fg">
             {fileName || button}
           </p>
-          <p className="truncate text-[0.65rem] text-fg-subtle">
+          <p className="truncate text-[0.68rem] font-medium text-fg-muted">
             {fileName ? "Click to replace" : hint}
           </p>
         </div>
