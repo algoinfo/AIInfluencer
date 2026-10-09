@@ -56,13 +56,18 @@ function readProductId(envKey: string): string | null {
   return value || null;
 }
 
+/**
+ * Resolve the Waffo product for the active API environment.
+ * - prod → WAFFO_LIVE_PRODUCT_* , then WAFFO_PRODUCT_* (for single-var deploys)
+ * - test → WAFFO_PRODUCT_* only (never use live SKUs against the test API)
+ */
 export function getWaffoProductId(tierId: string): string | null {
   const keys = TIER_PRODUCT_ENV[tierId];
   if (!keys) return null;
-  const prodMode = getWaffoEnvironment() === "prod";
-  const primary = readProductId(prodMode ? keys.live : keys.test);
-  if (primary) return primary;
-  return readProductId(prodMode ? keys.test : keys.live);
+  if (getWaffoEnvironment() === "prod") {
+    return readProductId(keys.live) || readProductId(keys.test);
+  }
+  return readProductId(keys.test);
 }
 
 export function getTierIdForWaffoProduct(productId: string): string | null {

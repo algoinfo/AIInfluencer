@@ -34,10 +34,24 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    const environment = getWaffoEnvironment();
     const productId = getWaffoProductId(tierId);
     if (!productId) {
+      console.error("[payments/checkout] missing product id for environment", {
+        tierId,
+        environment,
+        hint:
+          environment === "prod"
+            ? "Set WAFFO_LIVE_PRODUCT_BASIC / WAFFO_LIVE_PRODUCT_PRO"
+            : "Set WAFFO_PRODUCT_BASIC / WAFFO_PRODUCT_PRO",
+      });
       return NextResponse.json(
-        { error: "Checkout is not available for this pack yet." },
+        {
+          error:
+            environment === "prod"
+              ? "Checkout is not configured for production. Set WAFFO_LIVE_PRODUCT_* on the server."
+              : "Checkout is not available for this pack yet.",
+        },
         { status: 400 },
       );
     }
@@ -48,6 +62,7 @@ export async function POST(req: NextRequest) {
     console.log("[waffo/checkout] creating session", {
       tierId,
       productId,
+      environment,
       email,
       userId: session.user_id,
       origin,
@@ -68,13 +83,19 @@ export async function POST(req: NextRequest) {
       orderMerchantExternalId: checkout.orderMerchantExternalId,
     });
   } catch (error) {
-    console.error("[payments/checkout] failed", {
-      message: error instanceof Error ? error.message : String(error),
-    });
+    const message = error instanceof Error ? error.message : String(error);
+    const environment = getWaffoEnvironment();
+    console.error("[payments/checkout] failed", { message, environment });
+    const envMismatch = /not found or not active for this environment/i.test(
+      message,
+    );
     return NextResponse.json(
       {
-        error:
-          error instanceof Error ? error.message : "Could not start checkout.",
+        error: envMismatch
+          ? `Waffo product does not match WAFFO_ENVIRONMENT=${environment}. Use live product IDs with prod, test IDs with test.`
+          : error instanceof Error
+            ? error.message
+            : "Could not start checkout.",
       },
       { status: 500 },
     );
