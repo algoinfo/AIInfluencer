@@ -5,8 +5,8 @@ import { getRequestSessionFromReq } from "@/lib/request-session";
 import {
   createWaffoCheckout,
   getWaffoEnvironment,
-  getWaffoProductId,
   isWaffoConfigured,
+  resolveWaffoProduct,
 } from "@/lib/waffo";
 
 export async function POST(req: NextRequest) {
@@ -34,24 +34,14 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const environment = getWaffoEnvironment();
-    const productId = getWaffoProductId(tierId);
-    if (!productId) {
-      console.error("[payments/checkout] missing product id for environment", {
+    const resolved = resolveWaffoProduct(tierId);
+    if (!resolved) {
+      console.error("[payments/checkout] missing product id", {
         tierId,
-        environment,
-        hint:
-          environment === "prod"
-            ? "Set WAFFO_LIVE_PRODUCT_BASIC / WAFFO_LIVE_PRODUCT_PRO"
-            : "Set WAFFO_PRODUCT_BASIC / WAFFO_PRODUCT_PRO",
+        environment: getWaffoEnvironment(),
       });
       return NextResponse.json(
-        {
-          error:
-            environment === "prod"
-              ? "Checkout is not configured for production. Set WAFFO_LIVE_PRODUCT_* on the server."
-              : "Checkout is not available for this pack yet.",
-        },
+        { error: "Checkout is not available for this pack yet." },
         { status: 400 },
       );
     }
@@ -61,41 +51,59 @@ export async function POST(req: NextRequest) {
 
     console.log("[waffo/checkout] creating session", {
       tierId,
-      productId,
-      environment,
+      productId: resolved.productId,
+      environment: resolved.environment,
+      source: resolved.source,
       email,
       userId: session.user_id,
       origin,
     });
 
-    const checkout = await createWaffoCheckout({
-      tierId,
-      productId,
-      userId: session.user_id,
-      email,
-      successUrl,
-    });
+    try {
+      const checkout = await createWaffoCheckout({
+        tierId,
+        productId: resolved.productId,
+        userId: session.user_id,
+        email,
+        successUrl,
+      });
 
-    return NextResponse.json({
-      provider: "waffo",
-      sessionId: checkout.sessionId,
-      checkoutUrl: checkout.checkoutUrl,
-      orderMerchantExternalId: checkout.orderMerchantExternalId,
-    });
+      return NextResponse.json({
+        provider: "waffo",
+        sessionId: checkout.sessionId,
+        checkoutUrl: checkout.checkoutUrl,
+        orderMerchantExternalId: checkout.orderMerchantExternalId,
+      });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      console.error("[payments/checkout] failed", {
+        message,
+        environment: resolved.environment,
+        productId: resolved.productId,
+        source: resolved.source,
+      });
+      const envMismatch = /not found or not active for this environment/i.test(
+        message,
+      );
+      return NextResponse.json(
+        {
+          error: envMismatch
+            ? `Waffo rejected ${resolved.productId} for ${resolved.environment} (${resolved.source}). In the Waffo dashboard, open that product and Publish / Activate it for ${resolved.environment}.`
+            : error instanceof Error
+              ? error.message
+              : "Could not start checkout.",
+        },
+        { status: 500 },
+      );
+    }
   } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    const environment = getWaffoEnvironment();
-    console.error("[payments/checkout] failed", { message, environment });
-    const envMismatch = /not found or not active for this environment/i.test(
-      message,
-    );
+    console.error("[payments/checkout] failed", {
+      message: error instanceof Error ? error.message : String(error),
+    });
     return NextResponse.json(
       {
-        error: envMismatch
-          ? `Waffo product does not match WAFFO_ENVIRONMENT=${environment}. Use live product IDs with prod, test IDs with test.`
-          : error instanceof Error
-            ? error.message
-            : "Could not start checkout.",
+        error:
+          error instanceof Error ? error.message : "Could not start checkout.",
       },
       { status: 500 },
     );

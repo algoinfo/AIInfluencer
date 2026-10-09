@@ -31,6 +31,13 @@ const DEFAULT_WAFFO_PRODUCTS: Record<
   },
 };
 
+const KNOWN_TEST_PRODUCT_IDS = new Set(
+  Object.values(DEFAULT_WAFFO_PRODUCTS).map((p) => p.test),
+);
+const KNOWN_LIVE_PRODUCT_IDS = new Set(
+  Object.values(DEFAULT_WAFFO_PRODUCTS).map((p) => p.live),
+);
+
 export type WaffoEnvironment = "test" | "prod";
 
 export function getWaffoEnvironment(): WaffoEnvironment {
@@ -71,19 +78,59 @@ function readProductId(envKey: string): string | null {
   return value || null;
 }
 
+export type WaffoProductResolution = {
+  productId: string;
+  environment: WaffoEnvironment;
+  source: "env-live" | "env-test" | "default-live" | "default-test";
+};
+
 /**
  * Resolve the Waffo product for the active API environment.
- * - prod → WAFFO_LIVE_PRODUCT_* → built-in live SKU (never use test SKUs)
- * - test → WAFFO_PRODUCT_* → built-in test SKU (never use live SKUs)
+ * Rejects known test SKUs when environment=prod (and the reverse), even if
+ * mis-copied into WAFFO_LIVE_PRODUCT_* / WAFFO_PRODUCT_*.
  */
-export function getWaffoProductId(tierId: string): string | null {
+export function resolveWaffoProduct(
+  tierId: string,
+): WaffoProductResolution | null {
   const keys = TIER_PRODUCT_ENV[tierId];
   const defaults = DEFAULT_WAFFO_PRODUCTS[tierId];
   if (!keys || !defaults) return null;
-  if (getWaffoEnvironment() === "prod") {
-    return readProductId(keys.live) || defaults.live;
+
+  const environment = getWaffoEnvironment();
+  if (environment === "prod") {
+    const liveEnv = readProductId(keys.live);
+    if (liveEnv && !KNOWN_TEST_PRODUCT_IDS.has(liveEnv)) {
+      return { productId: liveEnv, environment, source: "env-live" };
+    }
+    // Allow WAFFO_PRODUCT_* only when it is a live SKU (common Vercel setup).
+    const productEnv = readProductId(keys.test);
+    if (
+      productEnv &&
+      !KNOWN_TEST_PRODUCT_IDS.has(productEnv) &&
+      (KNOWN_LIVE_PRODUCT_IDS.has(productEnv) || !liveEnv)
+    ) {
+      return { productId: productEnv, environment, source: "env-test" };
+    }
+    return {
+      productId: defaults.live,
+      environment,
+      source: "default-live",
+    };
   }
-  return readProductId(keys.test) || defaults.test;
+
+  const testEnv = readProductId(keys.test);
+  if (testEnv && !KNOWN_LIVE_PRODUCT_IDS.has(testEnv)) {
+    return { productId: testEnv, environment, source: "env-test" };
+  }
+  return {
+    productId: defaults.test,
+    environment,
+    source: "default-test",
+  };
+}
+
+export function getWaffoProductId(tierId: string): string | null {
+  return resolveWaffoProduct(tierId)?.productId ?? null;
 }
 
 export function getTierIdForWaffoProduct(productId: string): string | null {
