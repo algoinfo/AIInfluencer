@@ -16,9 +16,6 @@ export default function DanceVideoPage() {
       eyebrow="Use case · Free dance"
       title="Free AI Dance Video Generator"
       subtitle={`Start free with ${WELCOME_CREDITS} welcome credits — upload a photo, add a dance reference, and generate a real motion-transfer clip in the studio.`}
-      tags={["Free to start", "Photo → dance", "Welcome credits"]}
-      primaryCta={{ href: "#studio", label: "Generate free dance" }}
-      secondaryCta={{ href: "/login", label: "Start free" }}
       features={[
         {
           title: `${WELCOME_CREDITS} free credits on signup`,
@@ -81,8 +78,6 @@ export default function DanceVideoPage() {
         { href: "/ugc-video-generator", label: "UGC video generator" },
         { href: "/guides/how-to-create-ai-influencer-videos", label: "Influencer how-to" },
       ]}
-      ctaTitle="Start your free dance video"
-      ctaBody={`Sign up for ${WELCOME_CREDITS} welcome credits, then generate photo-to-dance in the studio.`}
     />
   );
 }

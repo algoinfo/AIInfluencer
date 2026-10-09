@@ -21,9 +21,6 @@ export default function ProductVideoPage() {
       eyebrow="Use case · Product"
       title="AI Product Video Generator"
       subtitle="Attach a pack shot or hero still to a turn, hand demo, or lifestyle move — short AI product video without a full reshoot."
-      tags={["Pack shot", "Object swap", "Motion transfer"]}
-      primaryCta={{ href: "#studio", label: "Generate product video" }}
-      secondaryCta={{ href: "/examples", label: "See Examples" }}
       features={[
         {
           title: "Still stays the hero",
@@ -80,8 +77,6 @@ export default function ProductVideoPage() {
         { href: "/motion-transfer", label: "Motion Transfer" },
         { href: "/guides/how-to-use-genjutsu", label: "How to use Genjutsu" },
       ]}
-      ctaTitle="Put the pack shot in motion"
-      ctaBody="Open the studio with a clear product still and a short demo reference, then generate after login."
     />
   );
 }

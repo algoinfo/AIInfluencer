@@ -17,9 +17,6 @@ export default function AvatarVideoGeneratorPage() {
       eyebrow="Use case · Avatar"
       title="AI Avatar Video Generator"
       subtitle="Generate avatar videos from a locked character still plus a performance reference — consistent face and body across takes."
-      tags={["Avatar still", "Motion transfer", "Consistent identity"]}
-      primaryCta={{ href: "#studio", label: "Generate avatar video" }}
-      secondaryCta={{ href: "/ai-influencer", label: "AI influencer flow" }}
       features={[
         {
           title: "One avatar, many performances",
@@ -76,8 +73,6 @@ export default function AvatarVideoGeneratorPage() {
         { href: "/dance-video", label: "Free dance video" },
         { href: "/guides/how-to-create-consistent-ai-characters", label: "Consistent characters" },
       ]}
-      ctaTitle="Generate an avatar video"
-      ctaBody="Open the studio with a locked avatar still and a short performance reference."
     />
   );
 }

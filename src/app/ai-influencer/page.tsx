@@ -21,13 +21,6 @@ export default function AIInfluencerPage() {
       eyebrow="Use case · AI influencer"
       title="AI Influencer Video Generator"
       subtitle="Lock a consistent AI character, then bring it to life with motion transfer — walks, dance, and UGC-style performances from one identity."
-      tags={["Identity first", "Motion transfer", "Batch content"]}
-      primaryCta={{ href: "#studio", label: "Open Genjutsu studio" }}
-      secondaryCta={{
-        href: "https://aiinfluencer.world",
-        label: "Create character",
-        external: true,
-      }}
       features={[
         {
           title: "Identity first",
@@ -84,8 +77,6 @@ export default function AIInfluencerPage() {
         { href: "/guides/how-to-create-ai-influencer-videos", label: "How-to guide" },
         { href: "/genjutsu-alternatives", label: "Alternatives" },
       ]}
-      ctaTitle="Build the character. Transfer the motion."
-      ctaBody="Create or import a locked still, then generate influencer clips in the Genjutsu studio after login."
     />
   );
 }

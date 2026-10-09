@@ -16,9 +16,6 @@ export default function UgcVideoGeneratorPage() {
       eyebrow="Use case · UGC"
       title="AI UGC Video Generator"
       subtitle="Make creator-style UGC ads from a still + a real phone-native performance. Keep the hook timing; swap the face or product."
-      tags={["One keyword focus", "Motion transfer", "Ad variants"]}
-      primaryCta={{ href: "#studio", label: "Generate UGC video" }}
-      secondaryCta={{ href: "/pricing", label: "Credits & pricing" }}
       features={[
         {
           title: "Performance you already trust",
@@ -108,8 +105,6 @@ export default function UgcVideoGeneratorPage() {
         { href: "/avatar-video-generator", label: "Avatar video" },
         { href: "/guides/how-to-use-genjutsu", label: "How to use Genjutsu" },
       ]}
-      ctaTitle="Generate your next UGC variant"
-      ctaBody="Open the studio with a phone-native reference and a locked still. Welcome credits cover your first tests after signup."
     />
   );
 }

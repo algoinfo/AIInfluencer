@@ -38,7 +38,7 @@ export type UseCasePageProps = {
   title: string;
   subtitle: string;
   tags?: string[];
-  primaryCta: CtaLink;
+  primaryCta?: CtaLink;
   secondaryCta?: CtaLink;
   features: { title: string; body: string }[];
   examplesHeading?: string;
@@ -48,8 +48,8 @@ export type UseCasePageProps = {
   sections: UseCaseSection[];
   faq: UseCaseFaq[];
   related: { href: string; label: string }[];
-  ctaTitle: string;
-  ctaBody: string;
+  ctaTitle?: string;
+  ctaBody?: string;
 };
 
 export function UseCasePage({
@@ -77,41 +77,75 @@ export function UseCasePage({
         title={title}
         subtitle={subtitle}
         tags={tags}
-        ctas={[
-          {
-            href: primaryCta.href,
-            label: primaryCta.label,
-            external: primaryCta.external,
-          },
-          ...(secondaryCta
+        ctas={
+          primaryCta
             ? [
                 {
-                  href: secondaryCta.href,
-                  label: secondaryCta.label,
-                  variant: "secondary" as const,
-                  external: secondaryCta.external,
+                  href: primaryCta.href,
+                  label: primaryCta.label,
+                  external: primaryCta.external,
                 },
+                ...(secondaryCta
+                  ? [
+                      {
+                        href: secondaryCta.href,
+                        label: secondaryCta.label,
+                        variant: "secondary" as const,
+                        external: secondaryCta.external,
+                      },
+                    ]
+                  : []),
               ]
-            : []),
-        ]}
+            : []
+        }
       />
 
       <section className="border-b border-border bg-bg pb-10 pt-2 sm:pb-12">
         <div className="page-shell">
-          <div className="mb-4 max-w-2xl">
-            <h2 className="font-display text-2xl font-semibold tracking-tight sm:text-3xl">
-              Generate in the studio
-            </h2>
-            <p className="mt-2 text-base leading-relaxed text-fg-muted">
-              Same tool as the homepage — upload your image and motion
-              reference, then generate with credits after login.
-            </p>
-          </div>
           <div className="mx-auto flex h-[min(85vh,920px)] min-h-[560px] w-full max-w-6xl">
             <MotionStudio />
           </div>
         </div>
       </section>
+
+      {examples?.length ? (
+        <section className="section-pad border-b border-border bg-bg-soft">
+          <div className="page-shell">
+            <h2 className="font-display text-2xl font-semibold tracking-tight sm:text-3xl">
+              {examplesHeading}
+            </h2>
+            <ul className="mt-6 grid grid-cols-1 gap-4 md:grid-cols-3">
+              {examples.map((example) => (
+                <li
+                  key={example.title}
+                  className="overflow-hidden rounded-2xl border border-border bg-surface/70"
+                >
+                  <div className="relative aspect-[9/16] max-h-[380px] w-full bg-bg">
+                    <Image
+                      src={example.imageSrc}
+                      alt={example.imageAlt}
+                      fill
+                      className="object-cover object-top"
+                      sizes="(max-width: 768px) 100vw, 33vw"
+                    />
+                  </div>
+                  <div className="px-4 py-4">
+                    <p className="text-xs uppercase tracking-[0.16em] text-fg-subtle">
+                      Case
+                    </p>
+                    <h3 className="mt-2 font-display text-lg font-semibold tracking-tight sm:text-xl">
+                      {example.title}
+                    </h3>
+                    <p className="mt-2 text-sm leading-relaxed text-fg-muted">
+                      {example.description}
+                    </p>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </section>
+      ) : null}
 
       <section className="section-pad">
         <div className="page-shell">
@@ -127,45 +161,6 @@ export function UseCasePage({
           </div>
         </div>
       </section>
-
-      {examples?.length ? (
-        <section className="section-pad border-t border-border bg-bg-soft">
-          <div className="page-shell">
-            <h2 className="font-display text-2xl font-semibold tracking-tight sm:text-3xl">
-              {examplesHeading}
-            </h2>
-            <ul className="mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-              {examples.map((example) => (
-                <li
-                  key={example.title}
-                  className="overflow-hidden rounded-2xl border border-border bg-surface/70"
-                >
-                  <div className="relative aspect-[9/16] max-h-[420px] w-full bg-bg">
-                    <Image
-                      src={example.imageSrc}
-                      alt={example.imageAlt}
-                      fill
-                      className="object-cover object-top"
-                      sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
-                    />
-                  </div>
-                  <div className="px-4 py-4">
-                    <p className="text-xs uppercase tracking-[0.16em] text-fg-subtle">
-                      Case
-                    </p>
-                    <h3 className="mt-2 font-display text-xl font-semibold tracking-tight">
-                      {example.title}
-                    </h3>
-                    <p className="mt-2 text-sm leading-relaxed text-fg-muted">
-                      {example.description}
-                    </p>
-                  </div>
-                </li>
-              ))}
-            </ul>
-          </div>
-        </section>
-      ) : null}
 
       {templates?.length ? (
         <section className="section-pad border-t border-border">
@@ -245,23 +240,25 @@ export function UseCasePage({
         </div>
       </section>
 
-      <CTA
-        title={ctaTitle}
-        body={ctaBody}
-        primaryHref={primaryCta.href}
-        primaryLabel={primaryCta.label}
-        externalPrimary={primaryCta.external}
-        secondaryHref={
-          secondaryCta && !secondaryCta.external
-            ? secondaryCta.href
-            : "/examples"
-        }
-        secondaryLabel={
-          secondaryCta && !secondaryCta.external
-            ? secondaryCta.label
-            : "See Examples"
-        }
-      />
+      {primaryCta && ctaTitle ? (
+        <CTA
+          title={ctaTitle}
+          body={ctaBody}
+          primaryHref={primaryCta.href}
+          primaryLabel={primaryCta.label}
+          externalPrimary={primaryCta.external}
+          secondaryHref={
+            secondaryCta && !secondaryCta.external
+              ? secondaryCta.href
+              : "/examples"
+          }
+          secondaryLabel={
+            secondaryCta && !secondaryCta.external
+              ? secondaryCta.label
+              : "See Examples"
+          }
+        />
+      ) : null}
     </>
   );
 }
