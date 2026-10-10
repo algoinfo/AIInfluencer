@@ -1,8 +1,12 @@
+import { ScanSemanticMode } from "@waffo/pancake-ts";
 import { getWaffoClient, isWaffoConfigured } from "@/lib/waffo";
 
 /**
- * Waffo content-safety scan before AIGC generation.
- * Docs: https://docs.waffo.ai/zh/api-reference/endpoints/content-safety/scan-prompt
+ * Waffo Prompt Sift — screen prompts before AIGC generation.
+ * Docs: https://docs.waffo.ai/api-reference/endpoints/content-safety/scan-prompt
+ * AIGC: https://docs.waffo.ai/mor/account-reviews/aigc-compliance
+ *
+ * Continue to your image/video model only when `action === "allow"`.
  */
 
 export type WaffoScanAction = "allow" | "review" | "block";
@@ -34,25 +38,26 @@ function isTruthyEnv(value: string | undefined): boolean {
   return normalized === "1" || normalized === "true" || normalized === "yes";
 }
 
-/** Skip screening in local dev without keys, or WAFFO_CONTENT_SAFETY_SKIP=1. */
+/** Explicit opt-out only — production never skips just because credentials look missing. */
 export function isWaffoContentSafetySkipped(): boolean {
-  if (isTruthyEnv(process.env.WAFFO_CONTENT_SAFETY_SKIP)) return true;
-  return process.env.NODE_ENV === "development" && !isWaffoConfigured();
+  return isTruthyEnv(process.env.WAFFO_CONTENT_SAFETY_SKIP);
 }
 
 /**
- * Scan prompt; continue generation only when action === allow.
- * Fail closed on review / block / service errors (per Waffo docs).
+ * Call Waffo `contentSafety.scanPrompt` before generation.
+ * Resolves only when the verdict is `allow`; otherwise throws (fail closed).
  */
 export async function screenWaffoPrompt(input: {
   prompt: string;
   locale?: "en" | "zh" | "ja";
   log?: (message: string, data?: Record<string, unknown>) => void;
-}): Promise<void> {
+}): Promise<{ requestId?: string }> {
   const prompt = input.prompt.trim();
   if (!prompt) {
-    input.log?.("content-safety skipped", { reason: "no_prompt" });
-    return;
+    throw new WaffoContentSafetyError(
+      "A prompt is required for content screening before generation.",
+      "prompt_blocked",
+    );
   }
 
   if (prompt.length > 10_000) {
@@ -64,14 +69,19 @@ export async function screenWaffoPrompt(input: {
 
   if (isWaffoContentSafetySkipped()) {
     input.log?.("content-safety skipped", {
-      reason: isTruthyEnv(process.env.WAFFO_CONTENT_SAFETY_SKIP)
-        ? "WAFFO_CONTENT_SAFETY_SKIP"
-        : "WAFFO credentials missing (development)",
+      reason: "WAFFO_CONTENT_SAFETY_SKIP",
     });
-    return;
+    return {};
   }
 
   if (!isWaffoConfigured()) {
+    // Local-only escape hatch when keys are absent; production must screen.
+    if (process.env.NODE_ENV === "development") {
+      input.log?.("content-safety skipped", {
+        reason: "WAFFO credentials missing (development)",
+      });
+      return {};
+    }
     input.log?.("content-safety blocked", { reason: "WAFFO not configured" });
     throw new WaffoContentSafetyError(
       "Content screening is temporarily unavailable. Please try again in a moment.",
@@ -80,10 +90,16 @@ export async function screenWaffoPrompt(input: {
   }
 
   try {
-    // Omit `semantic` — SDK default is enforce; avoids enum/string assignability issues.
+    input.log?.("content-safety scanning", {
+      promptLen: prompt.length,
+      locale: input.locale ?? "en",
+      semantic: ScanSemanticMode.Enforce,
+    });
+
     const verdict = await getWaffoClient().contentSafety.scanPrompt({
       prompt,
       locale: input.locale ?? "en",
+      semantic: ScanSemanticMode.Enforce,
     });
 
     input.log?.("content-safety screened", {
@@ -91,9 +107,12 @@ export async function screenWaffoPrompt(input: {
       reasonCode: verdict.reasonCode,
       requestId: verdict.requestId,
       matchedCategories: verdict.matchedCategories,
+      semanticStatus: verdict.semanticStatus,
     });
 
-    if (verdict.action === "allow") return;
+    if (verdict.action === "allow") {
+      return { requestId: verdict.requestId };
+    }
 
     if (verdict.action === "block") {
       throw new WaffoContentSafetyError(
@@ -103,7 +122,7 @@ export async function screenWaffoPrompt(input: {
       );
     }
 
-    // review / service_degraded — fail closed, ask to retry
+    // review / service_degraded — fail closed, do not generate
     throw new WaffoContentSafetyError(
       "Content screening needs a moment. Please try again shortly.",
       "prompt_review",

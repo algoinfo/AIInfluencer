@@ -17,7 +17,10 @@ import {
   parsePixverseSwapMode,
   parsePixverseSwapResolution,
 } from "@/data/pixverse-swap";
-import { resolveMotionPrompt } from "@/data/motion-prompt";
+import {
+  DEFAULT_MOTION_PROMPT,
+  resolveMotionPrompt,
+} from "@/data/motion-prompt";
 import { generateGenjutsuMotionTransfer } from "@/lib/genjutsu-motion-transfer";
 import { getRequestSessionFromReq } from "@/lib/request-session";
 import { SESSION_COOKIE, SESSION_MAX_AGE_SECONDS } from "@/lib/session-cookie";
@@ -232,13 +235,21 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // Content safety before charging or calling the model.
-    await screenWaffoPrompt({
-      prompt:
-        prompt ||
-        (usePixverseSwap ? "pixverse swap" : "motion transfer"),
+    // Waffo Prompt Sift — must allow before credits charge or model call.
+    // https://docs.waffo.ai/api-reference/endpoints/content-safety/scan-prompt
+    const safetyPrompt =
+      prompt.trim() ||
+      (usePixverseSwap
+        ? "Object swap video: replace the subject in the source clip with the uploaded image."
+        : DEFAULT_MOTION_PROMPT);
+    const safety = await screenWaffoPrompt({
+      prompt: safetyPrompt,
       locale: "en",
       log: (message, data) => log(message, data),
+    });
+    log("content-safety gate passed", {
+      requestId: safety.requestId,
+      promptLen: safetyPrompt.length,
     });
 
     const chargeLabel = usePixverseSwap
@@ -356,7 +367,11 @@ export async function POST(req: NextRequest) {
     }
 
     const providerStartedAt = Date.now();
-    log("provider start", { provider, resolution: outResolution });
+    log("provider start", {
+      provider,
+      resolution: outResolution,
+      contentSafetyRequestId: safety.requestId,
+    });
 
     let sourceUrl: string;
     try {

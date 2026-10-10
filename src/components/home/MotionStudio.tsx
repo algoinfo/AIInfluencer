@@ -27,10 +27,8 @@ import {
   creditsForPixverseSwapRun,
   PIXVERSE_SWAP_DEFAULT_MODE,
   PIXVERSE_SWAP_DEFAULT_RESOLUTION,
-  PIXVERSE_SWAP_MODES,
   PIXVERSE_SWAP_RESOLUTIONS,
   pixverseSwapCreditsPerSecond,
-  type PixverseSwapMode,
   type PixverseSwapResolution,
 } from "@/data/pixverse-swap";
 import { resolveMotionPrompt } from "@/data/motion-prompt";
@@ -162,9 +160,6 @@ export function MotionStudio() {
   const [imageName, setImageName] = useState<string | null>(null);
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [imageFile, setImageFile] = useState<File | null>(null);
-  const [swapMode, setSwapMode] = useState<PixverseSwapMode>(
-    PIXVERSE_SWAP_DEFAULT_MODE,
-  );
   const [videoName, setVideoName] = useState<string | null>(null);
   const [videoFile, setVideoFile] = useState<File | null>(null);
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
@@ -551,7 +546,7 @@ export function MotionStudio() {
         form.set("durationSec", String(duration));
         form.set("modelMultiplier", String(model.multiplier));
         form.set("resolution", outResolution);
-        if (isObjectSwap) form.set("swapMode", swapMode);
+        if (isObjectSwap) form.set("swapMode", PIXVERSE_SWAP_DEFAULT_MODE);
         if (videoFramePixels != null && videoFramePixels > 0) {
           form.set("framePixels", String(videoFramePixels));
         }
@@ -567,7 +562,24 @@ export function MotionStudio() {
             error?: string;
             needsLogin?: boolean;
             needsCredits?: boolean;
+            contentSafety?: boolean;
           } | null;
+          if (data?.contentSafety || res.status === 422) {
+            const message =
+              data?.error ||
+              "This content doesn't meet our usage guidelines. Please revise your prompt and try again.";
+            setHistory((prev) =>
+              updateStudioHistoryItem(prev, historyId, {
+                status: "failed",
+                errorMessage: message,
+                elapsedSec: elapsedRef.current,
+              }),
+            );
+            setStatus("error");
+            setErrorMessage(message);
+            setPanelMode("preview");
+            return;
+          }
           if (res.status === 403 && data?.needsLogin) {
             setHistory((prev) =>
               updateStudioHistoryItem(prev, historyId, {
@@ -840,31 +852,9 @@ export function MotionStudio() {
                     );
                   })}
                 </div>
-                <div className="mt-2.5">
-                  <p className="mb-1.5 text-[0.68rem] font-medium uppercase tracking-[0.14em] text-fg-muted">
-                    Swap
-                  </p>
-                  <div className="grid grid-cols-3 gap-1 rounded-xl border border-white/[0.08] bg-black/25 p-1">
-                    {PIXVERSE_SWAP_MODES.map((option) => {
-                      const active = option === swapMode;
-                      return (
-                        <button
-                          key={option}
-                          type="button"
-                          onClick={() => setSwapMode(option)}
-                          className={[
-                            "rounded-lg px-1 py-2 text-center text-xs font-medium capitalize transition-colors",
-                            active
-                              ? "bg-accent text-[#0a0a0c]"
-                              : "text-fg-muted hover:bg-white/[0.05] hover:text-fg",
-                          ].join(" ")}
-                        >
-                          {option}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
+                <p className="mt-2.5 text-[0.72rem] leading-snug text-fg-muted">
+                  Replaces the object in the source video with your swap image.
+                </p>
               </div>
             ) : (
               <div className="shrink-0 space-y-2.5">
@@ -1212,7 +1202,7 @@ export function MotionStudio() {
             </button>
             <p className="mt-2.5 text-center text-[0.72rem] leading-snug text-fg-muted">
               {isObjectSwap
-                ? "Tip: use a clear swap image that matches the subject size and angle in the source video."
+                ? "Tip: use a clear object image that matches size and angle of the item in the source video."
                 : "Tip: keep the person a similar size and framing in the photo and the motion video."}
             </p>
             {status === "need" ||
