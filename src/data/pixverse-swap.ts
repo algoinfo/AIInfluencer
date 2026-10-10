@@ -58,9 +58,11 @@ export function parsePixverseSwapResolution(
   return PIXVERSE_SWAP_DEFAULT_RESOLUTION;
 }
 
-/** Object Swap is locked to object replacement only (person/background disabled). */
 export function parsePixverseSwapMode(
-  _value?: string | null,
+  value: string | null | undefined,
 ): PixverseSwapMode {
-  return "object";
+  if (value === "person" || value === "object" || value === "background") {
+    return value;
+  }
+  return PIXVERSE_SWAP_DEFAULT_MODE;
 }
