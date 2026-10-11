@@ -752,10 +752,10 @@ export function MotionStudio() {
     >
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_20%_0%,rgba(216,255,62,0.06),transparent_45%),radial-gradient(ellipse_at_90%_20%,rgba(255,255,255,0.04),transparent_40%)]" />
 
-      <div className="relative grid min-h-0 flex-1 grid-rows-[minmax(0,1.15fr)_minmax(0,0.85fr)] lg:grid-rows-1 lg:grid-cols-[340px_1fr] xl:grid-cols-[360px_1fr]">
+      <div className="relative grid min-h-0 flex-1 grid-rows-[minmax(0,1.15fr)_minmax(0,0.85fr)] lg:grid-rows-1 lg:grid-cols-[400px_1fr] xl:grid-cols-[420px_1fr]">
         {/* Left tools */}
         <div className="flex min-h-0 flex-col border-b border-white/[0.07] lg:border-b-0 lg:border-r lg:border-white/[0.07]">
-          <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto p-3.5 sm:p-4 [scrollbar-width:thin]">
+          <div className="flex min-h-0 flex-1 flex-col gap-3.5 overflow-y-auto p-4 sm:p-5 [scrollbar-width:thin]">
             {/* Mode tabs */}
             <div
               className="grid shrink-0 grid-cols-2 gap-1 rounded-xl border border-white/[0.1] bg-black/30 p-1"
@@ -789,7 +789,7 @@ export function MotionStudio() {
                       }
                     }}
                     className={[
-                      "rounded-lg px-2 py-2 text-center text-[0.72rem] font-semibold tracking-tight transition-colors",
+                      "rounded-lg px-2 py-2.5 text-center text-[0.8rem] font-semibold tracking-tight transition-colors",
                       active
                         ? "bg-accent text-accent-ink"
                         : "text-fg-muted hover:bg-white/[0.05] hover:text-fg",
@@ -805,10 +805,10 @@ export function MotionStudio() {
             {isObjectSwap ? (
               <div className="shrink-0">
                 <div className="mb-1.5 flex items-center justify-between gap-2">
-                  <p className="text-[0.68rem] font-medium uppercase tracking-[0.14em] text-fg-muted">
+                  <p className="text-[0.78rem] font-medium tracking-wide text-fg-muted">
                     Resolution
                   </p>
-                  <p className="text-[0.68rem] font-medium tabular-nums text-fg-muted">
+                  <p className="text-[0.75rem] font-medium tabular-nums text-fg-muted">
                     {pixverseSwapCreditsPerSecond(
                       pixverseResolution,
                     ).toLocaleString()}{" "}
@@ -824,7 +824,7 @@ export function MotionStudio() {
                         type="button"
                         onClick={() => setResolution(option)}
                         className={[
-                          "rounded-lg px-1 py-2 text-center text-xs font-medium transition-colors",
+                          "rounded-lg px-1 py-2 text-center text-sm font-medium transition-colors",
                           active
                             ? "bg-accent text-[#0a0a0c]"
                             : "text-fg-muted hover:bg-white/[0.05] hover:text-fg",
@@ -836,15 +836,15 @@ export function MotionStudio() {
                   })}
                 </div>
                 <div className="mt-2.5">
-                  <p className="mb-1.5 text-[0.68rem] font-medium uppercase tracking-[0.14em] text-fg-muted">
+                  <p className="mb-1.5 text-[0.78rem] font-medium tracking-wide text-fg-muted">
                     Swap
                   </p>
                   <div className="rounded-xl border border-white/[0.08] bg-black/25 p-1">
-                    <div className="rounded-lg bg-accent px-2 py-2 text-center text-xs font-medium capitalize text-[#0a0a0c]">
+                    <div className="rounded-lg bg-accent px-2 py-2 text-center text-sm font-medium capitalize text-[#0a0a0c]">
                       Object
                     </div>
                   </div>
-                  <p className="mt-2 text-[0.72rem] leading-snug text-fg-muted">
+                  <p className="mt-2 text-[0.8rem] leading-snug text-fg-muted">
                     Replaces the object in the source video with your swap image.
                   </p>
                 </div>
@@ -852,7 +852,7 @@ export function MotionStudio() {
             ) : (
               <div className="shrink-0 space-y-2.5">
                 <div ref={menuRef} className="relative">
-                  <p className="mb-1.5 text-[0.68rem] font-medium uppercase tracking-[0.14em] text-fg-muted">
+                  <p className="mb-1.5 text-[0.78rem] font-medium tracking-wide text-fg-muted">
                     Model
                   </p>
                   <button
@@ -868,10 +868,10 @@ export function MotionStudio() {
                         {model.mark}
                       </span>
                       <span className="min-w-0">
-                        <span className="block truncate text-[0.8rem] font-medium text-fg">
+                        <span className="block truncate text-[0.9rem] font-medium text-fg">
                           {model.name}
                         </span>
-                        <span className="mt-0.5 block text-[0.72rem] font-medium text-fg-muted">
+                        <span className="mt-0.5 block text-[0.78rem] font-medium text-fg-muted">
                           {isGenjutsuMotion
                             ? `${genjutsuCreditsPerSecond(genjutsuResolution).toLocaleString()} credits/s · ${resolution} · ${model.etaLabel}`
                             : `${model.meta} · ${resolution} · ${model.etaLabel}`}
@@ -955,14 +955,14 @@ export function MotionStudio() {
                               <span className="min-w-0">
                                 <span
                                   className={[
-                                    "block truncate text-sm",
+                                    "block truncate text-[0.9rem] font-medium",
                                     disabled ? "text-fg-muted" : "text-fg",
                                   ].join(" ")}
                                 >
                                   {item.name}
                                   {disabled ? " · soon" : ""}
                                 </span>
-                                <span className="mt-0.5 block text-xs font-medium text-fg-muted">
+                                <span className="mt-0.5 block text-[0.78rem] font-medium text-fg-muted">
                                   {item.meta}
                                   {duration != null
                                     ? ` · ${itemCredits.toLocaleString()} credits / ${duration}s`
@@ -979,7 +979,7 @@ export function MotionStudio() {
                 </div>
 
                 <div>
-                  <p className="mb-1.5 text-[0.68rem] font-medium uppercase tracking-[0.14em] text-fg-muted">
+                  <p className="mb-1.5 text-[0.78rem] font-medium tracking-wide text-fg-muted">
                     Resolution
                   </p>
                   <div className="grid grid-cols-3 gap-1 rounded-xl border border-white/[0.08] bg-black/25 p-1">
@@ -991,7 +991,7 @@ export function MotionStudio() {
                           type="button"
                           onClick={() => setResolution(option)}
                           className={[
-                            "rounded-lg px-1 py-2 text-center text-xs font-medium transition-colors",
+                            "rounded-lg px-1 py-2 text-center text-sm font-medium transition-colors",
                             active
                               ? "bg-accent text-[#0a0a0c]"
                               : "text-fg-muted hover:bg-white/[0.05] hover:text-fg",
@@ -1042,7 +1042,7 @@ export function MotionStudio() {
               <div className="mb-1.5 flex items-center justify-between gap-2">
                 <label
                   htmlFor={promptId}
-                  className="flex items-center gap-2 text-[0.68rem] font-medium uppercase tracking-[0.14em] text-fg-muted"
+                  className="flex items-center gap-2 text-[0.78rem] font-medium tracking-wide text-fg-muted"
                 >
                   Prompt
                   <span className="normal-case tracking-normal text-fg-muted/90">
@@ -1089,14 +1089,14 @@ export function MotionStudio() {
                         ? "Optional style / character notes…"
                         : "1. Look  2. Outfit  3. Scene  4. Keep the same  5. Final style"
                   }
-                  className="w-full resize-none rounded-xl border border-white/[0.1] bg-white/[0.04] px-3 py-2.5 text-[0.8rem] leading-relaxed text-fg outline-none transition placeholder:text-fg-muted/70 focus:border-accent/35 focus:bg-white/[0.06]"
+                  className="w-full resize-none rounded-xl border border-white/[0.1] bg-white/[0.04] px-3 py-2.5 text-[0.875rem] leading-relaxed text-fg outline-none transition placeholder:text-fg-muted/70 focus:border-accent/35 focus:bg-white/[0.06]"
                 />
               ) : null}
             </div>
           </div>
 
           {/* Sticky generate */}
-          <div className="shrink-0 border-t border-white/[0.07] p-3.5 sm:p-4">
+          <div className="shrink-0 border-t border-white/[0.07] p-4 sm:p-5">
             <button
               type="button"
               onClick={() => void onGenerate()}
@@ -1193,7 +1193,7 @@ export function MotionStudio() {
                 </span>
               )}
             </button>
-            <p className="mt-2.5 text-center text-[0.72rem] leading-snug text-fg-muted">
+            <p className="mt-2.5 text-center text-[0.8rem] leading-snug text-fg-muted">
               {isObjectSwap
                 ? "Tip: use a clear object image that matches size and angle of the item in the source video."
                 : "Tip: keep the person a similar size and framing in the photo and the motion video."}
@@ -1204,7 +1204,7 @@ export function MotionStudio() {
             status === "done" ? (
               <p
                 className={[
-                  "mt-1.5 text-center text-[0.72rem] leading-tight",
+                  "mt-1.5 text-center text-[0.8rem] leading-tight",
                   status === "need" || status === "error"
                     ? "text-accent"
                     : "text-fg-muted",
@@ -1460,7 +1460,7 @@ function UploadField({
       >
         <div
           className={[
-            "relative flex h-11 w-11 items-center justify-center overflow-hidden rounded-lg border",
+            "relative flex h-12 w-12 items-center justify-center overflow-hidden rounded-lg border",
             filled
               ? "border-accent/30 bg-black/30"
               : "border-white/10 bg-black/25 text-fg-muted group-hover:text-fg",
@@ -1473,14 +1473,14 @@ function UploadField({
           )}
         </div>
         <div className="min-w-0">
-          <p className="text-[0.65rem] font-medium uppercase tracking-[0.12em] text-fg-muted">
+          <p className="text-[0.75rem] font-medium tracking-wide text-fg-muted">
             {label}
             {required ? <span className="ml-0.5 text-[#ff5c5c]">*</span> : null}
           </p>
-          <p className="mt-0.5 truncate text-[0.75rem] font-medium text-fg">
+          <p className="mt-0.5 truncate text-[0.85rem] font-medium text-fg">
             {fileName ? "Ready" : button}
           </p>
-          <p className="truncate text-[0.65rem] font-medium text-fg-muted">
+          <p className="truncate text-[0.72rem] font-medium text-fg-muted">
             {fileName ? "Replace" : hint}
           </p>
         </div>

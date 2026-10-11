@@ -9,7 +9,7 @@ export function Hero() {
         <div className="absolute -right-16 top-8 h-[240px] w-[240px] rounded-full bg-[radial-gradient(circle,rgba(120,70,50,0.1),transparent_65%)] blur-2xl" />
       </div>
 
-      <div className="page-shell relative flex min-h-0 flex-1 flex-col pb-3 pt-1.5 sm:pb-4 sm:pt-2">
+      <div className="page-shell-wide relative flex min-h-0 flex-1 flex-col pb-3 pt-1.5 sm:pb-4 sm:pt-2">
         <div className="mx-auto shrink-0 animate-rise text-center">
           <h1 className="font-display text-[clamp(1.25rem,2.8vw,1.85rem)] font-semibold leading-tight tracking-tight text-fg">
             Genjutsu AI Video Generator
@@ -19,7 +19,7 @@ export function Hero() {
           </p>
         </div>
 
-        <div className="mx-auto mt-2.5 flex min-h-0 w-full max-w-6xl flex-1 sm:mt-3">
+        <div className="mx-auto mt-2.5 flex min-h-0 w-full max-w-7xl flex-1 sm:mt-3">
           <MotionStudio />
         </div>
       </div>
