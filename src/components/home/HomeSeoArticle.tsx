@@ -1,7 +1,5 @@
-import Image from "next/image";
 import Link from "next/link";
 import {
-  homeExamples,
   homeUseCases,
   homeWhatIs,
   homeWhatYouCanCreate,
@@ -103,40 +101,6 @@ export function HomeSeoArticle() {
             </li>
           ))}
         </ul>
-      </div>
-
-      <div className="page-shell mt-16">
-        <h2
-          id="motion-examples"
-          className="font-display text-2xl font-semibold tracking-tight sm:text-3xl"
-        >
-          Examples: still + motion → video
-        </h2>
-        <p className="mt-2 max-w-2xl text-sm text-fg-muted">
-          Studio library stills with typical settings.
-        </p>
-        <div className="mt-8 grid grid-cols-1 gap-4 sm:grid-cols-3">
-          {homeExamples.map((ex) => (
-            <div
-              key={ex.id}
-              className="overflow-hidden rounded-2xl border border-border bg-surface"
-            >
-              <div className="relative aspect-[16/10]">
-                <Image
-                  src={ex.src}
-                  alt={ex.title}
-                  fill
-                  className="object-cover"
-                  sizes="(max-width: 640px) 100vw, 33vw"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/10 to-transparent" />
-                <p className="absolute bottom-3 left-3 text-sm font-medium text-fg">
-                  {ex.title}
-                </p>
-              </div>
-            </div>
-          ))}
-        </div>
       </div>
     </article>
   );

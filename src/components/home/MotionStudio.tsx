@@ -1084,10 +1084,10 @@ export function MotionStudio() {
                   rows={3}
                   placeholder={
                     isObjectSwap
-                      ? "Optional notes (swap uses image + video)…"
+                      ? "e.g. Replace the bottle with this product, keep the hand and scene the same…"
                       : usesGenjutsuPricing
-                        ? "Optional style / character notes…"
-                        : "1. Look  2. Outfit  3. Scene  4. Keep the same  5. Final style"
+                        ? "e.g. Keep her face and hairstyle, casual streetwear, sunny outdoor…"
+                        : "e.g. Same person as the photo, red jacket, city street at night, keep face unchanged…"
                   }
                   className="w-full resize-none rounded-xl border border-white/[0.1] bg-white/[0.04] px-3 py-2.5 text-[0.875rem] leading-relaxed text-fg outline-none transition placeholder:text-fg-muted/70 focus:border-accent/35 focus:bg-white/[0.06]"
                 />

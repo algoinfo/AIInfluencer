@@ -19,7 +19,7 @@ export function Hero() {
           </p>
         </div>
 
-        <div className="mx-auto mt-2 flex w-full max-w-7xl flex-1 sm:mt-3 min-h-[min(720px,calc(100dvh-8rem))] lg:min-h-[calc(100dvh-8rem)]">
+        <div className="mx-auto mt-2 flex min-h-[min(720px,calc(100dvh-8rem))] w-full max-w-7xl flex-1 sm:mt-3 lg:min-h-[calc(100dvh-8rem)]">
           <MotionStudio />
         </div>
       </div>
