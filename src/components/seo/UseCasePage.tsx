@@ -102,7 +102,7 @@ export function UseCasePage({
 
       <section className="border-b border-border bg-bg pb-10 pt-2 sm:pb-12">
         <div className="page-shell">
-          <div className="mx-auto flex h-[min(85vh,920px)] min-h-[560px] w-full max-w-6xl">
+          <div className="mx-auto flex h-[min(85vh,920px)] min-h-[560px] w-full max-w-6xl max-lg:h-auto max-lg:min-h-[640px]">
             <MotionStudio />
           </div>
         </div>

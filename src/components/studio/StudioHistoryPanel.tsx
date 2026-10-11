@@ -90,7 +90,7 @@ export function StudioHistoryPanel({
           <li key={item.id}>
             <div
               className={[
-                "flex items-stretch gap-3 rounded-xl border p-2 transition",
+                "flex items-stretch gap-2 rounded-xl border p-2 transition sm:gap-3",
                 isGenerating
                   ? "border-accent/25 bg-[rgba(216,255,62,0.04)]"
                   : isFailed
@@ -103,7 +103,7 @@ export function StudioHistoryPanel({
                 onClick={() => canPreview && onSelect(item)}
                 disabled={!canPreview}
                 className={[
-                  "relative aspect-video h-[4.25rem] w-[7.5rem] shrink-0 overflow-hidden rounded-lg border border-white/10 bg-black",
+                  "relative aspect-video h-[3.5rem] w-[6.25rem] shrink-0 overflow-hidden rounded-lg border border-white/10 bg-black sm:h-[4.25rem] sm:w-[7.5rem]",
                   canPreview ? "" : "cursor-default",
                 ].join(" ")}
                 aria-label={
@@ -166,12 +166,12 @@ export function StudioHistoryPanel({
                 ) : null}
               </div>
 
-              <div className="flex shrink-0 flex-col justify-center gap-1.5 self-center">
+              <div className="flex shrink-0 flex-col justify-center gap-1 self-center sm:gap-1.5">
                 <button
                   type="button"
                   onClick={() => onDownload(item)}
                   disabled={!canPreview}
-                  className="min-w-[4.5rem] rounded-full border border-accent/30 bg-[rgba(216,255,62,0.08)] px-2.5 py-1 text-[0.65rem] font-medium text-accent transition hover:bg-[rgba(216,255,62,0.14)] disabled:cursor-not-allowed disabled:opacity-35"
+                  className="min-w-[3.75rem] rounded-full border border-accent/30 bg-[rgba(216,255,62,0.08)] px-2 py-1 text-[0.65rem] font-medium text-accent transition hover:bg-[rgba(216,255,62,0.14)] disabled:cursor-not-allowed disabled:opacity-35 sm:min-w-[4.5rem] sm:px-2.5"
                 >
                   Download
                 </button>
@@ -185,7 +185,7 @@ export function StudioHistoryPanel({
                     if (ok) onDelete(item);
                   }}
                   disabled={!onDelete || isGenerating}
-                  className="min-w-[4.5rem] rounded-full border border-white/12 px-2.5 py-1 text-[0.65rem] font-medium text-fg-muted transition hover:border-red-400/35 hover:bg-red-500/10 hover:text-red-300 disabled:cursor-not-allowed disabled:opacity-35"
+                  className="min-w-[3.75rem] rounded-full border border-white/12 px-2 py-1 text-[0.65rem] font-medium text-fg-muted transition hover:border-red-400/35 hover:bg-red-500/10 hover:text-red-300 disabled:cursor-not-allowed disabled:opacity-35 sm:min-w-[4.5rem] sm:px-2.5"
                 >
                   Delete
                 </button>

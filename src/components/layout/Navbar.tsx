@@ -9,6 +9,8 @@ import { UserAccountMenu } from "@/components/layout/UserAccountMenu";
 
 const navItems = [
   { href: "/pricing", label: "Pricing" },
+  { href: "/motion-transfer", label: "Studio" },
+  { href: "/examples", label: "Examples" },
 ];
 
 export function Navbar() {
@@ -43,12 +45,21 @@ export function Navbar() {
     setOpen(false);
   }, [pathname]);
 
+  useEffect(() => {
+    if (!open) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = prev;
+    };
+  }, [open]);
+
   return (
     <header
       className={[
         "fixed inset-x-0 top-0 z-50 transition-all duration-300",
         scrolled || open
-          ? "border-b border-border bg-[#050506]/80 backdrop-blur-xl"
+          ? "border-b border-border bg-[#050506]/90 backdrop-blur-xl"
           : "bg-transparent",
       ].join(" ")}
     >
@@ -95,14 +106,14 @@ export function Navbar() {
               <button
                 type="button"
                 onClick={() => openAuthModal({ mode: "login" })}
-                className="h-9 rounded-full px-3 text-sm text-fg-muted transition hover:text-fg"
+                className="h-9 rounded-lg px-3 text-sm text-fg-muted transition hover:text-fg"
               >
                 Log in
               </button>
               <button
                 type="button"
                 onClick={() => openAuthModal({ mode: "register" })}
-                className="inline-flex h-9 items-center rounded-full bg-accent px-4 text-sm font-semibold text-[#0a0a0c] transition hover:bg-accent-strong"
+                className="inline-flex h-9 items-center rounded-lg bg-accent px-4 text-sm font-semibold text-accent-ink transition hover:bg-accent-strong"
               >
                 Sign up
               </button>
@@ -112,23 +123,28 @@ export function Navbar() {
 
         <button
           type="button"
-          className="inline-flex h-10 w-10 items-center justify-center justify-self-end rounded-full border border-border-strong text-fg lg:hidden"
+          className={[
+            "inline-flex h-10 w-10 items-center justify-center rounded-lg border text-fg transition lg:hidden",
+            open
+              ? "border-white/20 bg-white/[0.06]"
+              : "border-white/12 bg-transparent",
+          ].join(" ")}
           aria-expanded={open}
-          aria-label="Toggle menu"
+          aria-label={open ? "Close menu" : "Open menu"}
           onClick={() => setOpen((value) => !value)}
         >
-          <span className="sr-only">Menu</span>
-          <div className="flex w-4 flex-col gap-1.5">
+          <span className="sr-only">{open ? "Close" : "Menu"}</span>
+          <div className="relative h-3.5 w-3.5">
             <span
               className={[
-                "h-px w-full bg-fg transition-transform",
-                open ? "translate-y-[3.5px] rotate-45" : "",
+                "absolute left-0 top-[6px] h-px w-3.5 bg-fg transition-transform duration-200",
+                open ? "translate-y-0 rotate-45" : "-translate-y-[4px]",
               ].join(" ")}
             />
             <span
               className={[
-                "h-px w-full bg-fg transition-transform",
-                open ? "-translate-y-[3.5px] -rotate-45" : "",
+                "absolute left-0 top-[6px] h-px w-3.5 bg-fg transition-transform duration-200",
+                open ? "translate-y-0 -rotate-45" : "translate-y-[4px]",
               ].join(" ")}
             />
           </div>
@@ -136,46 +152,72 @@ export function Navbar() {
       </div>
 
       {open ? (
-        <div className="border-t border-border bg-[#050506]/98 backdrop-blur-xl lg:hidden">
-          <div className="page-shell flex flex-col gap-1 py-4">
-            {navItems.map((item) => (
-              <Link
-                key={item.href}
-                href={item.href}
-                className="rounded-xl px-3 py-3 text-base text-fg-muted transition-colors hover:bg-white/[0.04] hover:text-fg"
-              >
-                {item.label}
-              </Link>
-            ))}
-            <div className="mt-2 border-t border-white/[0.06] pt-3">
-              {isLoggedIn && user ? (
-                <div className="px-3 py-1">
-                  <UserAccountMenu email={user.email} className="w-full" />
-                </div>
-              ) : (
-                <div className="flex flex-col gap-2 px-3">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setOpen(false);
-                      openAuthModal({ mode: "login" });
-                    }}
-                    className="rounded-xl px-3 py-3 text-left text-base text-fg-muted transition hover:bg-white/[0.04] hover:text-fg"
-                  >
-                    Log in
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setOpen(false);
-                      openAuthModal({ mode: "register" });
-                    }}
-                    className="inline-flex h-11 items-center justify-center rounded-full bg-accent text-sm font-semibold text-[#0a0a0c]"
-                  >
-                    Sign up
-                  </button>
-                </div>
-              )}
+        <div className="lg:hidden">
+          <button
+            type="button"
+            aria-label="Dismiss menu"
+            className="fixed inset-0 top-[72px] z-40 bg-black/55 backdrop-blur-[2px]"
+            onClick={() => setOpen(false)}
+          />
+          <div className="relative z-50 border-t border-white/[0.06] bg-[#0a0a0c]">
+            <div className="page-shell py-3 pb-4">
+              <nav className="overflow-hidden rounded-xl border border-white/[0.08] bg-white/[0.025]">
+                {navItems.map((item, index) => {
+                  const active =
+                    pathname === item.href ||
+                    pathname.startsWith(`${item.href}/`);
+                  return (
+                    <Link
+                      key={item.href}
+                      href={item.href}
+                      onClick={() => setOpen(false)}
+                      className={[
+                        "flex items-center justify-between px-3.5 py-3 text-[0.95rem] font-medium transition-colors",
+                        index > 0 ? "border-t border-white/[0.06]" : "",
+                        active
+                          ? "bg-white/[0.05] text-fg"
+                          : "text-fg-muted hover:bg-white/[0.04] hover:text-fg",
+                      ].join(" ")}
+                    >
+                      <span>{item.label}</span>
+                      <span className="text-fg-subtle" aria-hidden="true">
+                        ›
+                      </span>
+                    </Link>
+                  );
+                })}
+              </nav>
+
+              <div className="mt-3">
+                {isLoggedIn && user ? (
+                  <div className="rounded-xl border border-white/[0.08] bg-white/[0.025] px-3 py-2.5">
+                    <UserAccountMenu email={user.email} className="w-full" />
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setOpen(false);
+                        openAuthModal({ mode: "login" });
+                      }}
+                      className="inline-flex h-11 items-center justify-center rounded-xl border border-white/12 bg-white/[0.04] text-sm font-medium text-fg transition hover:bg-white/[0.07]"
+                    >
+                      Log in
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setOpen(false);
+                        openAuthModal({ mode: "register" });
+                      }}
+                      className="inline-flex h-11 items-center justify-center rounded-xl bg-accent text-sm font-semibold text-accent-ink transition hover:bg-accent-strong"
+                    >
+                      Sign up
+                    </button>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </div>

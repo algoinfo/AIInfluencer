@@ -18,7 +18,7 @@ export function StudioPreviewHistoryTabs({
   return (
     <div className="flex items-center gap-2">
       {trailing ? (
-        <div className="mr-auto min-w-0 truncate text-[0.7rem] text-fg-subtle">
+        <div className="mr-auto hidden min-w-0 truncate text-[0.7rem] text-fg-subtle sm:block">
           {trailing}
         </div>
       ) : (

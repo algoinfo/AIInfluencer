@@ -748,14 +748,14 @@ export function MotionStudio() {
   return (
     <div
       id="studio"
-      className="animate-rise-delay-1 relative flex h-full min-h-0 w-full flex-col overflow-hidden rounded-[1.25rem] border border-white/[0.1] bg-[linear-gradient(180deg,rgba(22,22,26,0.95),rgba(10,10,12,0.98))] shadow-[0_40px_100px_rgba(0,0,0,0.55)]"
+      className="animate-rise-delay-1 relative flex h-full min-h-[640px] w-full flex-col overflow-hidden rounded-xl border border-white/[0.1] bg-[linear-gradient(180deg,rgba(22,22,26,0.95),rgba(10,10,12,0.98))] shadow-[0_40px_100px_rgba(0,0,0,0.55)] sm:rounded-[1.25rem] lg:min-h-0"
     >
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_20%_0%,rgba(216,255,62,0.06),transparent_45%),radial-gradient(ellipse_at_90%_20%,rgba(255,255,255,0.04),transparent_40%)]" />
 
-      <div className="relative grid min-h-0 flex-1 grid-rows-[minmax(0,1.15fr)_minmax(0,0.85fr)] lg:grid-rows-1 lg:grid-cols-[460px_1fr] xl:grid-cols-[480px_1fr]">
+      <div className="relative grid min-h-0 flex-1 grid-rows-[auto_minmax(260px,42vh)] lg:grid-rows-1 lg:grid-cols-[460px_1fr] xl:grid-cols-[480px_1fr]">
         {/* Left tools */}
         <div className="flex min-h-0 flex-col border-b border-white/[0.07] lg:border-b-0 lg:border-r lg:border-white/[0.07]">
-          <div className="flex min-h-0 flex-1 flex-col gap-3.5 overflow-y-auto p-4 sm:p-5 [scrollbar-width:thin]">
+          <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-visible p-3 sm:gap-3.5 sm:p-5 lg:overflow-y-auto lg:[scrollbar-width:thin]">
             {/* Mode tabs */}
             <div
               className="grid shrink-0 grid-cols-2 gap-1 rounded-xl border border-white/[0.1] bg-black/30 p-1"
@@ -789,7 +789,7 @@ export function MotionStudio() {
                       }
                     }}
                     className={[
-                      "rounded-lg px-2 py-2.5 text-center text-[0.8rem] font-semibold tracking-tight transition-colors",
+                      "rounded-lg px-1.5 py-2.5 text-center text-[0.75rem] font-semibold tracking-tight transition-colors sm:px-2 sm:text-[0.8rem]",
                       active
                         ? "bg-accent text-accent-ink"
                         : "text-fg-muted hover:bg-white/[0.05] hover:text-fg",
@@ -1096,14 +1096,15 @@ export function MotionStudio() {
           </div>
 
           {/* Sticky generate */}
-          <div className="shrink-0 border-t border-white/[0.07] p-4 sm:p-5">
+          <div className="shrink-0 border-t border-white/[0.07] bg-[rgba(14,14,17,0.96)] p-3 backdrop-blur-sm sm:p-5">
             <button
               type="button"
               onClick={() => void onGenerate()}
               disabled={busy}
               aria-busy={busy}
               className={[
-                "group relative flex h-12 w-full items-center justify-between gap-3 overflow-hidden rounded-2xl px-4 text-left transition-all duration-200 disabled:pointer-events-none disabled:cursor-wait",
+                "group relative flex w-full items-center justify-between gap-2 overflow-hidden rounded-xl px-3.5 text-left transition-all duration-200 disabled:pointer-events-none disabled:cursor-wait sm:h-12 sm:gap-3 sm:rounded-2xl sm:px-4",
+                "max-sm:min-h-12 max-sm:flex-col max-sm:items-stretch max-sm:gap-1.5 max-sm:py-2.5",
                 ready && !busy
                   ? "bg-accent text-accent-ink shadow-[0_8px_28px_rgba(216,255,62,0.18)] hover:bg-accent-strong hover:shadow-[0_10px_32px_rgba(216,255,62,0.28)] active:scale-[0.985]"
                   : busy
@@ -1114,10 +1115,10 @@ export function MotionStudio() {
               {ready ? (
                 <span
                   aria-hidden
-                  className="pointer-events-none absolute inset-y-0 left-0 w-1/3 bg-gradient-to-r from-transparent via-white/25 to-transparent opacity-0 transition duration-500 group-hover:translate-x-[220%] group-hover:opacity-100"
+                  className="pointer-events-none absolute inset-y-0 left-0 hidden w-1/3 bg-gradient-to-r from-transparent via-white/25 to-transparent opacity-0 transition duration-500 group-hover:translate-x-[220%] group-hover:opacity-100 sm:block"
                 />
               ) : null}
-              <span className="relative flex min-w-0 items-center gap-2.5">
+              <span className="relative flex min-w-0 items-center gap-2.5 max-sm:justify-center">
                 {busy ? (
                   <span className="h-4 w-4 shrink-0 animate-spin rounded-full border-2 border-accent-ink/25 border-t-accent-ink" />
                 ) : (
@@ -1141,7 +1142,7 @@ export function MotionStudio() {
               </span>
               {busy ? (
                 <span
-                  className="relative flex shrink-0 items-center gap-1.5 rounded-full bg-accent-ink/10 px-2.5 py-1 text-[0.7rem] font-semibold tabular-nums text-accent-ink"
+                  className="relative flex shrink-0 items-center justify-center gap-1.5 rounded-full bg-accent-ink/10 px-2.5 py-1 text-[0.7rem] font-semibold tabular-nums text-accent-ink max-sm:self-center"
                   aria-live="polite"
                 >
                   <span className="font-mono text-[0.8rem]">
@@ -1155,7 +1156,7 @@ export function MotionStudio() {
               ) : (
                 <span
                   className={[
-                    "relative flex shrink-0 items-center gap-1.5 rounded-full px-2.5 py-1 text-[0.7rem] font-medium tabular-nums",
+                    "relative flex shrink-0 items-center justify-center gap-1.5 rounded-full px-2.5 py-1 text-[0.7rem] font-medium tabular-nums max-sm:self-center",
                     ready
                       ? "bg-accent-ink/10 text-accent-ink/85"
                       : "bg-black/25 text-fg-muted",
@@ -1173,27 +1174,31 @@ export function MotionStudio() {
                       </span>
                       <span>{sellCredits.toLocaleString()} credits</span>
                       <span
-                        className={
+                        className={`max-sm:hidden ${
                           ready ? "text-accent-ink/40" : "text-fg-muted/60"
-                        }
+                        }`}
                       >
                         ·
                       </span>
-                      <span>{eta.etaLabel}</span>
+                      <span className="max-sm:hidden">{eta.etaLabel}</span>
                     </>
                   ) : (
                     <span>
                       {usesPixversePricing
-                        ? `${pixverseSwapCreditsPerSecond(pixverseResolution).toLocaleString()} credits/s · ${eta.etaLabel}`
+                        ? `${pixverseSwapCreditsPerSecond(pixverseResolution).toLocaleString()} credits/s`
                         : usesGenjutsuPricing
-                          ? `${genjutsuCreditsPerSecond(genjutsuResolution).toLocaleString()} credits/s · ${eta.etaLabel}`
-                          : `${CREDITS_PER_SECOND} credits/s · ${eta.etaLabel}`}
+                          ? `${genjutsuCreditsPerSecond(genjutsuResolution).toLocaleString()} credits/s`
+                          : `${CREDITS_PER_SECOND} credits/s`}
+                      <span className="max-sm:hidden">
+                        {" "}
+                        · {eta.etaLabel}
+                      </span>
                     </span>
                   )}
                 </span>
               )}
             </button>
-            <p className="mt-2.5 text-center text-[0.8rem] leading-snug text-fg-muted">
+            <p className="mt-2 hidden text-center text-[0.8rem] leading-snug text-fg-muted sm:block">
               {isObjectSwap
                 ? "Tip: use a clear object image that matches size and angle of the item in the source video."
                 : "Tip: keep the person a similar size and framing in the photo and the motion video."}
@@ -1222,7 +1227,7 @@ export function MotionStudio() {
         </div>
 
         {/* Right: Preview / History (like tell AI Video Generator) */}
-        <div className="relative flex min-h-0 flex-col p-3 sm:p-4">
+        <div className="relative flex min-h-0 flex-col p-2.5 sm:p-4">
           <StudioPreviewHistoryTabs
             mode={panelMode}
             onModeChange={setPanelMode}
@@ -1246,7 +1251,7 @@ export function MotionStudio() {
             }
           />
 
-          <div className="mt-3 flex min-h-0 flex-1 flex-col">
+          <div className="mt-2 flex min-h-0 flex-1 flex-col sm:mt-3">
             {panelMode === "history" ? (
               <StudioHistoryPanel
                 items={history}
@@ -1332,7 +1337,7 @@ export function MotionStudio() {
                         </span>
                       </div>
                       <p
-                        className="flex items-baseline gap-1 font-mono text-[2.75rem] font-semibold leading-none tracking-tight text-fg sm:text-5xl"
+                        className="flex items-baseline gap-1 font-mono text-4xl font-semibold leading-none tracking-tight text-fg sm:text-5xl"
                         aria-live="polite"
                         aria-label={`Elapsed ${elapsedParts.label}`}
                       >
