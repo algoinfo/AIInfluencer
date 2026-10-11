@@ -103,7 +103,7 @@ type StudioModel = {
 const models: StudioModel[] = [
   {
     id: "kling-v3-pro",
-    name: "Kling V3 Pro Motion Control",
+    name: "Kling V3 Pro",
     meta: "Pro · ×1.5 credits",
     mark: "K3",
     multiplier: 1.5,
@@ -113,7 +113,7 @@ const models: StudioModel[] = [
   },
   {
     id: "genjutsu",
-    name: "genjutsu",
+    name: "Genjutsu",
     meta: "Higgsfield · by resolution",
     mark: "gj",
     multiplier: 1,
@@ -124,7 +124,7 @@ const models: StudioModel[] = [
   },
   {
     id: "kling-v3-standard",
-    name: "Kling V3 Standard Motion Control",
+    name: "Kling V3 Standard",
     meta: "Standard · ×1.2 credits",
     mark: "V3",
     multiplier: 1.2,
@@ -134,7 +134,7 @@ const models: StudioModel[] = [
   },
   {
     id: "kling-v26-standard",
-    name: "Kling V2.6 Standard Motion Control",
+    name: "Kling V2.6",
     meta: "Standard · ×1.0 credits",
     mark: "2.6",
     multiplier: 1,
@@ -753,7 +753,7 @@ export function MotionStudio() {
       <div className="relative grid min-h-0 flex-1 grid-rows-[minmax(0,1.1fr)_minmax(0,0.9fr)] lg:grid-rows-1 lg:grid-cols-[300px_1fr] xl:grid-cols-[320px_1fr]">
         {/* Left tools */}
         <div className="flex min-h-0 flex-col border-b border-white/[0.06] bg-[#0e0e11] lg:border-b-0 lg:border-r lg:border-white/[0.06]">
-          <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto px-3.5 py-3.5 sm:px-4 sm:py-4 [scrollbar-width:thin]">
+          <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto px-3.5 py-3.5 sm:px-4 sm:py-4 [scrollbar-width:thin]">
             {/* Mode tabs */}
             <div
               className="grid shrink-0 grid-cols-2 gap-0.5 rounded-lg bg-white/[0.04] p-0.5"
@@ -799,55 +799,80 @@ export function MotionStudio() {
               })}
             </div>
 
+            <div className="shrink-0">
+              <div className="mb-1.5 flex items-end justify-between gap-2">
+                <p className="text-[0.7rem] font-medium text-fg-muted">
+                  Inputs
+                </p>
+                {isObjectSwap ? (
+                  <p className="text-[0.65rem] text-fg-subtle">
+                    Image replaces object in video
+                  </p>
+                ) : null}
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <UploadField
+                  label={isObjectSwap ? "Swap image" : "Character"}
+                  required
+                  hint="JPG / PNG"
+                  button="Upload"
+                  accept="image/*"
+                  fileName={imageName}
+                  previewUrl={imageUrl}
+                  previewKind="image"
+                  onPick={onImage}
+                  icon="image"
+                  compact
+                />
+                <UploadField
+                  label={isObjectSwap ? "Source video" : "Motion"}
+                  required
+                  hint={duration != null ? `${duration}s` : "MP4 / MOV"}
+                  button="Upload"
+                  accept="video/*"
+                  fileName={videoName}
+                  previewUrl={videoUrl}
+                  previewKind="video"
+                  onPick={onVideo}
+                  icon="video"
+                  compact
+                />
+              </div>
+            </div>
+
             {/* Object Swap → fal-ai/pixverse/swap */}
             {isObjectSwap ? (
-              <div className="shrink-0 space-y-3">
-                <div>
-                  <div className="mb-1.5 flex items-center justify-between gap-2">
-                    <p className="text-[0.7rem] font-medium text-fg-muted">
-                      Resolution
-                    </p>
-                    <p className="text-[0.65rem] tabular-nums text-fg-subtle">
-                      {pixverseSwapCreditsPerSecond(
-                        pixverseResolution,
-                      ).toLocaleString()}{" "}
-                      /s
-                    </p>
-                  </div>
-                  <div className="grid grid-cols-3 gap-0.5 rounded-lg bg-white/[0.04] p-0.5">
-                    {PIXVERSE_SWAP_RESOLUTIONS.map((option) => {
-                      const active = option === resolution;
-                      return (
-                        <button
-                          key={option}
-                          type="button"
-                          onClick={() => setResolution(option)}
-                          className={[
-                            "rounded-md px-1 py-1.5 text-center text-xs font-medium transition-colors",
-                            active
-                              ? "bg-white/[0.1] text-fg"
-                              : "text-fg-subtle hover:text-fg",
-                          ].join(" ")}
-                        >
-                          {option}
-                        </button>
-                      );
-                    })}
-                  </div>
+              <div className="shrink-0">
+                <div className="mb-1.5 flex items-center justify-between gap-2">
+                  <p className="text-[0.7rem] font-medium text-fg-muted">
+                    Resolution
+                  </p>
+                  <p className="text-[0.65rem] tabular-nums text-fg-subtle">
+                    {pixverseSwapCreditsPerSecond(
+                      pixverseResolution,
+                    ).toLocaleString()}{" "}
+                    credits/s
+                  </p>
                 </div>
-                <div>
-                  <p className="mb-1.5 text-[0.7rem] font-medium text-fg-muted">
-                    Target
-                  </p>
-                  <div className="flex items-center justify-between rounded-lg border border-white/[0.08] bg-white/[0.03] px-3 py-2">
-                    <span className="text-xs font-medium text-fg">Object</span>
-                    <span className="rounded bg-white/[0.06] px-1.5 py-0.5 text-[0.6rem] font-medium text-fg-subtle">
-                      Fixed
-                    </span>
-                  </div>
-                  <p className="mt-1.5 text-[0.7rem] leading-snug text-fg-subtle">
-                    Replace the object in the source video with your image.
-                  </p>
+                <div className="grid grid-cols-3 gap-0.5 rounded-lg bg-white/[0.04] p-0.5">
+                  {PIXVERSE_SWAP_RESOLUTIONS.map((option) => {
+                    const active = option === resolution;
+                    return (
+                      <button
+                        key={option}
+                        type="button"
+                        onClick={() => setResolution(option)}
+                        className={[
+                          "rounded-md px-1 py-1.5 text-center text-xs font-medium transition-colors",
+                          active
+                            ? "bg-white/[0.1] text-fg"
+                            : "text-fg-subtle hover:text-fg",
+                        ].join(" ")}
+                      >
+                        {option}
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
             ) : (
@@ -1006,42 +1031,6 @@ export function MotionStudio() {
                 </div>
               </div>
             )}
-
-            <div className="shrink-0">
-              <p className="mb-1.5 text-[0.7rem] font-medium text-fg-muted">
-                Inputs
-              </p>
-              <div className="grid grid-cols-2 gap-2">
-                <UploadField
-                  label={isObjectSwap ? "Swap image" : "Character"}
-                  required
-                  hint="JPG / PNG"
-                  button="Upload"
-                  accept="image/*"
-                  fileName={imageName}
-                  previewUrl={imageUrl}
-                  previewKind="image"
-                  onPick={onImage}
-                  icon="image"
-                  compact
-                />
-                <UploadField
-                  label={isObjectSwap ? "Source video" : "Motion"}
-                  required
-                  hint={
-                    duration != null ? `${duration}s` : "MP4 / MOV"
-                  }
-                  button="Upload"
-                  accept="video/*"
-                  fileName={videoName}
-                  previewUrl={videoUrl}
-                  previewKind="video"
-                  onPick={onVideo}
-                  icon="video"
-                  compact
-                />
-              </div>
-            </div>
 
             {/* Prompt — toggle like Genjutsu studio */}
             <div className="shrink-0">
@@ -1430,7 +1419,7 @@ function UploadField({
     return (
       <label
         className={[
-          "group relative flex aspect-[4/5] cursor-pointer flex-col overflow-hidden rounded-lg border transition-colors",
+          "group relative flex aspect-square cursor-pointer flex-col overflow-hidden rounded-lg border transition-colors",
           filled
             ? "border-white/15 bg-black/50"
             : "border-dashed border-white/[0.12] bg-white/[0.02] hover:border-white/25 hover:bg-white/[0.04]",
