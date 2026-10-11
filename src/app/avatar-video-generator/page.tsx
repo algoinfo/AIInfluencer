@@ -43,7 +43,7 @@ export default function AvatarVideoGeneratorPage() {
           heading: "How to generate an avatar clip",
           paragraphs: [
             "1) Lock a hero avatar still (clear face, optional full body). 2) Pick a short performance reference. 3) Log in and generate in the homepage studio. 4) Batch by swapping only the motion file.",
-            "For influencer-branded calendars see /ai-influencer. For free photo-to-dance see /dance-video. For ad UGC see /ugc-video-generator.",
+            "For influencer-branded calendars see /ai-influencer. For photo-to-dance see /dance-video. For ad UGC see /ugc-video-generator.",
           ],
         },
         {
@@ -63,14 +63,15 @@ export default function AvatarVideoGeneratorPage() {
           a: "Yes — that is the point. Freeze the still; change only the performance reference.",
         },
         {
-          q: "Is there a free tier?",
-          a: `Signup includes ${WELCOME_CREDITS} welcome credits for studio generations.`,
+          q: "How do credits work?",
+          a: `Signup includes ${WELCOME_CREDITS} welcome credits for studio generations. Buy one-time packs on Pricing when you need more.`,
         },
       ]}
       related={[
         { href: "/ai-influencer", label: "AI influencer" },
         { href: "/ugc-video-generator", label: "UGC video generator" },
-        { href: "/dance-video", label: "Free dance video" },
+        { href: "/dance-video", label: "AI dance video" },
+        { href: "/pricing", label: "Buy credits" },
         { href: "/guides/how-to-create-consistent-ai-characters", label: "Consistent characters" },
       ]}
     />

@@ -7,11 +7,7 @@ import { useEffect, useState, type MouseEvent } from "react";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { UserAccountMenu } from "@/components/layout/UserAccountMenu";
 
-const navItems = [
-  { href: "/pricing", label: "Pricing" },
-  { href: "/motion-transfer", label: "Studio" },
-  { href: "/examples", label: "Examples" },
-];
+const navItems = [{ href: "/pricing", label: "Pricing" }];
 
 export function Navbar() {
   const pathname = usePathname();
@@ -59,8 +55,8 @@ export function Navbar() {
       className={[
         "fixed inset-x-0 top-0 z-50 transition-all duration-300",
         scrolled || open
-          ? "border-b border-border bg-[#050506]/90 backdrop-blur-xl"
-          : "bg-transparent",
+          ? "border-b border-white/[0.12] bg-white/[0.04] shadow-[inset_0_-1px_0_rgba(255,255,255,0.08)] backdrop-blur-2xl backdrop-saturate-150"
+          : "border-b border-transparent bg-transparent",
       ].join(" ")}
     >
       <div className="page-shell flex h-[72px] items-center justify-between gap-4">

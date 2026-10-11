@@ -76,14 +76,14 @@ export default function UgcVideoGeneratorPage() {
           heading: "When Genjutsu is the right UGC tool",
           paragraphs: [
             "Choose this page’s workflow when you have (or can film once) a winning camera pattern and need volume from new faces or products. Choose a talking-avatar suite when you need lip-sync scripts with no motion plate at all.",
-            "Stay on this URL for the query “AI UGC video generator.” Dance free-tier intent lives on /dance-video; pet niche on /ai-pet-dance; talking avatars on /avatar-video-generator.",
+            "Stay on this URL for the query “AI UGC video generator.” Dance clips live on /dance-video; pet niche on /ai-pet-dance; talking avatars on /avatar-video-generator.",
           ],
         },
       ]}
       faq={[
         {
-          q: "Is this a free AI UGC video generator?",
-          a: "New accounts get 50 welcome credits to run real generations after login. Ongoing volume uses one-time credit packs on Pricing — we do not claim unlimited anonymous free renders.",
+          q: "How much does UGC generation cost?",
+          a: "New accounts get 50 welcome credits for real generations after login. Ongoing volume uses one-time credit packs on Pricing.",
         },
         {
           q: "Do I need to hire UGC creators?",
@@ -101,7 +101,7 @@ export default function UgcVideoGeneratorPage() {
       related={[
         { href: "#studio", label: "Studio" },
         { href: "/pricing", label: "Pricing" },
-        { href: "/dance-video", label: "Free dance video" },
+        { href: "/dance-video", label: "AI dance video" },
         { href: "/avatar-video-generator", label: "Avatar video" },
         { href: "/guides/how-to-use-genjutsu", label: "How to use Genjutsu" },
       ]}

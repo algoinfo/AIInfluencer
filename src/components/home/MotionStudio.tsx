@@ -9,7 +9,11 @@ import {
   StudioPreviewHistoryTabs,
   type StudioPanelMode,
 } from "@/components/studio/StudioPreviewHistoryTabs";
-import { CREDITS_PER_SECOND, creditsForRun } from "@/data/credits";
+import {
+  CREDITS_PER_SECOND,
+  DEFAULT_MOTION_MODEL_MULTIPLIER,
+  creditsForRun,
+} from "@/data/credits";
 import {
   FAL_MOTION_DEFAULT_RESOLUTION,
   FAL_MOTION_RESOLUTIONS,
@@ -104,9 +108,9 @@ const models: StudioModel[] = [
   {
     id: "kling-v3-pro",
     name: "Kling V3 Pro Motion Control",
-    meta: "Pro · ×1.5 credits",
+    meta: `Pro · ×${DEFAULT_MOTION_MODEL_MULTIPLIER} credits`,
     mark: "K3",
-    multiplier: 1.5,
+    multiplier: DEFAULT_MOTION_MODEL_MULTIPLIER,
     provider: "fal",
     etaLabel: "~5–8 min",
     typicalWaitSec: 360,
@@ -748,7 +752,7 @@ export function MotionStudio() {
   return (
     <div
       id="studio"
-      className="animate-rise-delay-1 relative flex h-full min-h-[640px] w-full flex-col overflow-hidden rounded-xl border border-white/[0.1] bg-[linear-gradient(180deg,rgba(22,22,26,0.95),rgba(10,10,12,0.98))] shadow-[0_40px_100px_rgba(0,0,0,0.55)] sm:rounded-[1.25rem] lg:min-h-0"
+      className="animate-rise-delay-1 relative flex h-full min-h-[640px] w-full flex-col overflow-hidden rounded-[1.05rem] border border-white/[0.12] bg-[linear-gradient(180deg,rgba(22,22,28,0.72),rgba(8,8,12,0.82))] shadow-[inset_0_1px_0_rgba(255,255,255,0.12)] backdrop-blur-xl sm:rounded-[1.2rem] lg:min-h-0"
     >
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_20%_0%,rgba(216,255,62,0.06),transparent_45%),radial-gradient(ellipse_at_90%_20%,rgba(255,255,255,0.04),transparent_40%)]" />
 
@@ -758,7 +762,7 @@ export function MotionStudio() {
           <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-visible p-3 sm:gap-3.5 sm:p-5 lg:overflow-y-auto lg:[scrollbar-width:thin]">
             {/* Mode tabs */}
             <div
-              className="grid shrink-0 grid-cols-2 gap-1 rounded-xl border border-white/[0.1] bg-black/30 p-1"
+              className="grid shrink-0 grid-cols-2 gap-1 rounded-xl border border-white/[0.14] bg-white/[0.05] p-1 shadow-[inset_0_1px_0_rgba(255,255,255,0.1)] backdrop-blur-md"
               role="tablist"
               aria-label="Studio mode"
             >
@@ -815,7 +819,7 @@ export function MotionStudio() {
                     credits/s
                   </p>
                 </div>
-                <div className="grid grid-cols-3 gap-1 rounded-xl border border-white/[0.08] bg-black/25 p-1">
+                <div className="grid grid-cols-3 gap-1 rounded-xl border border-white/[0.12] bg-white/[0.05] p-1 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] backdrop-blur-md">
                   {PIXVERSE_SWAP_RESOLUTIONS.map((option) => {
                     const active = option === resolution;
                     return (
@@ -839,7 +843,7 @@ export function MotionStudio() {
                   <p className="mb-1.5 text-[0.78rem] font-medium tracking-wide text-fg-muted">
                     Swap
                   </p>
-                  <div className="rounded-xl border border-white/[0.08] bg-black/25 p-1">
+                  <div className="rounded-xl border border-white/[0.12] bg-white/[0.05] p-1 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] backdrop-blur-md">
                     <div className="rounded-lg bg-accent px-2 py-2 text-center text-sm font-medium capitalize text-[#0a0a0c]">
                       Object
                     </div>
@@ -861,7 +865,7 @@ export function MotionStudio() {
                     aria-expanded={open}
                     aria-controls={listId}
                     onClick={() => setOpen((v) => !v)}
-                    className="flex w-full items-center justify-between rounded-xl border border-white/[0.1] bg-white/[0.04] px-3 py-2.5 text-left transition-colors hover:border-white/[0.18] hover:bg-white/[0.06]"
+                    className="flex w-full items-center justify-between rounded-xl border border-white/[0.14] bg-white/[0.06] px-3 py-2.5 text-left shadow-[inset_0_1px_0_rgba(255,255,255,0.1)] backdrop-blur-md transition-colors hover:border-white/[0.22] hover:bg-white/[0.1]"
                   >
                     <span className="flex min-w-0 items-center gap-2.5">
                       <span className="flex h-8 min-w-8 items-center justify-center rounded-lg bg-accent px-1.5 font-display text-[0.6rem] font-semibold leading-none text-[#0a0a0c]">
@@ -885,7 +889,7 @@ export function MotionStudio() {
                     <ul
                       id={listId}
                       role="listbox"
-                      className="absolute left-0 right-0 z-20 mt-2 overflow-hidden rounded-2xl border border-white/[0.1] bg-[#141416] p-1.5 shadow-[0_20px_50px_rgba(0,0,0,0.5)]"
+                      className="material-glass absolute left-0 right-0 z-20 mt-2 overflow-hidden rounded-2xl p-1.5"
                     >
                       {models.map((item) => {
                         const disabled = Boolean(item.disabled);
@@ -982,7 +986,7 @@ export function MotionStudio() {
                   <p className="mb-1.5 text-[0.78rem] font-medium tracking-wide text-fg-muted">
                     Resolution
                   </p>
-                  <div className="grid grid-cols-3 gap-1 rounded-xl border border-white/[0.08] bg-black/25 p-1">
+                  <div className="grid grid-cols-3 gap-1 rounded-xl border border-white/[0.12] bg-white/[0.05] p-1 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] backdrop-blur-md">
                     {motionResolutions.map((option) => {
                       const active = option === resolution;
                       return (
@@ -1089,14 +1093,14 @@ export function MotionStudio() {
                         ? "e.g. Keep her face and hairstyle, casual streetwear, sunny outdoor…"
                         : "e.g. Same person as the photo, red jacket, city street at night, keep face unchanged…"
                   }
-                  className="w-full resize-none rounded-xl border border-white/[0.1] bg-white/[0.04] px-3 py-2.5 text-[0.875rem] leading-relaxed text-fg outline-none transition placeholder:text-fg-muted/70 focus:border-accent/35 focus:bg-white/[0.06]"
+                  className="w-full resize-none rounded-xl border border-white/[0.14] bg-white/[0.06] px-3 py-2.5 text-[0.875rem] leading-relaxed text-fg shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] outline-none backdrop-blur-md transition placeholder:text-fg-muted/70 focus:border-accent/40 focus:bg-white/[0.1]"
                 />
               ) : null}
             </div>
           </div>
 
           {/* Sticky generate */}
-          <div className="shrink-0 border-t border-white/[0.07] bg-[rgba(14,14,17,0.96)] p-3 backdrop-blur-sm sm:p-5">
+          <div className="shrink-0 border-t border-white/[0.1] bg-white/[0.04] p-3 backdrop-blur-xl sm:p-5">
             <button
               type="button"
               onClick={() => void onGenerate()}
@@ -1263,7 +1267,7 @@ export function MotionStudio() {
             ) : (
               <>
                 <div
-                  className="relative min-h-0 flex-1 overflow-hidden rounded-xl border border-white/[0.1] bg-[#0a0a0c]"
+                  className="relative min-h-0 flex-1 overflow-hidden rounded-xl border border-white/[0.12] bg-black/45 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] backdrop-blur-md"
                   aria-busy={busy}
                 >
                   {resultUrl && !busy ? (

@@ -1,4 +1,7 @@
-import { CREDITS_PER_SECOND } from "@/data/credits";
+import {
+  CREDITS_PER_SECOND,
+  DEFAULT_MOTION_MODEL_MULTIPLIER,
+} from "@/data/credits";
 
 /** $1 → 1,000 credits (1 credit = $0.001) */
 export const CREDITS_PER_DOLLAR = 1000;
@@ -32,9 +35,12 @@ function buildTier(
   return { ...input, baseCredits };
 }
 
+/** Approx. billable seconds on the studio default model (Kling V3 Pro ×1.5). */
 function secondsLabel(credits: number) {
-  const seconds = Math.floor(credits / CREDITS_PER_SECOND);
-  return `~${seconds}s of video at base rate`;
+  const creditsPerSec =
+    CREDITS_PER_SECOND * DEFAULT_MOTION_MODEL_MULTIPLIER;
+  const seconds = Math.floor(credits / creditsPerSec);
+  return `~${seconds}s on default model (×${DEFAULT_MOTION_MODEL_MULTIPLIER})`;
 }
 
 /** One-time packs — base = price × 1000; bonus credits on top */
@@ -65,7 +71,7 @@ export const PRICING_INCLUDES = [
   "One-time payment — credits never expire",
   "Base credits match your payment; bonus on every pack",
   "No watermark on exports",
-  "Motion transfer & Object Swap priced by length / resolution",
+  "Approx. length uses studio default model (Kling V3 Pro ×1.5); cheaper models stretch further",
 ] as const;
 
 export function getPricingTier(tierId: string): PricingTier | undefined {

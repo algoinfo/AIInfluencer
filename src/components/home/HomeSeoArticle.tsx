@@ -7,8 +7,9 @@ import {
 
 export function HomeSeoArticle() {
   return (
-    <article className="border-t border-border py-16 sm:py-20">
-      <div className="page-shell max-w-3xl">
+    <article className="relative border-t border-white/[0.08] py-16 sm:py-20">
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_55%_40%_at_50%_0%,rgba(255,255,255,0.035),transparent_60%)]" />
+      <div className="page-shell relative max-w-3xl">
         <h2
           id="what-is-ai-motion-transfer"
           className="font-display text-2xl font-semibold tracking-tight sm:text-3xl"
@@ -44,7 +45,7 @@ export function HomeSeoArticle() {
         </p>
       </div>
 
-      <div className="page-shell mt-16">
+      <div className="page-shell relative mt-16">
         <h2
           id="use-cases"
           className="font-display text-2xl font-semibold tracking-tight sm:text-3xl"
@@ -59,7 +60,7 @@ export function HomeSeoArticle() {
             <section
               key={item.id}
               id={item.id}
-              className="rounded-2xl border border-border bg-surface/50 p-5 sm:p-6"
+              className="material-panel rounded-2xl p-5 sm:p-6"
             >
               <h3 className="text-base font-medium text-fg">
                 <Link href={item.href} className="hover:text-accent">
@@ -76,7 +77,7 @@ export function HomeSeoArticle() {
         </div>
       </div>
 
-      <div className="page-shell mt-16">
+      <div className="page-shell relative mt-16">
         <h2
           id="what-can-you-create"
           className="font-display text-2xl font-semibold tracking-tight sm:text-3xl"
@@ -91,7 +92,7 @@ export function HomeSeoArticle() {
             <li key={item.title}>
               <Link
                 href={item.href}
-                className="block h-full rounded-2xl border border-border bg-surface/50 px-5 py-4 transition-colors hover:border-border-strong hover:bg-surface"
+                className="material-panel-soft block h-full rounded-2xl px-5 py-4 transition hover:border-border-strong"
               >
                 <h3 className="text-sm font-medium text-fg">{item.title}</h3>
                 <p className="mt-1.5 text-sm leading-relaxed text-fg-muted">

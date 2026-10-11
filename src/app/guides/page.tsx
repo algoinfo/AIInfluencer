@@ -18,7 +18,7 @@ export const metadata = pageMetadata({
 
 const useCases = [
   { href: "/ugc-video-generator", label: "AI UGC video generator" },
-  { href: "/dance-video", label: "Free AI dance video" },
+  { href: "/dance-video", label: "AI dance video" },
   { href: "/ai-pet-dance", label: "AI pet dance" },
   { href: "/avatar-video-generator", label: "Avatar video generator" },
   { href: "/ai-influencer", label: "AI influencer" },

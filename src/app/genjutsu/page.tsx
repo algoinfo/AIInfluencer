@@ -7,20 +7,20 @@ import { pageMetadata } from "@/lib/seo";
 export const metadata = pageMetadata({
   title: "What is Genjutsu AI — Motion Transfer Explained",
   description:
-    "Genjutsu AI is motion transfer for characters and creators: character + reference video → AI video. Learn how it works and how it relates to Higgsfield Genjutsu.",
+    "Genjutsu AI is motion transfer for characters and creators: character image + reference video → AI video. Learn the workflow and open the studio on genjutsu.online.",
   path: "/genjutsu",
   keywords: [
     "what is Genjutsu",
     "Genjutsu AI",
-    "Higgsfield Genjutsu",
     "AI motion transfer explained",
+    "character motion transfer",
   ],
 });
 
 const sections = [
   {
     title: "What is Genjutsu?",
-    body: "Genjutsu is an AI video motion transfer approach: you take a character and a reference video, then generate a new clip where your character performs that motion. On genjutsu.online, Genjutsu is the product concept and education hub — not a generic AI directory.",
+    body: "Genjutsu is an AI video tool for motion transfer: upload a character still and a reference clip, then generate a new video where your subject performs that motion. On genjutsu.online you can learn the workflow and run it in the studio.",
   },
   {
     title: "How Genjutsu works",
@@ -55,8 +55,8 @@ const sections = [
     body: "Character → Reference → Motion Transfer → AI Video. Keep iterating the reference and identity package until the result feels on-model.",
   },
   {
-    title: "Genjutsu and Higgsfield",
-    body: "Genjutsu-style motion workflows are associated with platforms such as Higgsfield. This website — genjutsu.online — is an independent educational and product site about AI motion transfer. It is not the official Higgsfield website and is not affiliated with Higgsfield.",
+    title: "What you can do here",
+    body: "Open the studio to generate clips, browse examples for still + motion pairs, follow the tutorial for best practices, and pick credit packs when you are ready to produce more.",
   },
   {
     title: "Genjutsu alternatives",
@@ -73,7 +73,7 @@ export default function GenjutsuPage() {
         subtitle="AI-powered motion transfer for characters, creators and videos."
         tags={["Motion Transfer", "AI Video", "Character Animation"]}
         ctas={[
-          { href: "/motion-transfer", label: "Try Genjutsu" },
+          { href: "/#studio", label: "Open studio" },
           {
             href: "/genjutsu-tutorial",
             label: "Tutorial",
@@ -82,8 +82,9 @@ export default function GenjutsuPage() {
         ]}
       >
         <div className="rounded-2xl border border-border bg-surface/60 px-5 py-4 text-sm leading-relaxed text-fg-muted">
-          Independent site about Genjutsu / AI motion transfer. Not affiliated
-          with Higgsfield or any official platform brand.
+          Character image + reference video → motion transfer → downloadable
+          MP4. Built for creators who want controlled movement without
+          keyframing every frame.
         </div>
       </PageHero>
 
@@ -104,11 +105,11 @@ export default function GenjutsuPage() {
 
       <CTA
         title="Start with motion transfer"
-        body="Open the demo, browse examples, or read the step-by-step tutorial."
-        primaryHref="/motion-transfer"
-        primaryLabel="Try Genjutsu"
-        secondaryHref="/genjutsu-alternatives"
-        secondaryLabel="See Alternatives"
+        body="Open the studio, browse examples, or read the step-by-step tutorial."
+        primaryHref="/#studio"
+        primaryLabel="Open studio"
+        secondaryHref="/examples"
+        secondaryLabel="See examples"
       />
     </>
   );

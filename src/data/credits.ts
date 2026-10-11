@@ -5,6 +5,12 @@ export const USD_PER_CREDIT = CENTS_PER_CREDIT / 100; // $0.001
 /** Credits charged per second of motion-video duration */
 export const CREDITS_PER_SECOND = 100;
 
+/**
+ * Studio default Motion Transfer model (Kling V3 Pro).
+ * Pack “approx. video” estimates should use this — not the ×1.0 base rate.
+ */
+export const DEFAULT_MOTION_MODEL_MULTIPLIER = 1.5;
+
 export function creditsForDuration(seconds: number) {
   return seconds * CREDITS_PER_SECOND;
 }

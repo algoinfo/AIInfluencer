@@ -8,9 +8,9 @@ const variants: Record<Variant, string> = {
   primary:
     "bg-accent !text-[#0a0a0c] hover:bg-accent-strong shadow-[0_8px_28px_rgba(216,255,62,0.28)] ring-1 ring-inset ring-black/20",
   secondary:
-    "border border-white/30 bg-white/[0.12] !text-fg hover:border-white/45 hover:bg-white/[0.18]",
+    "border border-white/25 bg-white/[0.08] !text-fg shadow-[inset_0_1px_0_rgba(255,255,255,0.18)] backdrop-blur-md hover:border-white/40 hover:bg-white/[0.14]",
   ghost:
-    "bg-white/[0.07] !text-fg ring-1 ring-inset ring-white/[0.16] hover:bg-white/[0.14]",
+    "bg-white/[0.06] !text-fg shadow-[inset_0_1px_0_rgba(255,255,255,0.12)] ring-1 ring-inset ring-white/[0.14] backdrop-blur-md hover:bg-white/[0.12]",
 };
 
 const sizes: Record<Size, string> = {

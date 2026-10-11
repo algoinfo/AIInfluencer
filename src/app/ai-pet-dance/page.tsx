@@ -28,8 +28,8 @@ export default function AiPetDancePage() {
           body: "Full-body pet stills hold better than cropped faces. Tips call out paws, tails, and floor margin.",
         },
         {
-          title: "Free credits to try",
-          body: `New accounts get ${WELCOME_CREDITS} welcome credits for real studio renders after login.`,
+          title: `${WELCOME_CREDITS} welcome credits on signup`,
+          body: "Starter balance for real studio renders after login. Buy packs on Pricing when you need more.",
         },
       ]}
       templatesHeading="12 pet dance templates"
@@ -53,7 +53,7 @@ export default function AiPetDancePage() {
           heading: "Pets we see work well",
           paragraphs: [
             "Dogs and cats are the primary path. Other animals can work when the silhouette is clear and the template motion is simple (slow sway, happy wag). Complex multi-pet scenes are out of scope for v1 of this landing.",
-            "Human free dance intent stays on /dance-video. UGC ads on /ugc-video-generator. Talking avatars on /avatar-video-generator.",
+            "Human dance clips stay on /dance-video. UGC ads on /ugc-video-generator. Talking avatars on /avatar-video-generator.",
           ],
         },
       ]}
@@ -67,8 +67,8 @@ export default function AiPetDancePage() {
           a: "They are named style packs for this workflow. In studio you pair your pet photo with a motion clip that matches the template energy.",
         },
         {
-          q: "Is AI pet dance free?",
-          a: `Signup includes ${WELCOME_CREDITS} welcome credits. Short template phrases stretch that balance further than long clips.`,
+          q: "How much does AI pet dance cost?",
+          a: `Signup includes ${WELCOME_CREDITS} welcome credits. Short template phrases stretch that balance further than long clips. Buy packs on Pricing for more volume.`,
         },
         {
           q: "Dogs and cats only?",
@@ -76,9 +76,10 @@ export default function AiPetDancePage() {
         },
       ]}
       related={[
-        { href: "/dance-video", label: "Free dance (people)" },
+        { href: "/dance-video", label: "AI dance (people)" },
         { href: "#studio", label: "Studio" },
-        { href: "/login", label: "Start free" },
+        { href: "/login", label: "Sign up / Log in" },
+        { href: "/pricing", label: "Buy credits" },
         { href: "/examples", label: "Examples" },
       ]}
     />

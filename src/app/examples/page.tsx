@@ -122,7 +122,7 @@ export default function ExamplesPage() {
               href="/dance-video"
               className="text-fg underline-offset-2 hover:underline"
             >
-              free dance video
+              AI dance video
             </Link>
             , and{" "}
             <Link

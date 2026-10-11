@@ -9,7 +9,7 @@ export const petDanceTemplates = [
   },
   {
     name: "TikTok shuffle",
-    description: "Fast footwork-style motion; trim to 4–6s for free credits.",
+    description: "Fast footwork-style motion; trim to 4–6s to stretch welcome credits.",
   },
   {
     name: "Spin & sit",

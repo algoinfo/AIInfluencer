@@ -1,5 +1,8 @@
 import { PricingCheckoutButton } from "@/components/pricing/PricingCheckoutButton";
-import { CREDITS_PER_SECOND } from "@/data/credits";
+import {
+  CREDITS_PER_SECOND,
+  DEFAULT_MOTION_MODEL_MULTIPLIER,
+} from "@/data/credits";
 import {
   formatBonusLabel,
   formatTierCredits,
@@ -19,8 +22,9 @@ export function CreditsPricing({ compact = false }: CreditsPricingProps) {
     <div>
       {!compact ? (
         <p className="mx-auto max-w-xl text-center text-sm text-fg-muted">
-          1 credit = $0.001 · {CREDITS_PER_SECOND} credits / second · one-time
-          packs, never expire
+          1 credit = $0.001 · Motion Transfer from {CREDITS_PER_SECOND}{" "}
+          credits/s × model (default ×{DEFAULT_MOTION_MODEL_MULTIPLIER}) ·
+          one-time packs, never expire
         </p>
       ) : null}
 
@@ -34,10 +38,10 @@ export function CreditsPricing({ compact = false }: CreditsPricingProps) {
           <li
             key={tier.id}
             className={[
-              "relative flex flex-col rounded-2xl border p-6",
+              "material-glass relative flex flex-col rounded-2xl p-6",
               tier.highlight
-                ? "border-accent/35 bg-surface shadow-[0_0_40px_rgba(216,255,62,0.06)] lg:scale-[1.02]"
-                : "border-border bg-surface/50",
+                ? "border-accent/40 shadow-[inset_0_1px_0_rgba(255,255,255,0.22),0_0_48px_rgba(216,255,62,0.1)] lg:scale-[1.02]"
+                : "",
             ].join(" ")}
           >
             {tier.badge ? (

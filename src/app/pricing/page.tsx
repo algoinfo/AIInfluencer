@@ -22,7 +22,11 @@ const faqs = [
   },
   {
     q: "How does duration affect credits?",
-    a: "Credits follow your uploaded video length. Motion Transfer uses 100 credits/s × model multiplier. Object Swap prices by resolution (360p / 540p / 720p) with the studio markup applied.",
+    a: "Credits follow your uploaded video length. Motion Transfer uses 100 credits/s × model multiplier. The studio default is Kling V3 Pro (×1.5), so packs quote “approx. video” at that rate. A ×1.0 model stretches further. Object Swap prices by resolution (360p / 540p / 720p).",
+  },
+  {
+    q: "Why is “approx. video” shorter than 100 credits/s math?",
+    a: "Pack examples use the studio default model multiplier (×1.5), not the ×1.0 base rate. Example: 10,890 credits ÷ 150 credits/s ≈ 72s on Kling V3 Pro.",
   },
   {
     q: "Do credits expire?",

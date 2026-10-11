@@ -6,7 +6,7 @@ const product = [
   { href: "/#studio", label: "Studio" },
   { href: "/pricing", label: "Pricing" },
   { href: "/ugc-video-generator", label: "UGC video generator" },
-  { href: "/dance-video", label: "Free dance video" },
+  { href: "/dance-video", label: "AI dance video" },
   { href: "/ai-pet-dance", label: "AI pet dance" },
   { href: "/avatar-video-generator", label: "Avatar video" },
   { href: "/ai-influencer", label: "AI Influencer" },
@@ -30,7 +30,7 @@ const company = [
 
 export function Footer() {
   return (
-    <footer className="border-t border-border bg-bg-soft">
+    <footer className="relative border-t border-white/[0.1] bg-white/[0.02] backdrop-blur-xl">
       <div className="page-shell flex flex-col gap-10 py-14 md:flex-row md:items-start md:justify-between">
         <div className="max-w-sm">
           <Link
@@ -116,7 +116,7 @@ export function Footer() {
             >
               {CONTACT_EMAIL}
             </a>
-            <span>Independent site · Not affiliated with Higgsfield</span>
+            <span>AI motion transfer · genjutsu.online</span>
           </span>
         </div>
       </div>
