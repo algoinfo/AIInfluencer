@@ -748,15 +748,17 @@ export function MotionStudio() {
   return (
     <div
       id="studio"
-      className="animate-rise-delay-1 relative flex h-full min-h-0 w-full flex-col overflow-hidden rounded-2xl border border-white/[0.08] bg-[#0c0c0e] shadow-[0_24px_64px_rgba(0,0,0,0.45)]"
+      className="animate-rise-delay-1 relative flex h-full min-h-0 w-full flex-col overflow-hidden rounded-[1.25rem] border border-white/[0.1] bg-[linear-gradient(180deg,rgba(22,22,26,0.95),rgba(10,10,12,0.98))] shadow-[0_40px_100px_rgba(0,0,0,0.55)]"
     >
-      <div className="relative grid min-h-0 flex-1 grid-rows-[minmax(0,1.1fr)_minmax(0,0.9fr)] lg:grid-rows-1 lg:grid-cols-[300px_1fr] xl:grid-cols-[320px_1fr]">
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_20%_0%,rgba(216,255,62,0.06),transparent_45%),radial-gradient(ellipse_at_90%_20%,rgba(255,255,255,0.04),transparent_40%)]" />
+
+      <div className="relative grid min-h-0 flex-1 grid-rows-[minmax(0,1.15fr)_minmax(0,0.85fr)] lg:grid-rows-1 lg:grid-cols-[340px_1fr] xl:grid-cols-[360px_1fr]">
         {/* Left tools */}
-        <div className="flex min-h-0 flex-col border-b border-white/[0.06] bg-[#0e0e11] lg:border-b-0 lg:border-r lg:border-white/[0.06]">
-          <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto px-3.5 py-3.5 sm:px-4 sm:py-4 [scrollbar-width:thin]">
+        <div className="flex min-h-0 flex-col border-b border-white/[0.07] lg:border-b-0 lg:border-r lg:border-white/[0.07]">
+          <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto p-3.5 sm:p-4 [scrollbar-width:thin]">
             {/* Mode tabs */}
             <div
-              className="grid shrink-0 grid-cols-2 gap-0.5 rounded-lg bg-white/[0.04] p-0.5"
+              className="grid shrink-0 grid-cols-2 gap-1 rounded-xl border border-white/[0.1] bg-black/30 p-1"
               role="tablist"
               aria-label="Studio mode"
             >
@@ -787,10 +789,10 @@ export function MotionStudio() {
                       }
                     }}
                     className={[
-                      "rounded-md px-2 py-2 text-center text-[0.75rem] font-medium tracking-tight transition-colors",
+                      "rounded-lg px-2 py-2 text-center text-[0.72rem] font-semibold tracking-tight transition-colors",
                       active
-                        ? "bg-white/[0.1] text-fg shadow-sm"
-                        : "text-fg-subtle hover:text-fg",
+                        ? "bg-accent text-accent-ink"
+                        : "text-fg-muted hover:bg-white/[0.05] hover:text-fg",
                     ].join(" ")}
                   >
                     {tab.label}
@@ -801,59 +803,56 @@ export function MotionStudio() {
 
             {/* Object Swap → fal-ai/pixverse/swap */}
             {isObjectSwap ? (
-              <div className="shrink-0 space-y-3">
-                <div>
-                  <div className="mb-1.5 flex items-center justify-between gap-2">
-                    <p className="text-[0.7rem] font-medium text-fg-muted">
-                      Resolution
-                    </p>
-                    <p className="text-[0.65rem] tabular-nums text-fg-subtle">
-                      {pixverseSwapCreditsPerSecond(
-                        pixverseResolution,
-                      ).toLocaleString()}{" "}
-                      /s
-                    </p>
-                  </div>
-                  <div className="grid grid-cols-3 gap-0.5 rounded-lg bg-white/[0.04] p-0.5">
-                    {PIXVERSE_SWAP_RESOLUTIONS.map((option) => {
-                      const active = option === resolution;
-                      return (
-                        <button
-                          key={option}
-                          type="button"
-                          onClick={() => setResolution(option)}
-                          className={[
-                            "rounded-md px-1 py-1.5 text-center text-xs font-medium transition-colors",
-                            active
-                              ? "bg-white/[0.1] text-fg"
-                              : "text-fg-subtle hover:text-fg",
-                          ].join(" ")}
-                        >
-                          {option}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-                <div>
-                  <p className="mb-1.5 text-[0.7rem] font-medium text-fg-muted">
-                    Target
+              <div className="shrink-0">
+                <div className="mb-1.5 flex items-center justify-between gap-2">
+                  <p className="text-[0.68rem] font-medium uppercase tracking-[0.14em] text-fg-muted">
+                    Resolution
                   </p>
-                  <div className="flex items-center justify-between rounded-lg border border-white/[0.08] bg-white/[0.03] px-3 py-2">
-                    <span className="text-xs font-medium text-fg">Object</span>
-                    <span className="rounded bg-white/[0.06] px-1.5 py-0.5 text-[0.6rem] font-medium text-fg-subtle">
-                      Fixed
-                    </span>
+                  <p className="text-[0.68rem] font-medium tabular-nums text-fg-muted">
+                    {pixverseSwapCreditsPerSecond(
+                      pixverseResolution,
+                    ).toLocaleString()}{" "}
+                    credits/s
+                  </p>
+                </div>
+                <div className="grid grid-cols-3 gap-1 rounded-xl border border-white/[0.08] bg-black/25 p-1">
+                  {PIXVERSE_SWAP_RESOLUTIONS.map((option) => {
+                    const active = option === resolution;
+                    return (
+                      <button
+                        key={option}
+                        type="button"
+                        onClick={() => setResolution(option)}
+                        className={[
+                          "rounded-lg px-1 py-2 text-center text-xs font-medium transition-colors",
+                          active
+                            ? "bg-accent text-[#0a0a0c]"
+                            : "text-fg-muted hover:bg-white/[0.05] hover:text-fg",
+                        ].join(" ")}
+                      >
+                        {option}
+                      </button>
+                    );
+                  })}
+                </div>
+                <div className="mt-2.5">
+                  <p className="mb-1.5 text-[0.68rem] font-medium uppercase tracking-[0.14em] text-fg-muted">
+                    Swap
+                  </p>
+                  <div className="rounded-xl border border-white/[0.08] bg-black/25 p-1">
+                    <div className="rounded-lg bg-accent px-2 py-2 text-center text-xs font-medium capitalize text-[#0a0a0c]">
+                      Object
+                    </div>
                   </div>
-                  <p className="mt-1.5 text-[0.7rem] leading-snug text-fg-subtle">
-                    Replace the object in the source video with your image.
+                  <p className="mt-2 text-[0.72rem] leading-snug text-fg-muted">
+                    Replaces the object in the source video with your swap image.
                   </p>
                 </div>
               </div>
             ) : (
-              <div className="shrink-0 space-y-3">
+              <div className="shrink-0 space-y-2.5">
                 <div ref={menuRef} className="relative">
-                  <p className="mb-1.5 text-[0.7rem] font-medium text-fg-muted">
+                  <p className="mb-1.5 text-[0.68rem] font-medium uppercase tracking-[0.14em] text-fg-muted">
                     Model
                   </p>
                   <button
@@ -862,17 +861,17 @@ export function MotionStudio() {
                     aria-expanded={open}
                     aria-controls={listId}
                     onClick={() => setOpen((v) => !v)}
-                    className="flex w-full items-center justify-between rounded-lg border border-white/[0.08] bg-white/[0.03] px-2.5 py-2 text-left transition-colors hover:border-white/[0.14] hover:bg-white/[0.05]"
+                    className="flex w-full items-center justify-between rounded-xl border border-white/[0.1] bg-white/[0.04] px-3 py-2.5 text-left transition-colors hover:border-white/[0.18] hover:bg-white/[0.06]"
                   >
                     <span className="flex min-w-0 items-center gap-2.5">
-                      <span className="flex h-7 min-w-7 items-center justify-center rounded-md bg-accent/90 px-1.5 font-display text-[0.55rem] font-semibold leading-none text-accent-ink">
+                      <span className="flex h-8 min-w-8 items-center justify-center rounded-lg bg-accent px-1.5 font-display text-[0.6rem] font-semibold leading-none text-[#0a0a0c]">
                         {model.mark}
                       </span>
                       <span className="min-w-0">
                         <span className="block truncate text-[0.8rem] font-medium text-fg">
                           {model.name}
                         </span>
-                        <span className="mt-0.5 block truncate text-[0.65rem] text-fg-subtle">
+                        <span className="mt-0.5 block text-[0.72rem] font-medium text-fg-muted">
                           {isGenjutsuMotion
                             ? `${genjutsuCreditsPerSecond(genjutsuResolution).toLocaleString()} credits/s · ${resolution} · ${model.etaLabel}`
                             : `${model.meta} · ${resolution} · ${model.etaLabel}`}
@@ -886,7 +885,7 @@ export function MotionStudio() {
                     <ul
                       id={listId}
                       role="listbox"
-                      className="absolute left-0 right-0 z-20 mt-1.5 overflow-hidden rounded-xl border border-white/[0.1] bg-[#141416] p-1 shadow-[0_16px_40px_rgba(0,0,0,0.55)]"
+                      className="absolute left-0 right-0 z-20 mt-2 overflow-hidden rounded-2xl border border-white/[0.1] bg-[#141416] p-1.5 shadow-[0_20px_50px_rgba(0,0,0,0.5)]"
                     >
                       {models.map((item) => {
                         const disabled = Boolean(item.disabled);
@@ -935,7 +934,7 @@ export function MotionStudio() {
                                 }
                               }}
                               className={[
-                                "flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left transition-colors",
+                                "flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition-colors",
                                 disabled
                                   ? "cursor-not-allowed opacity-40"
                                   : item.id === model.id
@@ -945,10 +944,10 @@ export function MotionStudio() {
                             >
                               <span
                                 className={[
-                                  "flex h-7 min-w-7 items-center justify-center rounded-md px-1 font-display text-[0.55rem] font-semibold leading-none",
+                                  "flex h-8 min-w-8 items-center justify-center rounded-lg px-1 font-display text-[0.6rem] font-semibold leading-none",
                                   disabled
                                     ? "bg-white/15 text-fg-muted"
-                                    : "bg-accent/90 text-accent-ink",
+                                    : "bg-accent/90 text-[#0a0a0c]",
                                 ].join(" ")}
                               >
                                 {item.mark}
@@ -956,14 +955,14 @@ export function MotionStudio() {
                               <span className="min-w-0">
                                 <span
                                   className={[
-                                    "block truncate text-[0.8rem] font-medium",
+                                    "block truncate text-sm",
                                     disabled ? "text-fg-muted" : "text-fg",
                                   ].join(" ")}
                                 >
                                   {item.name}
                                   {disabled ? " · soon" : ""}
                                 </span>
-                                <span className="mt-0.5 block text-[0.65rem] text-fg-subtle">
+                                <span className="mt-0.5 block text-xs font-medium text-fg-muted">
                                   {item.meta}
                                   {duration != null
                                     ? ` · ${itemCredits.toLocaleString()} credits / ${duration}s`
@@ -980,10 +979,10 @@ export function MotionStudio() {
                 </div>
 
                 <div>
-                  <p className="mb-1.5 text-[0.7rem] font-medium text-fg-muted">
+                  <p className="mb-1.5 text-[0.68rem] font-medium uppercase tracking-[0.14em] text-fg-muted">
                     Resolution
                   </p>
-                  <div className="grid grid-cols-3 gap-0.5 rounded-lg bg-white/[0.04] p-0.5">
+                  <div className="grid grid-cols-3 gap-1 rounded-xl border border-white/[0.08] bg-black/25 p-1">
                     {motionResolutions.map((option) => {
                       const active = option === resolution;
                       return (
@@ -992,10 +991,10 @@ export function MotionStudio() {
                           type="button"
                           onClick={() => setResolution(option)}
                           className={[
-                            "rounded-md px-1 py-1.5 text-center text-xs font-medium transition-colors",
+                            "rounded-lg px-1 py-2 text-center text-xs font-medium transition-colors",
                             active
-                              ? "bg-white/[0.1] text-fg"
-                              : "text-fg-subtle hover:text-fg",
+                              ? "bg-accent text-[#0a0a0c]"
+                              : "text-fg-muted hover:bg-white/[0.05] hover:text-fg",
                           ].join(" ")}
                         >
                           {option}
@@ -1007,40 +1006,35 @@ export function MotionStudio() {
               </div>
             )}
 
-            <div className="shrink-0">
-              <p className="mb-1.5 text-[0.7rem] font-medium text-fg-muted">
-                Inputs
-              </p>
-              <div className="grid grid-cols-2 gap-2">
-                <UploadField
-                  label={isObjectSwap ? "Swap image" : "Character"}
-                  required
-                  hint="JPG / PNG"
-                  button="Upload"
-                  accept="image/*"
-                  fileName={imageName}
-                  previewUrl={imageUrl}
-                  previewKind="image"
-                  onPick={onImage}
-                  icon="image"
-                  compact
-                />
-                <UploadField
-                  label={isObjectSwap ? "Source video" : "Motion"}
-                  required
-                  hint={
-                    duration != null ? `${duration}s` : "MP4 / MOV"
-                  }
-                  button="Upload"
-                  accept="video/*"
-                  fileName={videoName}
-                  previewUrl={videoUrl}
-                  previewKind="video"
-                  onPick={onVideo}
-                  icon="video"
-                  compact
-                />
-              </div>
+            <div className="grid shrink-0 grid-cols-2 gap-2.5">
+              <UploadField
+                label={isObjectSwap ? "Swap image" : "Character"}
+                required
+                hint="JPG / PNG"
+                button="Add image"
+                accept="image/*"
+                fileName={imageName}
+                previewUrl={imageUrl}
+                previewKind="image"
+                onPick={onImage}
+                icon="image"
+                compact
+              />
+              <UploadField
+                label={isObjectSwap ? "Source video" : "Motion"}
+                required
+                hint={
+                  duration != null ? `${duration}s · billable` : "MP4 / MOV"
+                }
+                button="Add video"
+                accept="video/*"
+                fileName={videoName}
+                previewUrl={videoUrl}
+                previewKind="video"
+                onPick={onVideo}
+                icon="video"
+                compact
+              />
             </div>
 
             {/* Prompt — toggle like Genjutsu studio */}
@@ -1048,11 +1042,10 @@ export function MotionStudio() {
               <div className="mb-1.5 flex items-center justify-between gap-2">
                 <label
                   htmlFor={promptId}
-                  className="flex items-center gap-1.5 text-[0.7rem] font-medium text-fg-muted"
+                  className="flex items-center gap-2 text-[0.68rem] font-medium uppercase tracking-[0.14em] text-fg-muted"
                 >
                   Prompt
-                  <span className="text-fg-subtle/80">
-                    ·{" "}
+                  <span className="normal-case tracking-normal text-fg-muted/90">
                     {promptOn
                       ? "custom"
                       : usesGenjutsuPricing
@@ -1067,17 +1060,17 @@ export function MotionStudio() {
                   aria-label="Enable custom prompt"
                   onClick={() => setPromptOn((v) => !v)}
                   className={[
-                    "relative h-5 w-9 shrink-0 rounded-full transition-colors duration-200",
+                    "relative h-6 w-11 shrink-0 rounded-full transition-colors duration-200",
                     promptOn
                       ? "bg-accent"
-                      : "bg-white/[0.1]",
+                      : "bg-white/[0.12] ring-1 ring-inset ring-white/[0.08]",
                   ].join(" ")}
                 >
                   <span
                     className={[
-                      "absolute top-0.5 left-0.5 h-4 w-4 rounded-full bg-white shadow transition-transform duration-200",
+                      "absolute top-0.5 left-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform duration-200",
                       promptOn
-                        ? "translate-x-4 bg-accent-ink"
+                        ? "translate-x-5 bg-accent-ink"
                         : "translate-x-0",
                     ].join(" ")}
                   />
@@ -1096,86 +1089,125 @@ export function MotionStudio() {
                         ? "Optional style / character notes…"
                         : "1. Look  2. Outfit  3. Scene  4. Keep the same  5. Final style"
                   }
-                  className="w-full resize-none rounded-lg border border-white/[0.08] bg-white/[0.03] px-3 py-2 text-[0.8rem] leading-relaxed text-fg outline-none transition placeholder:text-fg-subtle/70 focus:border-white/[0.18] focus:bg-white/[0.05]"
+                  className="w-full resize-none rounded-xl border border-white/[0.1] bg-white/[0.04] px-3 py-2.5 text-[0.8rem] leading-relaxed text-fg outline-none transition placeholder:text-fg-muted/70 focus:border-accent/35 focus:bg-white/[0.06]"
                 />
               ) : null}
             </div>
           </div>
 
           {/* Sticky generate */}
-          <div className="shrink-0 border-t border-white/[0.06] bg-[#0e0e11] p-3.5 sm:p-4">
+          <div className="shrink-0 border-t border-white/[0.07] p-3.5 sm:p-4">
             <button
               type="button"
               onClick={() => void onGenerate()}
               disabled={busy}
               aria-busy={busy}
               className={[
-                "flex h-11 w-full items-center justify-center gap-2 rounded-lg text-[0.9rem] font-semibold tracking-tight transition-colors disabled:pointer-events-none disabled:cursor-wait",
+                "group relative flex h-12 w-full items-center justify-between gap-3 overflow-hidden rounded-2xl px-4 text-left transition-all duration-200 disabled:pointer-events-none disabled:cursor-wait",
                 ready && !busy
-                  ? "bg-accent text-accent-ink hover:bg-accent-strong"
+                  ? "bg-accent text-accent-ink shadow-[0_8px_28px_rgba(216,255,62,0.18)] hover:bg-accent-strong hover:shadow-[0_10px_32px_rgba(216,255,62,0.28)] active:scale-[0.985]"
                   : busy
-                    ? "bg-accent/75 text-accent-ink"
-                    : "bg-white/[0.08] text-fg-muted hover:bg-white/[0.12] hover:text-fg",
+                    ? "bg-accent/80 text-accent-ink opacity-80 shadow-none"
+                    : "bg-white/[0.08] text-fg ring-1 ring-inset ring-white/[0.1] hover:bg-white/[0.12]",
               ].join(" ")}
             >
-              {busy ? (
-                <span className="h-3.5 w-3.5 shrink-0 animate-spin rounded-full border-2 border-accent-ink/25 border-t-accent-ink" />
+              {ready ? (
+                <span
+                  aria-hidden
+                  className="pointer-events-none absolute inset-y-0 left-0 w-1/3 bg-gradient-to-r from-transparent via-white/25 to-transparent opacity-0 transition duration-500 group-hover:translate-x-[220%] group-hover:opacity-100"
+                />
               ) : null}
-              <span>{busy ? "Generating…" : "Generate"}</span>
-            </button>
-            <div className="mt-2 flex items-center justify-between gap-2 text-[0.65rem] tabular-nums text-fg-subtle">
-              {busy ? (
-                <p aria-live="polite">
-                  <span className="font-mono text-fg-muted">
-                    {elapsedParts.mm}:{elapsedParts.ss}
+              <span className="relative flex min-w-0 items-center gap-2.5">
+                {busy ? (
+                  <span className="h-4 w-4 shrink-0 animate-spin rounded-full border-2 border-accent-ink/25 border-t-accent-ink" />
+                ) : (
+                  <span
+                    className={[
+                      "flex h-7 w-7 shrink-0 items-center justify-center rounded-full",
+                      ready ? "bg-accent-ink/10" : "bg-white/[0.06]",
+                    ].join(" ")}
+                  >
+                    <span
+                      className={[
+                        "ml-0.5 h-0 w-0 border-y-[5px] border-l-[8px] border-y-transparent",
+                        ready ? "border-l-accent-ink" : "border-l-fg-muted",
+                      ].join(" ")}
+                    />
                   </span>
-                  <span className="mx-1 opacity-40">/</span>
+                )}
+                <span className="truncate text-[0.95rem] font-semibold tracking-tight">
+                  {busy ? "Generating…" : "Generate"}
+                </span>
+              </span>
+              {busy ? (
+                <span
+                  className="relative flex shrink-0 items-center gap-1.5 rounded-full bg-accent-ink/10 px-2.5 py-1 text-[0.7rem] font-semibold tabular-nums text-accent-ink"
+                  aria-live="polite"
+                >
+                  <span className="font-mono text-[0.8rem]">
+                    {elapsedParts.mm}
+                    <span className="animate-pulse opacity-70">:</span>
+                    {elapsedParts.ss}
+                  </span>
+                  <span className="opacity-45">/</span>
                   <span>{eta.etaLabel}</span>
-                </p>
+                </span>
               ) : (
-                <p>
+                <span
+                  className={[
+                    "relative flex shrink-0 items-center gap-1.5 rounded-full px-2.5 py-1 text-[0.7rem] font-medium tabular-nums",
+                    ready
+                      ? "bg-accent-ink/10 text-accent-ink/85"
+                      : "bg-black/25 text-fg-muted",
+                  ].join(" ")}
+                >
                   {duration != null && sellCredits != null ? (
                     <>
-                      {duration}s · {sellCredits.toLocaleString()} credits ·{" "}
-                      {eta.etaLabel}
-                    </>
-                  ) : usesPixversePricing ? (
-                    <>
-                      {pixverseSwapCreditsPerSecond(
-                        pixverseResolution,
-                      ).toLocaleString()}{" "}
-                      credits/s · {eta.etaLabel}
-                    </>
-                  ) : usesGenjutsuPricing ? (
-                    <>
-                      {genjutsuCreditsPerSecond(
-                        genjutsuResolution,
-                      ).toLocaleString()}{" "}
-                      credits/s · {eta.etaLabel}
+                      <span>{duration}s</span>
+                      <span
+                        className={
+                          ready ? "text-accent-ink/40" : "text-fg-muted/60"
+                        }
+                      >
+                        ·
+                      </span>
+                      <span>{sellCredits.toLocaleString()} credits</span>
+                      <span
+                        className={
+                          ready ? "text-accent-ink/40" : "text-fg-muted/60"
+                        }
+                      >
+                        ·
+                      </span>
+                      <span>{eta.etaLabel}</span>
                     </>
                   ) : (
-                    <>
-                      {CREDITS_PER_SECOND} credits/s · {eta.etaLabel}
-                    </>
+                    <span>
+                      {usesPixversePricing
+                        ? `${pixverseSwapCreditsPerSecond(pixverseResolution).toLocaleString()} credits/s · ${eta.etaLabel}`
+                        : usesGenjutsuPricing
+                          ? `${genjutsuCreditsPerSecond(genjutsuResolution).toLocaleString()} credits/s · ${eta.etaLabel}`
+                          : `${CREDITS_PER_SECOND} credits/s · ${eta.etaLabel}`}
+                    </span>
                   )}
-                </p>
+                </span>
               )}
-              <p className="min-w-0 truncate text-right">
-                {isObjectSwap
-                  ? "Match object size & angle"
-                  : "Match framing in both assets"}
-              </p>
-            </div>
+            </button>
+            <p className="mt-2.5 text-center text-[0.72rem] leading-snug text-fg-muted">
+              {isObjectSwap
+                ? "Tip: use a clear object image that matches size and angle of the item in the source video."
+                : "Tip: keep the person a similar size and framing in the photo and the motion video."}
+            </p>
             {status === "need" ||
             status === "error" ||
             status === "generating" ||
             status === "done" ? (
               <p
                 className={[
-                  "mt-2 text-[0.7rem] leading-snug",
+                  "mt-1.5 text-center text-[0.72rem] leading-tight",
                   status === "need" || status === "error"
                     ? "text-accent"
-                    : "text-fg-subtle",
+                    : "text-fg-muted",
                 ].join(" ")}
               >
                 {status === "need"
@@ -1186,43 +1218,38 @@ export function MotionStudio() {
                     ? `${phaseHint} · ${elapsedParts.label} / ${eta.etaLabel}`
                     : status === "error"
                       ? errorMessage || "Generation failed."
-                      : `Done in ${lastElapsedSec != null ? formatElapsedParts(lastElapsedSec).label : "—"} · ${duration ?? "?"}s · ${modelMark} · ${resolution}${lastPrompt ? (usingDefaultPrompt ? " · default prompt" : " · custom prompt") : ""}.`}
+                      : `Done in ${lastElapsedSec != null ? formatElapsedParts(lastElapsedSec).label : "—"} · ${duration ?? "?"}s clip · ${modelMark} · ${resolution}${lastPrompt ? (usingDefaultPrompt ? " · default prompt" : " · custom prompt") : ""}.`}
               </p>
             ) : null}
           </div>
         </div>
 
-        {/* Right: Preview / History */}
-        <div className="relative flex min-h-0 flex-col bg-[#0a0a0c]">
-          <div className="flex shrink-0 items-center justify-between gap-3 border-b border-white/[0.06] px-3.5 py-2.5 sm:px-4">
-            <StudioPreviewHistoryTabs
-              mode={panelMode}
-              onModeChange={setPanelMode}
-              historyCount={history.length}
-              historyBusy={history.some((item) => item.status === "generating")}
-              trailing={
-                <>
-                  {duration != null ? `${duration}s · ` : ""}
-                  {`${resolution} · `}
-                  {modelMark}
-                  {status === "error" &&
-                  errorMessage?.toLowerCase().includes("credit") ? (
-                    <>
-                      {" · "}
-                      <Link
-                        href="/pricing"
-                        className="text-accent hover:underline"
-                      >
-                        Get credits
-                      </Link>
-                    </>
-                  ) : null}
-                </>
-              }
-            />
-          </div>
+        {/* Right: Preview / History (like tell AI Video Generator) */}
+        <div className="relative flex min-h-0 flex-col p-3 sm:p-4">
+          <StudioPreviewHistoryTabs
+            mode={panelMode}
+            onModeChange={setPanelMode}
+            historyCount={history.length}
+            historyBusy={history.some((item) => item.status === "generating")}
+            trailing={
+              <>
+                {duration != null ? `${duration}s · ` : ""}
+                {`${resolution} · `}
+                {modelMark}
+                {status === "error" &&
+                errorMessage?.toLowerCase().includes("credit") ? (
+                  <>
+                    {" · "}
+                    <Link href="/pricing" className="text-accent hover:underline">
+                      Get credits
+                    </Link>
+                  </>
+                ) : null}
+              </>
+            }
+          />
 
-          <div className="flex min-h-0 flex-1 flex-col p-3 sm:p-3.5">
+          <div className="mt-3 flex min-h-0 flex-1 flex-col">
             {panelMode === "history" ? (
               <StudioHistoryPanel
                 items={history}
@@ -1234,13 +1261,13 @@ export function MotionStudio() {
             ) : (
               <>
                 <div
-                  className="relative min-h-0 flex-1 overflow-hidden rounded-lg border border-white/[0.06] bg-[radial-gradient(circle_at_center,rgba(255,255,255,0.03),transparent_55%),#080809]"
+                  className="relative min-h-0 flex-1 overflow-hidden rounded-xl border border-white/[0.1] bg-[#0a0a0c]"
                   aria-busy={busy}
                 >
                   {resultUrl && !busy ? (
-                    <div className="absolute inset-0 flex items-center justify-center p-3 sm:p-4">
+                    <div className="absolute inset-0 flex items-center justify-center bg-black p-3 sm:p-4">
                       <div
-                        className="relative h-full max-h-full w-auto max-w-full overflow-hidden rounded-md bg-black ring-1 ring-white/[0.08]"
+                        className="relative h-full max-h-full w-auto max-w-full overflow-hidden rounded-lg bg-black shadow-[0_0_0_1px_rgba(255,255,255,0.08)]"
                         style={{ aspectRatio: resultAspect }}
                       >
                         <video
@@ -1264,7 +1291,7 @@ export function MotionStudio() {
                   ) : (
                     <>
                       <div className="absolute inset-0 flex items-center justify-center p-3 sm:p-4">
-                        <div className="relative aspect-[9/16] h-full max-h-full w-auto max-w-full overflow-hidden rounded-md bg-black ring-1 ring-white/[0.08]">
+                        <div className="relative h-full max-h-full w-auto max-w-full aspect-[9/16] overflow-hidden rounded-lg bg-black shadow-[0_0_0_1px_rgba(255,255,255,0.08)]">
                           <video
                             key={DEMO_PREVIEW_VIDEO}
                             src={DEMO_PREVIEW_VIDEO}
@@ -1276,19 +1303,14 @@ export function MotionStudio() {
                             className="absolute inset-0 h-full w-full object-cover"
                             aria-label="Sample motion transfer preview"
                           />
-                          {!busy && status !== "error" ? (
-                            <span className="absolute left-2 top-2 rounded bg-black/55 px-1.5 py-0.5 text-[0.6rem] font-medium tracking-wide text-fg-muted backdrop-blur-sm">
-                              Sample
-                            </span>
-                          ) : null}
                         </div>
                       </div>
                       {status === "error" ? (
-                        <div className="absolute inset-0 flex flex-col items-center justify-center gap-1.5 bg-black/70 px-6 text-center backdrop-blur-[2px]">
+                        <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-black/65 px-6 text-center backdrop-blur-[2px]">
                           <p className="text-sm font-medium text-fg">
                             Generation failed
                           </p>
-                          <p className="max-w-xs text-[0.7rem] text-fg-subtle">
+                          <p className="text-[0.7rem] text-fg-subtle">
                             {errorMessage || "Try again"}
                           </p>
                         </div>
@@ -1297,8 +1319,8 @@ export function MotionStudio() {
                   )}
 
                   {busy ? (
-                    <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-[#0a0a0c]/90 px-6 backdrop-blur-[3px]">
-                      <div className="relative mb-4 flex h-14 w-14 items-center justify-center">
+                    <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-[#0a0a0c]/88 px-6 backdrop-blur-[4px]">
+                      <div className="relative mb-5 flex h-16 w-16 items-center justify-center">
                         <div
                           className="absolute inset-0 rounded-full border border-white/[0.08]"
                           aria-hidden
@@ -1313,7 +1335,7 @@ export function MotionStudio() {
                         </span>
                       </div>
                       <p
-                        className="flex items-baseline gap-1 font-mono text-4xl font-semibold leading-none tracking-tight text-fg sm:text-[2.75rem]"
+                        className="flex items-baseline gap-1 font-mono text-[2.75rem] font-semibold leading-none tracking-tight text-fg sm:text-5xl"
                         aria-live="polite"
                         aria-label={`Elapsed ${elapsedParts.label}`}
                       >
@@ -1324,34 +1346,34 @@ export function MotionStudio() {
                       <p className="mt-3 text-sm font-medium text-fg">
                         {phaseHint}
                       </p>
-                      <p className="mt-1 text-[0.7rem] text-fg-subtle">
+                      <p className="mt-1 text-[0.75rem] text-fg-subtle">
                         {modelMark} · usually {eta.etaLabel}
                       </p>
-                      <div className="mt-4 h-0.5 w-40 overflow-hidden rounded-full bg-white/[0.08]">
+                      <div className="mt-4 h-1 w-44 overflow-hidden rounded-full bg-white/[0.08]">
                         <div
                           className="h-full rounded-full bg-accent transition-[width] duration-300 ease-out"
                           style={{ width: `${progressPct}%` }}
                         />
                       </div>
-                      <p className="mt-3 text-center text-[0.65rem] text-fg-subtle">
-                        Keep this tab open · {elapsedParts.label} /{" "}
-                        {eta.etaLabel}
+                      <p className="mt-3 text-center text-[11px] text-fg-subtle">
+                        {elapsedParts.label} / {eta.etaLabel} · keep this tab
+                        open
                       </p>
                     </div>
                   ) : null}
                 </div>
 
                 {resultUrl && !busy ? (
-                  <div className="mt-2.5 flex items-center gap-2">
+                  <div className="mt-3 flex items-center gap-2">
                     <button
                       type="button"
                       onClick={downloadResult}
-                      className="inline-flex h-9 min-w-0 flex-1 items-center justify-center gap-2 rounded-lg bg-accent text-sm font-semibold text-accent-ink transition hover:bg-accent-strong"
+                      className="inline-flex h-10 min-w-0 flex-1 items-center justify-center gap-2 rounded-full border border-white/[0.12] bg-white/[0.04] text-sm font-medium text-fg transition hover:border-white/[0.2] hover:bg-white/[0.07]"
                     >
                       Download MP4
                     </button>
                     {lastElapsedSec != null ? (
-                      <span className="shrink-0 rounded-lg border border-white/[0.08] bg-white/[0.03] px-2.5 py-2 font-mono text-[0.7rem] tabular-nums text-fg-subtle">
+                      <span className="shrink-0 rounded-full border border-white/[0.1] bg-white/[0.04] px-3 py-2 font-mono text-[0.7rem] font-medium tabular-nums text-fg-subtle">
                         {formatElapsedParts(lastElapsedSec).label}
                       </span>
                     ) : null}
@@ -1430,36 +1452,36 @@ function UploadField({
     return (
       <label
         className={[
-          "group relative flex aspect-[4/5] cursor-pointer flex-col overflow-hidden rounded-lg border transition-colors",
+          "group flex cursor-pointer flex-col items-center gap-2 rounded-xl border px-2 py-3 text-center transition-all",
           filled
-            ? "border-white/15 bg-black/50"
-            : "border-dashed border-white/[0.12] bg-white/[0.02] hover:border-white/25 hover:bg-white/[0.04]",
+            ? "border-accent/25 bg-[rgba(216,255,62,0.04)]"
+            : "border-dashed border-white/[0.12] bg-white/[0.025] hover:border-white/[0.22] hover:bg-white/[0.045]",
         ].join(" ")}
       >
         <div
           className={[
-            "relative flex min-h-0 flex-1 items-center justify-center overflow-hidden",
-            filled ? "bg-black/40" : "text-fg-subtle group-hover:text-fg-muted",
+            "relative flex h-11 w-11 items-center justify-center overflow-hidden rounded-lg border",
+            filled
+              ? "border-accent/30 bg-black/30"
+              : "border-white/10 bg-black/25 text-fg-muted group-hover:text-fg",
           ].join(" ")}
         >
           {previewUrl ? (
             <MediaPreview url={previewUrl} kind={previewKind} />
           ) : (
-            <span className="flex flex-col items-center gap-1.5">
-              <UploadIcon type={icon} />
-              <span className="text-[0.65rem] font-medium">{button}</span>
-            </span>
+            <UploadIcon type={icon} />
           )}
         </div>
-        <div className="shrink-0 border-t border-white/[0.06] bg-black/35 px-2 py-1.5">
-          <p className="truncate text-[0.7rem] font-medium text-fg">
+        <div className="min-w-0">
+          <p className="text-[0.65rem] font-medium uppercase tracking-[0.12em] text-fg-muted">
             {label}
-            {required ? (
-              <span className="ml-0.5 text-fg-subtle">*</span>
-            ) : null}
+            {required ? <span className="ml-0.5 text-[#ff5c5c]">*</span> : null}
           </p>
-          <p className="truncate text-[0.6rem] text-fg-subtle">
-            {fileName ? "Click to replace" : hint}
+          <p className="mt-0.5 truncate text-[0.75rem] font-medium text-fg">
+            {fileName ? "Ready" : button}
+          </p>
+          <p className="truncate text-[0.65rem] font-medium text-fg-muted">
+            {fileName ? "Replace" : hint}
           </p>
         </div>
         <input
