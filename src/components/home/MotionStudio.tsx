@@ -1200,8 +1200,7 @@ export function MotionStudio() {
             </p>
             {status === "need" ||
             status === "error" ||
-            status === "generating" ||
-            status === "done" ? (
+            status === "generating" ? (
               <p
                 className={[
                   "mt-1.5 text-center text-[0.8rem] leading-tight",
@@ -1216,9 +1215,7 @@ export function MotionStudio() {
                     : "Add a character image and motion video first."
                   : status === "generating"
                     ? `${phaseHint} · ${elapsedParts.label} / ${eta.etaLabel}`
-                    : status === "error"
-                      ? errorMessage || "Generation failed."
-                      : `Done in ${lastElapsedSec != null ? formatElapsedParts(lastElapsedSec).label : "—"} · ${duration ?? "?"}s clip · ${modelMark} · ${resolution}${lastPrompt ? (usingDefaultPrompt ? " · default prompt" : " · custom prompt") : ""}.`}
+                    : errorMessage || "Generation failed."}
               </p>
             ) : null}
           </div>
