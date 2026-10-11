@@ -1,20 +1,21 @@
 import type { Metadata } from "next";
 
 export const SITE_URL = "https://genjutsu.online";
-export const SITE_NAME = "GENJUTSU";
-export const SITE_TAGLINE = "AI Video Motion Transfer";
+export const SITE_NAME = "Genjutsu AI";
+export const SITE_TAGLINE = "AI Motion Transfer Video Generator";
 export const CONTACT_EMAIL = "algoinf@gmail.com";
 
 /** Default site-wide keywords (TDK · K) */
 export const DEFAULT_KEYWORDS = [
+  "Genjutsu AI",
   "Genjutsu",
+  "AI Motion Transfer Video Generator",
   "AI video generator",
   "motion transfer",
   "object swap",
   "AI motion control",
   "character video",
   "AI influencer video",
-  "Higgsfield Genjutsu",
   "genjutsu.online",
 ];
 
@@ -25,7 +26,7 @@ type PageSeo = {
   /** Page-specific keywords; merged with DEFAULT_KEYWORDS */
   keywords?: string[];
   noindex?: boolean;
-  /** Skip the root `%s | GENJUTSU` template when the title already includes the brand. */
+  /** Skip the root `%s | Genjutsu AI` template when the title already includes the brand. */
   absoluteTitle?: boolean;
 };
 

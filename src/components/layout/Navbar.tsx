@@ -7,7 +7,22 @@ import { useEffect, useState, type MouseEvent } from "react";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { UserAccountMenu } from "@/components/layout/UserAccountMenu";
 
-const navItems = [{ href: "/pricing", label: "Pricing" }];
+const navItems = [
+  {
+    href: "/guides/what-can-genjutsu-do",
+    label: "Guide",
+    match: "/guides",
+  },
+  { href: "/pricing", label: "Pricing" },
+];
+
+function navItemActive(
+  pathname: string,
+  item: { href: string; match?: string },
+) {
+  const root = item.match ?? item.href;
+  return pathname === root || pathname.startsWith(`${root}/`);
+}
 
 export function Navbar() {
   const pathname = usePathname();
@@ -59,28 +74,27 @@ export function Navbar() {
           : "border-b border-transparent bg-transparent",
       ].join(" ")}
     >
-      <div className="page-shell flex h-[72px] items-center justify-between gap-4">
+      <div className="page-shell flex h-14 items-center justify-between gap-3 lg:h-[72px] lg:gap-4">
         <Link
           href="/"
           onClick={goHome}
-          className="relative z-[60] inline-flex items-center gap-2.5 font-display text-[0.95rem] font-semibold tracking-[0.14em] text-fg sm:text-base"
+          className="relative z-[60] inline-flex items-center gap-2 font-display text-[0.85rem] font-semibold tracking-[0.12em] text-fg sm:gap-2.5 sm:text-[0.95rem] lg:text-base lg:tracking-[0.14em]"
         >
           <Image
             src="/genjutsu-icon.jpg"
             alt=""
             width={28}
             height={28}
-            className="pointer-events-none h-7 w-7 rounded-lg object-cover"
+            className="pointer-events-none h-6 w-6 rounded-md object-cover lg:h-7 lg:w-7 lg:rounded-lg"
             priority
           />
-          GENJUTSU
+          GENJUTSU AI
         </Link>
 
         <div className="hidden items-center justify-end gap-6 lg:flex">
           <nav className="flex items-center gap-6">
             {navItems.map((item) => {
-              const active =
-                pathname === item.href || pathname.startsWith(`${item.href}/`);
+              const active = navItemActive(pathname, item);
               return (
                 <Link
                   key={item.href}
@@ -152,16 +166,14 @@ export function Navbar() {
           <button
             type="button"
             aria-label="Dismiss menu"
-            className="fixed inset-0 top-[72px] z-40 bg-black/55 backdrop-blur-[2px]"
+            className="fixed inset-0 top-14 z-40 bg-black/55 backdrop-blur-[2px] lg:top-[72px]"
             onClick={() => setOpen(false)}
           />
           <div className="relative z-50 border-t border-white/[0.06] bg-[#0a0a0c]">
             <div className="page-shell py-3 pb-4">
               <nav className="overflow-hidden rounded-xl border border-white/[0.08] bg-white/[0.025]">
                 {navItems.map((item, index) => {
-                  const active =
-                    pathname === item.href ||
-                    pathname.startsWith(`${item.href}/`);
+                  const active = navItemActive(pathname, item);
                   return (
                     <Link
                       key={item.href}

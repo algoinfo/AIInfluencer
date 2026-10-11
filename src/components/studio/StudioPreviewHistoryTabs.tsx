@@ -5,25 +5,34 @@ export type StudioPanelMode = "preview" | "history";
 export function StudioPreviewHistoryTabs({
   mode,
   onModeChange,
+  leading,
   trailing,
   historyCount = 0,
   historyBusy = false,
 }: {
   mode: StudioPanelMode;
   onModeChange: (mode: StudioPanelMode) => void;
+  leading?: React.ReactNode;
   trailing?: React.ReactNode;
   historyCount?: number;
   historyBusy?: boolean;
 }) {
   return (
     <div className="flex items-center gap-2">
-      {trailing ? (
+      {leading ? (
+        <div className="mr-auto flex min-w-0 items-center gap-2">{leading}</div>
+      ) : trailing ? (
         <div className="mr-auto hidden min-w-0 truncate text-[0.7rem] text-fg-subtle sm:block">
           {trailing}
         </div>
       ) : (
         <span className="mr-auto" aria-hidden="true" />
       )}
+      {leading && trailing ? (
+        <div className="hidden min-w-0 truncate text-[0.7rem] text-fg-subtle lg:block">
+          {trailing}
+        </div>
+      ) : null}
       <div
         className="ml-auto inline-flex shrink-0 rounded-full border border-white/[0.1] bg-black/30 p-0.5"
         role="tablist"

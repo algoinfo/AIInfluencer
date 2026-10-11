@@ -1,7 +1,6 @@
 "use client";
 
 import Image from "next/image";
-import Link from "next/link";
 import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { StudioHistoryPanel } from "@/components/studio/StudioHistoryPanel";
@@ -80,8 +79,8 @@ function formatElapsedParts(totalSeconds: number): {
 type StudioMode = "object-swap" | "motion-transfer";
 
 const MODE_TABS: { id: StudioMode; label: string }[] = [
-  { id: "motion-transfer", label: "Motion Transfer" },
-  { id: "object-swap", label: "Object Swap" },
+  { id: "motion-transfer", label: "Motion transfer" },
+  { id: "object-swap", label: "Objects swap" },
 ];
 
 const OBJECT_SWAP_ETA = { etaLabel: "~2–5 min", typicalWaitSec: 180 };
@@ -89,6 +88,14 @@ const OBJECT_SWAP_ETA = { etaLabel: "~2–5 min", typicalWaitSec: 180 };
 /** Idle preview sample shown before the user generates. */
 const DEMO_PREVIEW_VIDEO =
   "https://pub-3a51eee0bcba4124b258f45bbbe4d181.r2.dev/demo/two-cats-dance.mp4";
+
+/** Compact sample row above Preview — click to fill Motion upload. */
+const SAMPLE_MOTION_CLIPS = [
+  { id: "1", src: "/1.mp4", label: "1" },
+  { id: "2", src: "/2.mp4", label: "2" },
+  { id: "3", src: "/3.mp4", label: "3" },
+  { id: "4", src: "/4.mp4", label: "4" },
+] as const;
 
 type StudioModel = {
   id: string;
@@ -182,6 +189,11 @@ export function MotionStudio() {
   const [history, setHistory] = useState<StudioHistoryItem[]>([]);
   const [elapsedSec, setElapsedSec] = useState(0);
   const [lastElapsedSec, setLastElapsedSec] = useState<number | null>(null);
+  const [previewMuted, setPreviewMuted] = useState(true);
+  const [mobileGeneratePinned, setMobileGeneratePinned] = useState(true);
+  const previewVideoRef = useRef<HTMLVideoElement | null>(null);
+  const studioRootRef = useRef<HTMLDivElement | null>(null);
+  const toolsPanelRef = useRef<HTMLDivElement | null>(null);
   const elapsedRef = useRef(0);
   const generateLockRef = useRef(false);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -251,6 +263,25 @@ export function MotionStudio() {
     }
     document.addEventListener("mousedown", onDoc);
     return () => document.removeEventListener("mousedown", onDoc);
+  }, []);
+
+  useEffect(() => {
+    const tools = toolsPanelRef.current;
+    if (!tools || typeof IntersectionObserver === "undefined") return;
+
+    const io = new IntersectionObserver(
+      ([entry]) => {
+        // Keep Generate pinned while any part of the tools panel is on screen;
+        // hide once the user scrolls past it (into SEO/pricing below).
+        setMobileGeneratePinned(entry.isIntersecting);
+      },
+      {
+        threshold: [0, 0.01, 0.15],
+        rootMargin: "0px 0px -8% 0px",
+      },
+    );
+    io.observe(tools);
+    return () => io.disconnect();
   }, []);
 
   const persistDraft = useCallback(async () => {
@@ -390,6 +421,12 @@ export function MotionStudio() {
     setImageUrl(preview);
   }
 
+  function clearImagePreview() {
+    syncPrimaryImage(null, null);
+    setStatus("idle");
+    setErrorMessage(null);
+  }
+
   function onImage(file: File | null) {
     if (!file) return;
     syncPrimaryImage(file, URL.createObjectURL(file));
@@ -406,6 +443,8 @@ export function MotionStudio() {
       if (prev) URL.revokeObjectURL(prev);
       return null;
     });
+    setStatus("idle");
+    setErrorMessage(null);
   }
 
   function onVideo(file: File | null) {
@@ -419,6 +458,8 @@ export function MotionStudio() {
     setVideoFile(file);
     setVideoDurationSec(null);
     setVideoFramePixels(null);
+    setResultUrl(null);
+    setResultAspect("9 / 16");
     setStatus("idle");
     setErrorMessage(null);
 
@@ -442,6 +483,28 @@ export function MotionStudio() {
         );
       }
     });
+  }
+
+  async function applySampleMotion(src: string, fileName: string) {
+    if (busy) return;
+    setPanelMode("preview");
+    setStatus("idle");
+    setErrorMessage(null);
+    setResultUrl(null);
+    setResultAspect("9 / 16");
+    setLastElapsedSec(null);
+    try {
+      const res = await fetch(src);
+      if (!res.ok) throw new Error("Could not load sample motion.");
+      const blob = await res.blob();
+      const file = new File([blob], fileName, {
+        type: blob.type || "video/mp4",
+      });
+      onVideo(file);
+    } catch {
+      setStatus("error");
+      setErrorMessage("Could not load that sample motion. Try again.");
+    }
   }
 
   async function onGenerate() {
@@ -701,6 +764,17 @@ export function MotionStudio() {
     a.click();
   }, [resultUrl]);
 
+  function clearResultPreview() {
+    setResultUrl(null);
+    setResultAspect("9 / 16");
+    setLastElapsedSec(null);
+    setLastPrompt(null);
+    if (status === "done" || status === "error") {
+      setStatus("idle");
+      setErrorMessage(null);
+    }
+  }
+
   const openHistoryItem = useCallback((item: StudioHistoryItem) => {
     if (item.status !== "done" || !item.videoUrl) return;
     setResultAspect("9 / 16");
@@ -752,17 +826,21 @@ export function MotionStudio() {
   return (
     <div
       id="studio"
-      className="animate-rise-delay-1 relative flex h-full min-h-[640px] w-full flex-col overflow-hidden rounded-[1.05rem] border border-white/[0.12] bg-[linear-gradient(180deg,rgba(22,22,28,0.72),rgba(8,8,12,0.82))] shadow-[inset_0_1px_0_rgba(255,255,255,0.12)] backdrop-blur-xl sm:rounded-[1.2rem] lg:min-h-0"
+      ref={studioRootRef}
+      className="animate-rise-delay-1 relative flex w-full flex-col overflow-hidden rounded-[1.05rem] border border-white/[0.12] bg-[linear-gradient(180deg,rgba(22,22,28,0.72),rgba(8,8,12,0.82))] shadow-[inset_0_1px_0_rgba(255,255,255,0.12)] backdrop-blur-xl sm:rounded-[1.2rem] lg:h-full lg:min-h-0"
     >
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_20%_0%,rgba(216,255,62,0.06),transparent_45%),radial-gradient(ellipse_at_90%_20%,rgba(255,255,255,0.04),transparent_40%)]" />
 
-      <div className="relative grid min-h-0 flex-1 grid-rows-[auto_minmax(260px,42vh)] lg:grid-rows-1 lg:grid-cols-[460px_1fr] xl:grid-cols-[480px_1fr]">
-        {/* Left tools */}
-        <div className="flex min-h-0 flex-col border-b border-white/[0.07] lg:border-b-0 lg:border-r lg:border-white/[0.07]">
-          <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-visible p-3 sm:gap-3.5 sm:p-5 lg:overflow-y-auto lg:[scrollbar-width:thin]">
-            {/* Mode tabs */}
+      <div className="relative flex flex-col lg:min-h-0 lg:flex-1 lg:grid lg:grid-cols-[440px_1fr] xl:grid-cols-[460px_1fr]">
+        {/* Tools — below preview on mobile */}
+        <div
+          ref={toolsPanelRef}
+          className="order-2 flex flex-col border-t border-white/[0.07] pb-[calc(4.75rem+env(safe-area-inset-bottom))] lg:order-1 lg:min-h-0 lg:border-t-0 lg:border-r lg:border-white/[0.07] lg:pb-0"
+        >
+          <div className="flex flex-col gap-3 p-3 sm:p-4 lg:min-h-0 lg:flex-1 lg:overflow-y-auto lg:[scrollbar-width:thin]">
+            {/* Mode tabs — segmented control */}
             <div
-              className="grid shrink-0 grid-cols-2 gap-1 rounded-xl border border-white/[0.14] bg-white/[0.05] p-1 shadow-[inset_0_1px_0_rgba(255,255,255,0.1)] backdrop-blur-md"
+              className="flex shrink-0 gap-0.5 rounded-xl bg-[#121214] p-1 ring-1 ring-inset ring-white/[0.06]"
               role="tablist"
               aria-label="Studio mode"
             >
@@ -793,13 +871,14 @@ export function MotionStudio() {
                       }
                     }}
                     className={[
-                      "rounded-lg px-1.5 py-2.5 text-center text-[0.75rem] font-semibold tracking-tight transition-colors sm:px-2 sm:text-[0.8rem]",
+                      "flex min-w-0 flex-1 items-center justify-center gap-1.5 rounded-lg px-2 py-2 text-[0.78rem] font-medium tracking-tight transition sm:gap-2 sm:px-2.5 sm:text-[0.82rem]",
                       active
-                        ? "bg-accent text-accent-ink"
-                        : "text-fg-muted hover:bg-white/[0.05] hover:text-fg",
+                        ? "bg-[#2a2a2e] text-fg shadow-[inset_0_0_0_1px_rgba(255,255,255,0.1)]"
+                        : "text-fg-subtle hover:text-fg-muted",
                     ].join(" ")}
                   >
-                    {tab.label}
+                    <ModeTabIcon mode={tab.id} active={active} />
+                    <span className="truncate">{tab.label}</span>
                   </button>
                 );
               })}
@@ -819,7 +898,7 @@ export function MotionStudio() {
                     credits/s
                   </p>
                 </div>
-                <div className="grid grid-cols-3 gap-1 rounded-xl border border-white/[0.12] bg-white/[0.05] p-1 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] backdrop-blur-md">
+                <div className="flex gap-0.5 rounded-xl bg-[#121214] p-1 ring-1 ring-inset ring-white/[0.06]">
                   {PIXVERSE_SWAP_RESOLUTIONS.map((option) => {
                     const active = option === resolution;
                     return (
@@ -828,10 +907,10 @@ export function MotionStudio() {
                         type="button"
                         onClick={() => setResolution(option)}
                         className={[
-                          "rounded-lg px-1 py-2 text-center text-sm font-medium transition-colors",
+                          "min-w-0 flex-1 rounded-lg px-1 py-2 text-center text-[0.82rem] font-medium tracking-tight transition",
                           active
-                            ? "bg-accent text-[#0a0a0c]"
-                            : "text-fg-muted hover:bg-white/[0.05] hover:text-fg",
+                            ? "bg-[#2a2a2e] text-fg shadow-[inset_0_0_0_1px_rgba(255,255,255,0.1)]"
+                            : "text-fg-subtle hover:text-fg-muted",
                         ].join(" ")}
                       >
                         {option}
@@ -855,7 +934,10 @@ export function MotionStudio() {
               </div>
             ) : (
               <div className="shrink-0 space-y-2.5">
-                <div ref={menuRef} className="relative">
+                <div
+                  ref={menuRef}
+                  className={open ? "relative z-50" : "relative z-0"}
+                >
                   <p className="mb-1.5 text-[0.78rem] font-medium tracking-wide text-fg-muted">
                     Model
                   </p>
@@ -865,7 +947,7 @@ export function MotionStudio() {
                     aria-expanded={open}
                     aria-controls={listId}
                     onClick={() => setOpen((v) => !v)}
-                    className="flex w-full items-center justify-between rounded-xl border border-white/[0.14] bg-white/[0.06] px-3 py-2.5 text-left shadow-[inset_0_1px_0_rgba(255,255,255,0.1)] backdrop-blur-md transition-colors hover:border-white/[0.22] hover:bg-white/[0.1]"
+                    className="flex w-full items-center justify-between rounded-xl border border-white/[0.14] bg-[#1a1a1e] px-3 py-2.5 text-left shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] transition-colors hover:border-white/[0.22] hover:bg-[#222228]"
                   >
                     <span className="flex min-w-0 items-center gap-2.5">
                       <span className="flex h-8 min-w-8 items-center justify-center rounded-lg bg-accent px-1.5 font-display text-[0.6rem] font-semibold leading-none text-[#0a0a0c]">
@@ -889,7 +971,7 @@ export function MotionStudio() {
                     <ul
                       id={listId}
                       role="listbox"
-                      className="material-glass absolute left-0 right-0 z-20 mt-2 overflow-hidden rounded-2xl p-1.5"
+                      className="absolute left-0 right-0 z-50 mt-1.5 max-h-[min(46vh,280px)] overflow-y-auto overscroll-contain rounded-2xl border border-white/[0.12] bg-[#141416] p-1.5 shadow-[0_20px_50px_rgba(0,0,0,0.65)] [scrollbar-width:thin]"
                     >
                       {models.map((item) => {
                         const disabled = Boolean(item.disabled);
@@ -986,7 +1068,7 @@ export function MotionStudio() {
                   <p className="mb-1.5 text-[0.78rem] font-medium tracking-wide text-fg-muted">
                     Resolution
                   </p>
-                  <div className="grid grid-cols-3 gap-1 rounded-xl border border-white/[0.12] bg-white/[0.05] p-1 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] backdrop-blur-md">
+                  <div className="flex gap-0.5 rounded-xl bg-[#121214] p-1 ring-1 ring-inset ring-white/[0.06]">
                     {motionResolutions.map((option) => {
                       const active = option === resolution;
                       return (
@@ -995,10 +1077,10 @@ export function MotionStudio() {
                           type="button"
                           onClick={() => setResolution(option)}
                           className={[
-                            "rounded-lg px-1 py-2 text-center text-sm font-medium transition-colors",
+                            "min-w-0 flex-1 rounded-lg px-1 py-2 text-center text-[0.82rem] font-medium tracking-tight transition",
                             active
-                              ? "bg-accent text-[#0a0a0c]"
-                              : "text-fg-muted hover:bg-white/[0.05] hover:text-fg",
+                              ? "bg-[#2a2a2e] text-fg shadow-[inset_0_0_0_1px_rgba(255,255,255,0.1)]"
+                              : "text-fg-subtle hover:text-fg-muted",
                           ].join(" ")}
                         >
                           {option}
@@ -1021,6 +1103,7 @@ export function MotionStudio() {
                 previewUrl={imageUrl}
                 previewKind="image"
                 onPick={onImage}
+                onClear={clearImagePreview}
                 icon="image"
                 compact
               />
@@ -1036,6 +1119,7 @@ export function MotionStudio() {
                 previewUrl={videoUrl}
                 previewKind="video"
                 onPick={onVideo}
+                onClear={clearVideoPreview}
                 icon="video"
                 compact
               />
@@ -1085,7 +1169,7 @@ export function MotionStudio() {
                   id={promptId}
                   value={prompt}
                   onChange={(e) => setPrompt(e.target.value)}
-                  rows={3}
+                  rows={2}
                   placeholder={
                     isObjectSwap
                       ? "e.g. Replace the bottle with this product, keep the hand and scene the same…"
@@ -1099,16 +1183,24 @@ export function MotionStudio() {
             </div>
           </div>
 
-          {/* Sticky generate */}
-          <div className="shrink-0 border-t border-white/[0.1] bg-white/[0.04] p-3 backdrop-blur-xl sm:p-5">
+          {/* Generate — fixed bottom on mobile while tools visible; inline on desktop */}
+          <div
+            className={[
+              "border-t border-white/[0.1] backdrop-blur-xl transition-[transform,opacity] duration-200 ease-out",
+              "fixed inset-x-0 bottom-0 z-50 bg-[#0a0a0c]/96 p-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))]",
+              mobileGeneratePinned
+                ? "translate-y-0 opacity-100"
+                : "pointer-events-none translate-y-[110%] opacity-0",
+              "lg:pointer-events-auto lg:static lg:inset-auto lg:z-auto lg:translate-y-0 lg:bg-white/[0.04] lg:p-3.5 lg:pb-3.5 lg:opacity-100",
+            ].join(" ")}
+          >
             <button
               type="button"
               onClick={() => void onGenerate()}
               disabled={busy}
               aria-busy={busy}
               className={[
-                "group relative flex w-full items-center justify-between gap-2 overflow-hidden rounded-xl px-3.5 text-left transition-all duration-200 disabled:pointer-events-none disabled:cursor-wait sm:h-12 sm:gap-3 sm:rounded-2xl sm:px-4",
-                "max-sm:min-h-12 max-sm:flex-col max-sm:items-stretch max-sm:gap-1.5 max-sm:py-2.5",
+                "group relative flex h-12 w-full items-center justify-between gap-2 overflow-hidden rounded-2xl px-3.5 text-left transition-all duration-200 disabled:pointer-events-none disabled:cursor-wait sm:gap-3 sm:px-4",
                 ready && !busy
                   ? "bg-accent text-accent-ink shadow-[0_8px_28px_rgba(216,255,62,0.18)] hover:bg-accent-strong hover:shadow-[0_10px_32px_rgba(216,255,62,0.28)] active:scale-[0.985]"
                   : busy
@@ -1122,7 +1214,7 @@ export function MotionStudio() {
                   className="pointer-events-none absolute inset-y-0 left-0 hidden w-1/3 bg-gradient-to-r from-transparent via-white/25 to-transparent opacity-0 transition duration-500 group-hover:translate-x-[220%] group-hover:opacity-100 sm:block"
                 />
               ) : null}
-              <span className="relative flex min-w-0 items-center gap-2.5 max-sm:justify-center">
+              <span className="relative flex min-w-0 items-center gap-2.5">
                 {busy ? (
                   <span className="h-4 w-4 shrink-0 animate-spin rounded-full border-2 border-accent-ink/25 border-t-accent-ink" />
                 ) : (
@@ -1146,7 +1238,7 @@ export function MotionStudio() {
               </span>
               {busy ? (
                 <span
-                  className="relative flex shrink-0 items-center justify-center gap-1.5 rounded-full bg-accent-ink/10 px-2.5 py-1 text-[0.7rem] font-semibold tabular-nums text-accent-ink max-sm:self-center"
+                  className="relative flex shrink-0 items-center justify-center gap-1.5 rounded-full bg-accent-ink/10 px-2.5 py-1 text-[0.7rem] font-semibold tabular-nums text-accent-ink"
                   aria-live="polite"
                 >
                   <span className="font-mono text-[0.8rem]">
@@ -1160,7 +1252,7 @@ export function MotionStudio() {
               ) : (
                 <span
                   className={[
-                    "relative flex shrink-0 items-center justify-center gap-1.5 rounded-full px-2.5 py-1 text-[0.7rem] font-medium tabular-nums max-sm:self-center",
+                    "relative flex shrink-0 items-center justify-center gap-1.5 rounded-full px-2.5 py-1 text-[0.7rem] font-medium tabular-nums",
                     ready
                       ? "bg-accent-ink/10 text-accent-ink/85"
                       : "bg-black/25 text-fg-muted",
@@ -1230,32 +1322,16 @@ export function MotionStudio() {
           </div>
         </div>
 
-        {/* Right: Preview / History (like tell AI Video Generator) */}
-        <div className="relative flex min-h-0 flex-col p-2.5 sm:p-4">
+        {/* Preview — first on mobile */}
+        <div className="relative order-1 flex h-[min(52vh,420px)] flex-col p-2.5 sm:p-3 lg:order-2 lg:h-auto lg:min-h-0 lg:flex-1">
           <StudioPreviewHistoryTabs
             mode={panelMode}
             onModeChange={setPanelMode}
             historyCount={history.length}
             historyBusy={history.some((item) => item.status === "generating")}
-            trailing={
-              <>
-                {duration != null ? `${duration}s · ` : ""}
-                {`${resolution} · `}
-                {modelMark}
-                {status === "error" &&
-                errorMessage?.toLowerCase().includes("credit") ? (
-                  <>
-                    {" · "}
-                    <Link href="/pricing" className="text-accent hover:underline">
-                      Get credits
-                    </Link>
-                  </>
-                ) : null}
-              </>
-            }
           />
 
-          <div className="mt-2 flex min-h-0 flex-1 flex-col sm:mt-3">
+          <div className="mt-2 flex min-h-0 flex-1 flex-col">
             {panelMode === "history" ? (
               <StudioHistoryPanel
                 items={history}
@@ -1266,117 +1342,242 @@ export function MotionStudio() {
               />
             ) : (
               <>
-                <div
-                  className="relative min-h-0 flex-1 overflow-hidden rounded-xl border border-white/[0.12] bg-black/45 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] backdrop-blur-md"
-                  aria-busy={busy}
-                >
-                  {resultUrl && !busy ? (
-                    <div className="absolute inset-0 flex items-center justify-center bg-black p-3 sm:p-4">
-                      <div
-                        className="relative h-full max-h-full w-auto max-w-full overflow-hidden rounded-lg bg-black shadow-[0_0_0_1px_rgba(255,255,255,0.08)]"
-                        style={{ aspectRatio: resultAspect }}
-                      >
-                        <video
-                          key={resultUrl}
-                          src={resultUrl}
-                          controls
-                          autoPlay
-                          playsInline
-                          className="h-full w-full object-contain"
-                          onLoadedMetadata={(e) => {
-                            const el = e.currentTarget;
-                            if (el.videoWidth > 0 && el.videoHeight > 0) {
-                              setResultAspect(
-                                `${el.videoWidth} / ${el.videoHeight}`,
-                              );
+                <div className="flex min-h-0 flex-1 gap-2 sm:gap-2.5">
+                  {/* Left: samples */}
+                  <div className="flex w-[42%] max-w-[12.5rem] shrink-0 flex-col gap-1.5 sm:max-w-[14rem] sm:gap-2 lg:w-[38%] lg:max-w-[15rem]">
+                    <p className="truncate text-[0.6rem] font-medium tracking-wide text-fg-subtle sm:text-[0.65rem]">
+                      Examples
+                    </p>
+                    <div
+                      className="grid min-h-0 flex-1 grid-rows-4 gap-1.5 sm:gap-2"
+                      aria-label="Sample motion clips"
+                    >
+                      {SAMPLE_MOTION_CLIPS.map((clip) => {
+                        const selected =
+                          videoName === `${clip.id}.mp4` ||
+                          videoName === clip.src;
+                        return (
+                          <button
+                            key={clip.id}
+                            type="button"
+                            disabled={busy}
+                            onClick={() =>
+                              void applySampleMotion(
+                                clip.src,
+                                `${clip.id}.mp4`,
+                              )
                             }
-                          }}
-                        />
-                      </div>
+                            className={[
+                              "relative min-h-0 w-full overflow-hidden rounded-lg border transition sm:rounded-xl",
+                              selected
+                                ? "border-accent/70 ring-1 ring-accent/40"
+                                : "border-white/[0.14] hover:border-white/35",
+                              busy
+                                ? "cursor-not-allowed opacity-50"
+                                : "cursor-pointer",
+                            ].join(" ")}
+                            aria-label={`Use sample ${clip.label} as motion video`}
+                            aria-pressed={selected}
+                            title={`Use as motion · ${clip.label}`}
+                          >
+                            <video
+                              src={clip.src}
+                              muted
+                              loop
+                              playsInline
+                              autoPlay
+                              preload="metadata"
+                              className="absolute inset-0 h-full w-full object-cover"
+                            />
+                          </button>
+                        );
+                      })}
                     </div>
-                  ) : (
-                    <>
-                      <div className="absolute inset-0 flex items-center justify-center p-3 sm:p-4">
-                        <div className="relative h-full max-h-full w-auto max-w-full aspect-[9/16] overflow-hidden rounded-lg bg-black shadow-[0_0_0_1px_rgba(255,255,255,0.08)]">
+                  </div>
+
+                  {/* Right: preview */}
+                  <div
+                    className="relative min-h-0 min-w-0 flex-1 overflow-hidden rounded-xl border border-white/[0.12] bg-black/45 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] backdrop-blur-md"
+                    aria-busy={busy}
+                  >
+                    {resultUrl && !busy ? (
+                      <div className="absolute inset-0 flex items-center justify-center bg-black p-2 sm:p-3">
+                        <div
+                          className="relative h-full max-h-full w-auto max-w-full overflow-hidden rounded-lg bg-black shadow-[0_0_0_1px_rgba(255,255,255,0.08)]"
+                          style={{ aspectRatio: resultAspect }}
+                        >
                           <video
-                            key={DEMO_PREVIEW_VIDEO}
-                            src={DEMO_PREVIEW_VIDEO}
+                            key={resultUrl}
+                            ref={previewVideoRef}
+                            src={resultUrl}
+                            controls
                             autoPlay
-                            muted
-                            loop
                             playsInline
-                            preload="metadata"
-                            className="absolute inset-0 h-full w-full object-cover"
-                            aria-label="Sample motion transfer preview"
+                            muted={previewMuted}
+                            className="h-full w-full object-contain"
+                            onLoadedMetadata={(e) => {
+                              const el = e.currentTarget;
+                              if (el.videoWidth > 0 && el.videoHeight > 0) {
+                                setResultAspect(
+                                  `${el.videoWidth} / ${el.videoHeight}`,
+                                );
+                              }
+                            }}
                           />
                         </div>
                       </div>
-                      {status === "error" ? (
-                        <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-black/65 px-6 text-center backdrop-blur-[2px]">
-                          <p className="text-sm font-medium text-fg">
-                            Generation failed
-                          </p>
-                          <p className="text-[0.7rem] text-fg-subtle">
-                            {errorMessage || "Try again"}
-                          </p>
+                    ) : (
+                      <>
+                        <div className="absolute inset-0 flex items-center justify-center p-2 sm:p-3">
+                          <div className="relative h-full max-h-full w-auto max-w-full aspect-[9/16] overflow-hidden rounded-lg bg-black shadow-[0_0_0_1px_rgba(255,255,255,0.08)]">
+                            <video
+                              key={videoUrl || DEMO_PREVIEW_VIDEO}
+                              ref={previewVideoRef}
+                              src={videoUrl || DEMO_PREVIEW_VIDEO}
+                              autoPlay
+                              muted={previewMuted}
+                              loop
+                              playsInline
+                              preload="metadata"
+                              className="absolute inset-0 h-full w-full object-cover"
+                              aria-label={
+                                videoUrl
+                                  ? "Selected motion video preview"
+                                  : "Sample motion transfer preview"
+                              }
+                            />
+                          </div>
                         </div>
-                      ) : null}
-                    </>
-                  )}
+                        {status === "error" ? (
+                          <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-black/65 px-4 text-center backdrop-blur-[2px]">
+                            <p className="text-sm font-medium text-fg">
+                              Generation failed
+                            </p>
+                            <p className="text-[0.7rem] text-fg-subtle">
+                              {errorMessage || "Try again"}
+                            </p>
+                          </div>
+                        ) : null}
+                      </>
+                    )}
 
-                  {busy ? (
-                    <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-[#0a0a0c]/88 px-6 backdrop-blur-[4px]">
-                      <div className="relative mb-5 flex h-16 w-16 items-center justify-center">
-                        <div
-                          className="absolute inset-0 rounded-full border border-white/[0.08]"
-                          aria-hidden
-                        />
-                        <div
-                          className="absolute inset-0 animate-spin rounded-full border-2 border-transparent border-t-accent"
-                          style={{ animationDuration: "1.1s" }}
-                          aria-hidden
-                        />
-                        <span className="font-mono text-[0.65rem] font-medium tabular-nums text-fg-subtle">
-                          {Math.round(progressPct)}%
-                        </span>
-                      </div>
-                      <p
-                        className="flex items-baseline gap-1 font-mono text-4xl font-semibold leading-none tracking-tight text-fg sm:text-5xl"
-                        aria-live="polite"
-                        aria-label={`Elapsed ${elapsedParts.label}`}
+                    {!busy ? (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const next = !previewMuted;
+                          setPreviewMuted(next);
+                          const el = previewVideoRef.current;
+                          if (el) {
+                            el.muted = next;
+                            if (!next) {
+                              void el.play().catch(() => {
+                                /* autoplay with sound may still fail */
+                              });
+                            }
+                          }
+                        }}
+                        className="absolute bottom-2 right-2 z-20 flex h-8 w-8 items-center justify-center rounded-full border border-white/15 bg-black/65 text-fg shadow-sm backdrop-blur-md transition hover:border-white/30 hover:bg-black/80 sm:bottom-3 sm:right-3 sm:h-9 sm:w-9"
+                        aria-label={
+                          previewMuted ? "Unmute preview" : "Mute preview"
+                        }
+                        aria-pressed={!previewMuted}
+                        title={previewMuted ? "Sound on" : "Sound off"}
                       >
-                        <span className="tabular-nums">{elapsedParts.mm}</span>
-                        <span className="animate-pulse text-accent">:</span>
-                        <span className="tabular-nums">{elapsedParts.ss}</span>
-                      </p>
-                      <p className="mt-3 text-sm font-medium text-fg">
-                        {phaseHint}
-                      </p>
-                      <p className="mt-1 text-[0.75rem] text-fg-subtle">
-                        {modelMark} · usually {eta.etaLabel}
-                      </p>
-                      <div className="mt-4 h-1 w-44 overflow-hidden rounded-full bg-white/[0.08]">
-                        <div
-                          className="h-full rounded-full bg-accent transition-[width] duration-300 ease-out"
-                          style={{ width: `${progressPct}%` }}
-                        />
+                        {previewMuted ? (
+                          <svg
+                            width="16"
+                            height="16"
+                            viewBox="0 0 16 16"
+                            fill="none"
+                            aria-hidden
+                          >
+                            <path
+                              d="M2.5 6.2v3.6h2.2L8 13V3L4.7 6.2H2.5Z"
+                              fill="currentColor"
+                            />
+                            <path
+                              d="M10.2 5.8l3.5 3.5M13.7 5.8l-3.5 3.5"
+                              stroke="currentColor"
+                              strokeWidth="1.4"
+                              strokeLinecap="round"
+                            />
+                          </svg>
+                        ) : (
+                          <svg
+                            width="16"
+                            height="16"
+                            viewBox="0 0 16 16"
+                            fill="none"
+                            aria-hidden
+                          >
+                            <path
+                              d="M2.5 6.2v3.6h2.2L8 13V3L4.7 6.2H2.5Z"
+                              fill="currentColor"
+                            />
+                            <path
+                              d="M10 6.2c.7.6 1.1 1.4 1.1 2.3S10.7 10.2 10 10.8M11.8 4.6c1.3 1.1 2 2.5 2 4s-.7 2.9-2 4"
+                              stroke="currentColor"
+                              strokeWidth="1.3"
+                              strokeLinecap="round"
+                            />
+                          </svg>
+                        )}
+                      </button>
+                    ) : null}
+
+                    {busy ? (
+                      <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-[#0a0a0c]/88 px-4 backdrop-blur-[4px]">
+                        <div className="relative mb-4 flex h-14 w-14 items-center justify-center">
+                          <div
+                            className="absolute inset-0 rounded-full border border-white/[0.08]"
+                            aria-hidden
+                          />
+                          <div
+                            className="absolute inset-0 animate-spin rounded-full border-2 border-transparent border-t-accent"
+                            style={{ animationDuration: "1.1s" }}
+                            aria-hidden
+                          />
+                          <span className="font-mono text-[0.65rem] font-medium tabular-nums text-fg-subtle">
+                            {Math.round(progressPct)}%
+                          </span>
+                        </div>
+                        <p
+                          className="flex items-baseline gap-1 font-mono text-3xl font-semibold leading-none tracking-tight text-fg sm:text-4xl"
+                          aria-live="polite"
+                          aria-label={`Elapsed ${elapsedParts.label}`}
+                        >
+                          <span className="tabular-nums">{elapsedParts.mm}</span>
+                          <span className="animate-pulse text-accent">:</span>
+                          <span className="tabular-nums">{elapsedParts.ss}</span>
+                        </p>
+                        <p className="mt-2 text-sm font-medium text-fg">
+                          {phaseHint}
+                        </p>
+                        <p className="mt-1 text-[0.7rem] text-fg-subtle">
+                          {modelMark} · usually {eta.etaLabel}
+                        </p>
                       </div>
-                      <p className="mt-3 text-center text-[11px] text-fg-subtle">
-                        {elapsedParts.label} / {eta.etaLabel} · keep this tab
-                        open
-                      </p>
-                    </div>
-                  ) : null}
+                    ) : null}
+                  </div>
                 </div>
 
                 {resultUrl && !busy ? (
-                  <div className="mt-3 flex items-center gap-2">
+                  <div className="mt-2.5 flex items-center gap-2">
                     <button
                       type="button"
                       onClick={downloadResult}
                       className="inline-flex h-10 min-w-0 flex-1 items-center justify-center gap-2 rounded-full border border-white/[0.12] bg-white/[0.04] text-sm font-medium text-fg transition hover:border-white/[0.2] hover:bg-white/[0.07]"
                     >
                       Download MP4
+                    </button>
+                    <button
+                      type="button"
+                      onClick={clearResultPreview}
+                      className="inline-flex h-10 shrink-0 items-center justify-center rounded-full border border-white/[0.12] bg-white/[0.04] px-4 text-sm font-medium text-fg-muted transition hover:border-white/[0.2] hover:bg-white/[0.07] hover:text-fg"
+                      aria-label="Clear preview result"
+                    >
+                      Clear
                     </button>
                     {lastElapsedSec != null ? (
                       <span className="shrink-0 rounded-full border border-white/[0.1] bg-white/[0.04] px-3 py-2 font-mono text-[0.7rem] font-medium tabular-nums text-fg-subtle">
@@ -1437,6 +1638,7 @@ function UploadField({
   previewUrl,
   previewKind = "image",
   onPick,
+  onClear,
   icon,
   compact,
 }: {
@@ -1449,46 +1651,127 @@ function UploadField({
   previewUrl?: string | null;
   previewKind?: "image" | "video";
   onPick: (file: File | null) => void;
+  onClear?: () => void;
   icon: "image" | "video";
   compact?: boolean;
 }) {
   const filled = Boolean(fileName);
 
+  const clearButton =
+    filled && onClear ? (
+      <button
+        type="button"
+        onClick={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          onClear();
+        }}
+        className="absolute right-1.5 top-1.5 z-10 flex h-6 w-6 items-center justify-center rounded-full border border-white/15 bg-black/70 text-fg shadow-sm backdrop-blur-sm transition hover:border-white/30 hover:bg-black/85 hover:text-white"
+        aria-label={`Remove ${label}`}
+        title="Remove"
+      >
+        <svg width="10" height="10" viewBox="0 0 10 10" fill="none" aria-hidden>
+          <path
+            d="M2 2l6 6M8 2L2 8"
+            stroke="currentColor"
+            strokeWidth="1.5"
+            strokeLinecap="round"
+          />
+        </svg>
+      </button>
+    ) : null;
+
   if (compact) {
     return (
-      <label
+      <div
         className={[
-          "group flex cursor-pointer flex-col items-center gap-2 rounded-xl border px-2 py-3 text-center transition-all",
+          "group relative flex flex-col items-center gap-2 rounded-xl border px-2 py-3 text-center transition-all",
           filled
             ? "border-accent/25 bg-[rgba(216,255,62,0.04)]"
             : "border-dashed border-white/[0.12] bg-white/[0.025] hover:border-white/[0.22] hover:bg-white/[0.045]",
         ].join(" ")}
       >
-        <div
-          className={[
-            "relative flex h-12 w-12 items-center justify-center overflow-hidden rounded-lg border",
-            filled
-              ? "border-accent/30 bg-black/30"
-              : "border-white/10 bg-black/25 text-fg-muted group-hover:text-fg",
-          ].join(" ")}
-        >
-          {previewUrl ? (
-            <MediaPreview url={previewUrl} kind={previewKind} />
-          ) : (
-            <UploadIcon type={icon} />
-          )}
-        </div>
-        <div className="min-w-0">
-          <p className="text-[0.75rem] font-medium tracking-wide text-fg-muted">
-            {label}
-            {required ? <span className="ml-0.5 text-[#ff5c5c]">*</span> : null}
-          </p>
-          <p className="mt-0.5 truncate text-[0.85rem] font-medium text-fg">
-            {fileName ? "Ready" : button}
-          </p>
-          <p className="truncate text-[0.72rem] font-medium text-fg-muted">
-            {fileName ? "Replace" : hint}
-          </p>
+        {clearButton}
+        <label className="flex w-full cursor-pointer flex-col items-center gap-2">
+          <div
+            className={[
+              "relative flex h-12 w-12 items-center justify-center overflow-hidden rounded-lg border",
+              filled
+                ? "border-accent/30 bg-black/30"
+                : "border-white/10 bg-black/25 text-fg-muted group-hover:text-fg",
+            ].join(" ")}
+          >
+            {previewUrl ? (
+              <MediaPreview url={previewUrl} kind={previewKind} />
+            ) : (
+              <UploadIcon type={icon} />
+            )}
+          </div>
+          <div className="min-w-0">
+            <p className="text-[0.75rem] font-medium tracking-wide text-fg-muted">
+              {label}
+              {required ? (
+                <span className="ml-0.5 text-[#ff5c5c]">*</span>
+              ) : null}
+            </p>
+            <p className="mt-0.5 truncate text-[0.85rem] font-medium text-fg">
+              {fileName ? "Ready" : button}
+            </p>
+            <p className="truncate text-[0.72rem] font-medium text-fg-muted">
+              {fileName ? "Replace" : hint}
+            </p>
+          </div>
+          <input
+            type="file"
+            accept={accept}
+            className="sr-only"
+            onChange={(e) => onPick(e.target.files?.[0] ?? null)}
+          />
+        </label>
+      </div>
+    );
+  }
+
+  return (
+    <div
+      className={[
+        "group relative block shrink-0 rounded-lg border px-2.5 py-2 transition-all",
+        filled
+          ? "border-accent/25 bg-[rgba(216,255,62,0.04)]"
+          : "border-dashed border-white/[0.12] bg-white/[0.025] hover:border-white/[0.22] hover:bg-white/[0.045]",
+      ].join(" ")}
+    >
+      {clearButton}
+      <label className="block cursor-pointer">
+        <div className="flex items-center gap-2">
+          <div
+            className={[
+              "relative flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-md border",
+              filled
+                ? "border-accent/30 bg-black/30"
+                : "border-white/10 bg-black/25 text-fg-muted group-hover:text-fg",
+            ].join(" ")}
+          >
+            {previewUrl ? (
+              <MediaPreview url={previewUrl} kind={previewKind} />
+            ) : (
+              <UploadIcon type={icon} />
+            )}
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="text-[0.65rem] font-medium uppercase tracking-[0.12em] text-fg-muted">
+              {label}
+              {required ? (
+                <span className="ml-1 text-[#ff5c5c]">*</span>
+              ) : null}
+            </p>
+            <p className="truncate text-[0.8rem] font-medium text-fg">
+              {fileName || button}
+            </p>
+            <p className="truncate text-[0.68rem] font-medium text-fg-muted">
+              {fileName ? "Click to replace" : hint}
+            </p>
+          </div>
         </div>
         <input
           type="file"
@@ -1497,53 +1780,74 @@ function UploadField({
           onChange={(e) => onPick(e.target.files?.[0] ?? null)}
         />
       </label>
+    </div>
+  );
+}
+
+function ModeTabIcon({
+  mode,
+  active,
+}: {
+  mode: StudioMode;
+  active: boolean;
+}) {
+  const tone = active ? "text-fg" : "text-fg-subtle";
+  if (mode === "motion-transfer") {
+    return (
+      <svg
+        width="16"
+        height="16"
+        viewBox="0 0 16 16"
+        fill="none"
+        aria-hidden
+        className={`shrink-0 ${tone}`}
+      >
+        <circle
+          cx="6"
+          cy="8"
+          r="3.2"
+          stroke="currentColor"
+          strokeWidth="1.25"
+          strokeDasharray="1.6 1.5"
+        />
+        <circle
+          cx="10"
+          cy="8"
+          r="3.2"
+          stroke="currentColor"
+          strokeWidth="1.25"
+        />
+      </svg>
     );
   }
-
   return (
-    <label
-      className={[
-        "group block shrink-0 cursor-pointer rounded-lg border px-2.5 py-2 transition-all",
-        filled
-          ? "border-accent/25 bg-[rgba(216,255,62,0.04)]"
-          : "border-dashed border-white/[0.12] bg-white/[0.025] hover:border-white/[0.22] hover:bg-white/[0.045]",
-      ].join(" ")}
+    <svg
+      width="16"
+      height="16"
+      viewBox="0 0 16 16"
+      fill="none"
+      aria-hidden
+      className={`shrink-0 ${tone}`}
     >
-      <div className="flex items-center gap-2">
-        <div
-          className={[
-            "relative flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-md border",
-            filled
-              ? "border-accent/30 bg-black/30"
-              : "border-white/10 bg-black/25 text-fg-muted group-hover:text-fg",
-          ].join(" ")}
-        >
-          {previewUrl ? (
-            <MediaPreview url={previewUrl} kind={previewKind} />
-          ) : (
-            <UploadIcon type={icon} />
-          )}
-        </div>
-        <div className="min-w-0 flex-1">
-          <p className="text-[0.65rem] font-medium uppercase tracking-[0.12em] text-fg-muted">
-            {label}
-            {required ? <span className="ml-1 text-[#ff5c5c]">*</span> : null}
-          </p>
-          <p className="truncate text-[0.8rem] font-medium text-fg">
-            {fileName || button}
-          </p>
-          <p className="truncate text-[0.68rem] font-medium text-fg-muted">
-            {fileName ? "Click to replace" : hint}
-          </p>
-        </div>
-      </div>
-      <input
-        type="file"
-        accept={accept}
-        className="sr-only"
-        onChange={(e) => onPick(e.target.files?.[0] ?? null)}
+      <rect
+        x="2.2"
+        y="3.4"
+        width="7.2"
+        height="7.2"
+        rx="1.2"
+        stroke="currentColor"
+        strokeWidth="1.25"
       />
-    </label>
+      <rect
+        x="6.6"
+        y="5.4"
+        width="7.2"
+        height="7.2"
+        rx="1.2"
+        stroke="currentColor"
+        strokeWidth="1.25"
+      />
+    </svg>
   );
 }
 

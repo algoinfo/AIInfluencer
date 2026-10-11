@@ -14,11 +14,12 @@ const product = [
 ];
 
 const learn = [
+  { href: "/guides/what-can-genjutsu-do", label: "Guide" },
   { href: "/genjutsu", label: "What is Genjutsu?" },
   { href: "/genjutsu-tutorial", label: "Tutorial" },
   { href: "/genjutsu-api", label: "API" },
   { href: "/genjutsu-alternatives", label: "Alternatives" },
-  { href: "/guides", label: "Guides" },
+  { href: "/guides", label: "All guides" },
 ];
 
 const company = [
@@ -44,11 +45,11 @@ export function Footer() {
               height={28}
               className="h-7 w-7 rounded-lg object-cover"
             />
-            GENJUTSU
+            GENJUTSU AI
           </Link>
           <p className="mt-3 text-sm leading-relaxed text-fg-muted">
-            Genjutsu AI Video Generator — motion transfer from a reference
-            video to any character.
+            Genjutsu AI — AI Motion Transfer Video Generator. Recast any
+            character from a still plus a motion reference.
           </p>
         </div>
 
@@ -108,7 +109,7 @@ export function Footer() {
       </div>
       <div className="border-t border-border">
         <div className="page-shell flex flex-col gap-2 py-5 text-xs text-fg-subtle sm:flex-row sm:items-center sm:justify-between">
-          <span>© 2026 GENJUTSU · genjutsu.online</span>
+          <span>© 2026 Genjutsu AI · genjutsu.online</span>
           <span className="flex flex-wrap items-center gap-x-3 gap-y-1">
             <a
               href={`mailto:${CONTACT_EMAIL}`}

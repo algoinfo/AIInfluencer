@@ -26,6 +26,143 @@ export type Guide = {
 
 export const guides: Guide[] = [
   {
+    slug: "what-can-genjutsu-do",
+    title: "What Can Genjutsu Do? Motion Transfer From One Still + Clip",
+    excerpt:
+      "Genjutsu turns a character still and a short motion reference into a publishable clip — keep identity, inherit performance. Capabilities, workflow, limits, and pricing on genjutsu.online.",
+    readTime: "10 min",
+    sections: [
+      {
+        heading: "Direct answer",
+        paragraphs: [
+          "Genjutsu is an AI video studio for motion transfer and object swap. You upload a clear still of the subject you want on screen, plus a short reference video that already has the movement. The model reads pose, timing, and camera energy from the clip, then applies that performance to your image.",
+          "It is built to multiply channel-ready cuts from assets you already trust — a face sheet, a pack shot, a dance plate — not to invent a brand-new choreography from text alone, and not to replace a full edit suite.",
+        ],
+      },
+      {
+        heading: "What Genjutsu can do",
+        paragraphs: [
+          "Motion Transfer — Upload one character or product still and one reference clip (about 4–30 seconds). Timing and performance come from the video; identity comes from the image.",
+          "Object Swap — Keep the person or scene already in a source clip and mainly replace a held product, garment, or visual element.",
+          "Resolution choices — Common delivery sizes from lighter previews up to sharper masters, depending on the model path you pick in the studio.",
+          "Optional prompt — Leave it off for the default image + video path, or turn it on to steer look, outfit, scene, or what to swap.",
+          "Studio history — Successful runs stay in your session history so you can compare takes and download winners without reopening the shoot.",
+        ],
+      },
+      {
+        heading: "Why this is different from “just text-to-video”",
+        paragraphs: [
+          "Pure text-to-video invents motion from a prompt. That helps exploration, but it is weak when you already have an approved take — a dance, a product demo, a camera push that creative signed off.",
+          "Genjutsu starts from that take. The reference video is the motion source. The still is the identity. An optional prompt can nudge style, but it does not replace a readable plate. You keep continuity across variants (same walk, same beat) while testing a new face, product, or character for different markets and platforms.",
+        ],
+      },
+      {
+        heading: "How a generation pass works",
+        paragraphs: [
+          "1) Character — Use a sharp JPG/PNG (or WEBP) of the person, pet, avatar, or product you want on screen. Keep the subject large and readable.",
+          "2) Motion — Upload a short MP4/MOV/WEBM whose timing you already like. One reference video carries the performance.",
+          "3) Mode — Choose Motion Transfer when the still is the hero identity, or Object Swap when you mainly need to replace an item or outfit inside an existing shot.",
+          "4) Generate — Credit cost shows before you run (driven by motion length and model). Preview winners in history; iterate the still or plate instead of rewriting everything at once.",
+          "Practical brief pattern when you use a prompt: “Keep [motion / camera / performance]. Match [character still]. Change [outfit / scene / product] only if needed. Avoid [anything that must not appear].”",
+        ],
+      },
+      {
+        heading: "Motion Transfer vs Object Swap",
+        paragraphs: [
+          "Motion Transfer — Treat the still as the on-screen talent. Rebuild the performance around that identity. Use when choreography, delivery, or camera move is right in the reference and you need a different person, character, or product hero — for example, one dance plate into three influencer looks.",
+          "Object Swap — Change only what you name (SKU, prop, outfit) while keeping more of the source video’s person and framing. Use when the plate is approved and one surface must match a new offer or colorway.",
+          "Most creators run Motion Transfer as the main pass for character work, then Object Swap for product cleanup. If both identity and motion are wrong, fix the still or plate first — generation cannot invent a strong take from a weak upload.",
+        ],
+      },
+      {
+        heading: "Who Genjutsu is for",
+        paragraphs: [
+          "Creators and music — One dance or stage reference becomes teasers and Shorts with a locked character still. Performance stays; identity changes per release.",
+          "Growth and ads — Recast a proven camera pattern with a new face or pack shot for UGC-style tests without another filming day.",
+          "Ecommerce and catalog — Walks, turns, and hand demos from lookbook stills or virtual models when you cannot shoot every SKU live.",
+          "Best fit: you already have (or can source) a motion plate worth locking, and a clear still. Poor fit: you need a full NLE, long-form in one render, or a tool that invents motion from text alone.",
+        ],
+      },
+      {
+        heading: "Example workflows",
+        paragraphs: [
+          "Dance reel — Lock a clear full-body still. Run Motion Transfer with a 8–12s dance reference. Keep the same still across three music cuts; only change the motion file.",
+          "SKU demo ad — Keep the hand path from an approved product demo. Use Object Swap (or Motion Transfer with a pack-shot still) so packaging updates for a new market while timing stays.",
+          "AI influencer batch — Freeze one identity sheet, then feed walks, gestures, and unbox references through the same face. Vary motion, not the character.",
+          "These workflows share one rule: lock motion first (or identity first for batch work), then change the other input. If the motion is wrong, fix the plate before spending credits on looks.",
+        ],
+      },
+      {
+        heading: "Limits (what Genjutsu will not do)",
+        paragraphs: [
+          "Not a full NLE — Dialogue, captions, music licensing, and final assembly stay in your editor.",
+          "Shot-sized clips only — Uploads are capped around 30 seconds; models also need a minimum length (about 4 seconds). Split longer stories into shots, then assemble winners.",
+          "Prompt is optional seasoning — It will not invent clean footwork if the reference is muddy.",
+          "Rights stay with you — Clear likeness, music, product, and platform rules for synthetic media before paid spend. Genjutsu provides the generation tool; it does not grant third-party IP. See Terms and Acceptable Use.",
+        ],
+      },
+      {
+        heading: "Output specs and pricing",
+        paragraphs: [
+          "Length: about 4–30 seconds per run, based on the uploaded motion video (billable seconds rounded up).",
+          "Inputs: 1 character/product image + 1 motion reference video. Images up to about 10 MB; videos up to about 80 MB.",
+          "Billing: credit-based. Kling-style motion transfer uses 100 credits per second times the model multiplier (studio default is often ×1.5). Genjutsu Motion Transfer and Object Swap also price by resolution. The Generate button shows seconds and credits before you run.",
+          "Sign up includes welcome credits. After that, buy one-time packs on Pricing — credits do not expire. Failed or blocked runs do not complete a billable success when the studio returns an error before output.",
+        ],
+      },
+      {
+        heading: "How to start",
+        paragraphs: [
+          "1) Sign in on genjutsu.online.",
+          "2) Open the homepage studio (or /motion-transfer for the same workflow).",
+          "3) Upload a still and a motion reference, pick mode and resolution, then generate.",
+          "4) Keep winners in history and iterate one variable at a time — crop, duration, or a cleaner still — instead of reopening the whole brief.",
+        ],
+      },
+    ],
+    params: [
+      { label: "Inputs", value: "1 still (JPG/PNG/WEBP) + 1 motion video (MP4/MOV/WEBM)" },
+      { label: "Modes", value: "Motion Transfer · Object Swap" },
+      { label: "Length", value: "~4–30s per shot (credits follow motion length)" },
+      { label: "Billing", value: "Credits on screen before generate · packs never expire" },
+      { label: "Best still", value: "Clear subject, matched camera height, limited occlusion" },
+      { label: "Best reference", value: "Readable motion, stable framing, trimmed dead air" },
+    ],
+    faq: [
+      {
+        q: "What can Genjutsu do?",
+        a: "Turn a character or product still plus a short reference clip into a new video where that subject follows the motion in the reference. Use Motion Transfer for identity-from-still, or Object Swap to replace items inside an existing shot.",
+      },
+      {
+        q: "Is Genjutsu only a text-to-video tool?",
+        a: "No. A prompt can guide look or swap intent, but the studio is built to start from assets you already have: one image for identity and one video for motion.",
+      },
+      {
+        q: "What is the difference between Motion Transfer and Object Swap?",
+        a: "Motion Transfer rebuilds the performance around your still as the hero identity. Object Swap keeps more of the source video and mainly replaces a product, garment, or element you name.",
+      },
+      {
+        q: "Can I use Genjutsu videos commercially?",
+        a: "You are responsible for rights to uploads and for how you publish the output, including likeness, trademarks, and platform rules for synthetic media. See Terms and Acceptable Use.",
+      },
+      {
+        q: "How does Genjutsu pricing work?",
+        a: "Credit-based. Cost follows billable motion length and the model/resolution you pick. The studio shows credits before generate. Welcome credits on signup; then one-time packs that never expire.",
+      },
+      {
+        q: "Do I need to sign in?",
+        a: "Yes. Generation uses your credit balance and account history. Anonymous generation is not available.",
+      },
+    ],
+    related: [
+      { href: "/#studio", label: "Open studio" },
+      { href: "/guides/how-to-use-genjutsu", label: "How to use Genjutsu" },
+      { href: "/motion-transfer", label: "Motion Transfer" },
+      { href: "/pricing", label: "Pricing" },
+      { href: "/examples", label: "Examples" },
+    ],
+  },
+  {
     slug: "how-to-use-genjutsu",
     title: "How to Use Genjutsu (Motion Transfer Studio)",
     excerpt:
@@ -36,7 +173,7 @@ export const guides: Guide[] = [
         heading: "What Genjutsu is for",
         paragraphs: [
           "Genjutsu is an AI video motion transfer studio: you upload a character (or product) image and a reference video that already contains the performance you want. The model maps pose, timing, and often camera energy from the clip onto your subject. You are not asking a text prompt to invent choreography from scratch.",
-          "Use this when you need controlled movement — dance, walks, gestures, product demos — while keeping a recognizable identity. Genjutsu on genjutsu.online is an independent product experience; it is not an official Higgsfield property, even when the underlying motion ideas feel familiar to creators who have used similar pipelines elsewhere.",
+          "Use this when you need controlled movement — dance, walks, gestures, product demos — while keeping a recognizable identity. Start from the homepage studio after signup; packs on Pricing add credits when you scale.",
         ],
       },
       {
@@ -102,6 +239,7 @@ export const guides: Guide[] = [
     ],
     related: [
       { href: "/#studio", label: "Open studio" },
+      { href: "/guides/what-can-genjutsu-do", label: "What Genjutsu can do" },
       { href: "/motion-transfer", label: "Motion Transfer overview" },
       { href: "/dance-video", label: "AI dance videos" },
       { href: "/genjutsu-tutorial", label: "Tutorial" },

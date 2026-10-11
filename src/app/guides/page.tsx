@@ -7,10 +7,11 @@ import { pageMetadata } from "@/lib/seo";
 export const metadata = pageMetadata({
   title: "Genjutsu Guides — Motion Transfer How-Tos",
   description:
-    "Long-form Genjutsu guides: how to use the studio, create AI influencer videos, and lock consistent characters before motion transfer.",
+    "Genjutsu guides: what the studio can do, how to run motion transfer, create AI influencer videos, and lock consistent characters.",
   path: "/guides",
   keywords: [
     "Genjutsu Guides",
+    "what can Genjutsu do",
     "AI motion transfer tutorial",
     "AI influencer video guide",
   ],
@@ -33,12 +34,12 @@ export default function GuidesPage() {
       <PageHero
         eyebrow="Editorial hub"
         title="Genjutsu Guides"
-        subtitle="Three deep how-tos — not ten thin stubs. Use-case landing pages carry search intent; these guides teach the workflow."
+        subtitle="Start with what Genjutsu can do, then deep how-tos for the studio, influencers, and consistent characters."
         ctas={[
           { href: "/#studio", label: "Open studio" },
           {
-            href: "/guides/how-to-use-genjutsu",
-            label: "Start with how-to",
+            href: "/guides/what-can-genjutsu-do",
+            label: "What Genjutsu can do",
             variant: "secondary",
           },
         ]}
