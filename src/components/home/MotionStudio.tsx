@@ -1368,7 +1368,7 @@ export function MotionStudio() {
                               )
                             }
                             className={[
-                              "relative min-h-0 w-full overflow-hidden rounded-lg border transition sm:rounded-xl",
+                              "relative min-h-0 w-full overflow-hidden rounded-lg border bg-black/40 transition sm:rounded-xl",
                               selected
                                 ? "border-accent/70 ring-1 ring-accent/40"
                                 : "border-white/[0.14] hover:border-white/35",
@@ -1380,15 +1380,7 @@ export function MotionStudio() {
                             aria-pressed={selected}
                             title={`Use as motion · ${clip.label}`}
                           >
-                            <video
-                              src={clip.src}
-                              muted
-                              loop
-                              playsInline
-                              autoPlay
-                              preload="metadata"
-                              className="absolute inset-0 h-full w-full object-cover"
-                            />
+                            <SampleThumb src={clip.src} playing={selected} />
                           </button>
                         );
                       })}
@@ -1781,6 +1773,50 @@ function UploadField({
         />
       </label>
     </div>
+  );
+}
+
+/** Thumbnail for sample strip — shows a frame; plays only when selected. */
+function SampleThumb({ src, playing }: { src: string; playing: boolean }) {
+  const ref = useRef<HTMLVideoElement | null>(null);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    if (playing) {
+      void el.play().catch(() => {
+        /* ignore autoplay blocks */
+      });
+      return;
+    }
+    el.pause();
+    try {
+      if (el.readyState >= 1 && el.duration > 0.15) {
+        el.currentTime = 0.12;
+      }
+    } catch {
+      /* ignore seek errors */
+    }
+  }, [playing]);
+
+  return (
+    <video
+      ref={ref}
+      src={src}
+      muted
+      loop
+      playsInline
+      preload="metadata"
+      className="absolute inset-0 h-full w-full object-cover"
+      onLoadedMetadata={(e) => {
+        const el = e.currentTarget;
+        try {
+          if (!playing && el.duration > 0.15) el.currentTime = 0.12;
+        } catch {
+          /* ignore */
+        }
+      }}
+    />
   );
 }
 
