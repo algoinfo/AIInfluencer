@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Outfit, Syne } from "next/font/google";
 import Script from "next/script";
+import { MicrosoftClarity } from "@/components/analytics/MicrosoftClarity";
 import { Footer } from "@/components/layout/Footer";
 import { Navbar } from "@/components/layout/Navbar";
 import { AppProviders } from "@/components/providers/AppProviders";
@@ -81,6 +82,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
             gtag('config', '${GA_MEASUREMENT_ID}');
           `}
         </Script>
+        <MicrosoftClarity />
         <AppProviders>
           <Navbar />
           <main className="flex-1">{children}</main>
