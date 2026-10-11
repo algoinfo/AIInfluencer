@@ -752,7 +752,7 @@ export function MotionStudio() {
     >
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_20%_0%,rgba(216,255,62,0.06),transparent_45%),radial-gradient(ellipse_at_90%_20%,rgba(255,255,255,0.04),transparent_40%)]" />
 
-      <div className="relative grid min-h-0 flex-1 grid-rows-[minmax(0,1.15fr)_minmax(0,0.85fr)] lg:grid-rows-1 lg:grid-cols-[400px_1fr] xl:grid-cols-[420px_1fr]">
+      <div className="relative grid min-h-0 flex-1 grid-rows-[minmax(0,1.15fr)_minmax(0,0.85fr)] lg:grid-rows-1 lg:grid-cols-[460px_1fr] xl:grid-cols-[480px_1fr]">
         {/* Left tools */}
         <div className="flex min-h-0 flex-col border-b border-white/[0.07] lg:border-b-0 lg:border-r lg:border-white/[0.07]">
           <div className="flex min-h-0 flex-1 flex-col gap-3.5 overflow-y-auto p-4 sm:p-5 [scrollbar-width:thin]">
