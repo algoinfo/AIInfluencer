@@ -2,7 +2,7 @@ import type { MetadataRoute } from "next";
 import { guides } from "@/data/guides";
 import { SITE_URL } from "@/lib/seo";
 
-const LAST_MODIFIED = "2026-10-10";
+const LAST_MODIFIED = "2026-10-12";
 
 const staticPaths = [
   "/",
