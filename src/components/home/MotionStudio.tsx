@@ -89,12 +89,12 @@ const OBJECT_SWAP_ETA = { etaLabel: "~2–5 min", typicalWaitSec: 180 };
 const DEMO_PREVIEW_VIDEO =
   "https://pub-3a51eee0bcba4124b258f45bbbe4d181.r2.dev/demo/two-cats-dance.mp4";
 
-/** Compact sample row above Preview — click to fill Motion upload. */
+/** Examples strip — click to fill Motion upload. */
 const SAMPLE_MOTION_CLIPS = [
-  { id: "1", src: "/1.mp4", label: "1" },
-  { id: "2", src: "/2.mp4", label: "2" },
-  { id: "3", src: "/3.mp4", label: "3" },
-  { id: "4", src: "/4.mp4", label: "4" },
+  { id: "1", src: "/1.mp4", poster: "/samples/1.png", label: "1" },
+  { id: "2", src: "/2.mp4", poster: "/samples/2.png", label: "2" },
+  { id: "3", src: "/3.mp4", poster: "/samples/3.png", label: "3" },
+  { id: "4", src: "/4.mp4", poster: "/samples/4.png", label: "4" },
 ] as const;
 
 type StudioModel = {
@@ -1380,7 +1380,11 @@ export function MotionStudio() {
                             aria-pressed={selected}
                             title={`Use as motion · ${clip.label}`}
                           >
-                            <SampleThumb src={clip.src} playing={selected} />
+                            <SampleThumb
+                              src={clip.src}
+                              poster={clip.poster}
+                              playing={selected}
+                            />
                           </button>
                         );
                       })}
@@ -1776,8 +1780,16 @@ function UploadField({
   );
 }
 
-/** Thumbnail for sample strip — shows a frame; plays only when selected. */
-function SampleThumb({ src, playing }: { src: string; playing: boolean }) {
+/** Thumbnail for sample strip — poster always; video plays only when selected. */
+function SampleThumb({
+  src,
+  poster,
+  playing,
+}: {
+  src: string;
+  poster: string;
+  playing: boolean;
+}) {
   const ref = useRef<HTMLVideoElement | null>(null);
 
   useEffect(() => {
@@ -1791,32 +1803,38 @@ function SampleThumb({ src, playing }: { src: string; playing: boolean }) {
     }
     el.pause();
     try {
-      if (el.readyState >= 1 && el.duration > 0.15) {
-        el.currentTime = 0.12;
-      }
+      el.currentTime = 0;
     } catch {
       /* ignore seek errors */
     }
   }, [playing]);
 
   return (
-    <video
-      ref={ref}
-      src={src}
-      muted
-      loop
-      playsInline
-      preload="metadata"
-      className="absolute inset-0 h-full w-full object-cover"
-      onLoadedMetadata={(e) => {
-        const el = e.currentTarget;
-        try {
-          if (!playing && el.duration > 0.15) el.currentTime = 0.12;
-        } catch {
-          /* ignore */
-        }
-      }}
-    />
+    <>
+      {/* Poster always visible so empty black boxes never show while video buffers */}
+      <img
+        src={poster}
+        alt=""
+        className={[
+          "absolute inset-0 h-full w-full object-cover transition-opacity",
+          playing ? "opacity-0" : "opacity-100",
+        ].join(" ")}
+        draggable={false}
+      />
+      <video
+        ref={ref}
+        src={playing ? src : undefined}
+        poster={poster}
+        muted
+        loop
+        playsInline
+        preload={playing ? "auto" : "none"}
+        className={[
+          "absolute inset-0 h-full w-full object-cover transition-opacity",
+          playing ? "opacity-100" : "opacity-0",
+        ].join(" ")}
+      />
+    </>
   );
 }
 
