@@ -85,10 +85,6 @@ const MODE_TABS: { id: StudioMode; label: string }[] = [
 
 const OBJECT_SWAP_ETA = { etaLabel: "~2–5 min", typicalWaitSec: 180 };
 
-/** Idle preview sample shown before the user generates. */
-const DEMO_PREVIEW_VIDEO =
-  "https://pub-3a51eee0bcba4124b258f45bbbe4d181.r2.dev/demo/two-cats-dance.mp4";
-
 /** Examples strip — click to fill Motion upload. */
 const SAMPLE_MOTION_CLIPS = [
   { id: "1", src: "/1.mp4", poster: "/samples/1.png", label: "1" },
@@ -96,6 +92,10 @@ const SAMPLE_MOTION_CLIPS = [
   { id: "3", src: "/3.mp4", poster: "/samples/3.png", label: "3" },
   { id: "4", src: "/4.mp4", poster: "/samples/4.png", label: "4" },
 ] as const;
+
+/** Idle preview uses the first local sample so the panel is never empty. */
+const DEMO_PREVIEW_VIDEO = SAMPLE_MOTION_CLIPS[0].src;
+const DEMO_PREVIEW_POSTER = SAMPLE_MOTION_CLIPS[0].poster;
 
 type StudioModel = {
   id: string;
@@ -1426,22 +1426,44 @@ export function MotionStudio() {
                       <>
                         <div className="absolute inset-0 flex items-center justify-center p-2 sm:p-3">
                           <div className="relative h-full max-h-full w-auto max-w-full aspect-[9/16] overflow-hidden rounded-lg bg-black shadow-[0_0_0_1px_rgba(255,255,255,0.08)]">
-                            <video
-                              key={videoUrl || DEMO_PREVIEW_VIDEO}
-                              ref={previewVideoRef}
-                              src={videoUrl || DEMO_PREVIEW_VIDEO}
-                              autoPlay
-                              muted={previewMuted}
-                              loop
-                              playsInline
-                              preload="metadata"
-                              className="absolute inset-0 h-full w-full object-cover"
-                              aria-label={
-                                videoUrl
-                                  ? "Selected motion video preview"
-                                  : "Sample motion transfer preview"
-                              }
-                            />
+                            {(() => {
+                              const previewSrc = videoUrl || DEMO_PREVIEW_VIDEO;
+                              const sample = SAMPLE_MOTION_CLIPS.find(
+                                (c) =>
+                                  videoName === `${c.id}.mp4` ||
+                                  videoName === c.src ||
+                                  (!videoUrl && c.src === DEMO_PREVIEW_VIDEO),
+                              );
+                              const poster =
+                                sample?.poster ?? DEMO_PREVIEW_POSTER;
+                              return (
+                                <>
+                                  <img
+                                    src={poster}
+                                    alt=""
+                                    className="absolute inset-0 h-full w-full object-cover"
+                                    draggable={false}
+                                  />
+                                  <video
+                                    key={previewSrc}
+                                    ref={previewVideoRef}
+                                    src={previewSrc}
+                                    poster={poster}
+                                    autoPlay
+                                    muted={previewMuted}
+                                    loop
+                                    playsInline
+                                    preload="auto"
+                                    className="absolute inset-0 h-full w-full object-cover"
+                                    aria-label={
+                                      videoUrl
+                                        ? "Selected motion video preview"
+                                        : "Sample motion transfer preview"
+                                    }
+                                  />
+                                </>
+                              );
+                            })()}
                           </div>
                         </div>
                         {status === "error" ? (
